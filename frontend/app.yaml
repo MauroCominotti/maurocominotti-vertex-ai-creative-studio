@@ -1,0 +1,18 @@
+# Configuration for the App Engine Standard Environment
+
+# Use a standard, managed runtime for serving static files
+runtime: nodejs20
+service: frontend
+
+handlers:
+  # Handler for all static assets (js, css, images, etc.)
+  # It serves them directly from the build output directory.
+  - url: /(.*\.(js|css|svg|png|jpg|ico|gif|webmanifest))$
+    static_files: dist/creative-studio/browser/\1 # The path to your built Angular files
+    upload: dist/creative-studio/browser/(.*\.(js|css|svg|png|jpg|ico|gif|webmanifest))$
+
+  # Handler for all other routes (the SPA fallback)
+  # It serves the index.html file, letting Angular handle the client-side routing.
+  - url: /.*
+    static_files: dist/creative-studio/browser/index.html
+    upload: dist/creative-studio/browser/index.html

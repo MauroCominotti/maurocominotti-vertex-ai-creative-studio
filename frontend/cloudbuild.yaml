@@ -32,17 +32,17 @@ steps:
     waitFor: ['Install Dependencies']
     dir: frontend
 
-  # 3. Trigger deployment in the target project
+  # --- STEP 3: MODIFIED FOR APP ENGINE DEPLOYMENT ---
+  # No need to trigger another build; just deploy the built files.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'Trigger Deployment'
+    id: 'Deploy to App Engine'
     entrypoint: 'gcloud'
     args:
-      - 'builds'
-      - 'submit'
-      - '--project=${_TARGET_PROJECT_ID}'
-      - '--config=frontend/cloudbuild-deploy.yaml' # Path to the deployment config
-      - '--substitutions=_FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID}'
-      - '--async' # Run the triggered build asynchronously
+      - 'app'
+      - 'deploy'
+      # Point to the frontend's app.yaml file
+      - 'frontend/app.yaml'
+      - '--quiet'
     waitFor: ['Build Angular']
 
 # You can define substitution variables that can be overridden by triggers.

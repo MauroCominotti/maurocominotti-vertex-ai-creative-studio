@@ -1,0 +1,45 @@
+# Configuration for the App Engine Flexible Environment
+
+# Use a custom runtime since we are providing our own Docker container
+runtime: custom
+env: flex
+
+# Name this service 'backend' to distinguish it from the frontend
+service: backend
+
+# Configure automatic scaling based on CPU usage
+automatic_scaling:
+  min_num_instances: 1
+  max_num_instances: 10
+  cpu_utilization:
+    target_utilization: 0.75
+
+# Health checks to ensure your application is running correctly
+readiness_check:
+  path: "/api/version" # You should create a simple /health endpoint in FastAPI
+  check_interval_sec: 10
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+
+liveness_check:
+  path: "/api/version"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 4
+  success_threshold: 2
+
+# Network settings and timeout configuration
+network:
+  session_affinity: true # Useful for stateful interactions
+
+handlers:
+  # This handler is required for Flexible Environment but is superseded by your app
+  - url: /.*
+    script: auto
+    secure: always
+
+# --- THIS IS THE KEY CHANGE FOR YOUR TIMEOUT ISSUE ---
+# Set the request timeout (in seconds). Default is 60s. Max is 3600s (60 minutes).
+gcloud_app_deployment:
+  timeout: 1800s # Set to 30 minutes

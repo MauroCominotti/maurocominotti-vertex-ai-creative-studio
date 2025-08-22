@@ -1,0 +1,12 @@
+# This file directs traffic to the correct App Engine service.
+
+dispatch:
+  # Route all API calls to the 'backend' service.
+  # The '*/api/*' pattern matches both the default domain and any custom domains.
+  - url: "*/api/*"
+    service: backend
+
+  # Route all other traffic to the 'frontend' service.
+  # This is the catch-all for your Angular application.
+  - url: "*/*"
+    service: frontend

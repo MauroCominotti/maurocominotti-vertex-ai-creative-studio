@@ -11,7 +11,6 @@ steps:
         '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_SERVICE_NAME}:$SHORT_SHA',
         '.',
       ]
-    # This ensures the build context is the 'backend' folder
     dir: 'backend'
 
   # Step 2: Push the container image to Google Artifact Registry.
@@ -26,15 +25,15 @@ steps:
   # Step 3: Deploy to Cloud Run using the gcloud CLI builder.
   # This command updates the service with the new image, creating a new revision.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'Deploy'
+    id: 'Deploy to App Engine'
     entrypoint: gcloud
     args:
-      - 'run'
+      - 'app'
       - 'deploy'
-      - '${_SERVICE_NAME}'
-      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_SERVICE_NAME}:$SHORT_SHA'
-      - '--region'
-      - '${_REGION}'
+      # Point to the app.yaml file we just created
+      - 'backend/app.yaml'
+      # Specify the exact image to use for this deployment
+      - '--image-url=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/${_SERVICE_NAME}:$SHORT_SHA'
       - '--quiet' # Suppress interactive prompts for CI/CD environments
 
 # BEST PRACTICE: Explicitly declare the image(s) built by this pipeline.

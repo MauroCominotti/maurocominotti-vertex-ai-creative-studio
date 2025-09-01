@@ -12,7 +12,7 @@ class ConfigService:
     # Gemini
     _, project_id = google.auth.default()
     PROJECT_ID: str = getenv("PROJECT_ID", project_id or "")
-    LOCATION: str = getenv("LOCATION", "us-central1")
+    LOCATION: str = getenv("LOCATION", "global")
     GEMINI_MODEL_ID: str = getenv("GEMINI_MODEL_ID", "gemini-2.5-flash")
     INIT_VERTEX: bool = True
     GEMINI_AUDIO_ANALYSIS_MODEL_ID: str = getenv(

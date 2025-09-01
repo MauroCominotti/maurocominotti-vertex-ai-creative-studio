@@ -36,6 +36,7 @@ class GenerationModelEnum(str, Enum):
     IMAGEGEN_006 = "imagegeneration@006"
     IMAGEGEN_005 = "imagegeneration@005"
     IMAGEGEN_002 = "imagegeneration@002"
+    GEMINI_25_FLASH_IMAGE_PREVIEW = "gemini-2.5-flash-image-preview"
 
     # Video-Specific Models
     VEO_3_FAST = "veo-3.0-fast-generate-preview"

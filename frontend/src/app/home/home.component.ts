@@ -77,6 +77,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     {value: 'imagegeneration@006', viewValue: 'ImageGen (006)'},
     {value: 'imagegeneration@005', viewValue: 'ImageGen (005)'},
     {value: 'imagegeneration@002', viewValue: 'ImageGen (002)'},
+    {value: 'gemini-2.5-flash-image-preview', viewValue: 'Gemini 2.5 Flash Image Preview'},
   ];
   selectedGenerationModel = this.generationModels[0].viewValue;
   aspectRatioOptions: {value: string; viewValue: string; disabled: boolean}[] =

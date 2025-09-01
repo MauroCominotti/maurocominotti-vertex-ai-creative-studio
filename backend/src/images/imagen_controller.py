@@ -15,11 +15,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as Status
 from src.auth.auth_guard import RoleChecker, get_current_user
+from src.common.base_dto import GenerationModelEnum
 from src.galleries.dto.gallery_response_dto import MediaItemResponse
 from src.images.dto.create_imagen_dto import CreateImagenDto
 from src.images.dto.edit_imagen_dto import EditImagenDto
 from src.images.dto.upscale_imagen_dto import UpscaleImagenDto
-from src.images.imagen_service import ImagenService
+from src.models.services.imagen_service import ImagenService
 from src.images.schema.imagen_result_model import ImageGenerationResult
 from src.users.user_model import User, UserRoleEnum
 
@@ -35,6 +36,17 @@ router = APIRouter(
     dependencies=[user_only],
 )
 
+image_service_by_model_mapping = {
+    GenerationModelEnum.IMAGEN_4_ULTRA: ImagenService,
+    GenerationModelEnum.IMAGEN_3_001: ImagenService,
+    GenerationModelEnum.IMAGEN_3_FAST: ImagenService,
+    GenerationModelEnum.IMAGEN_3_002: ImagenService,
+    GenerationModelEnum.IMAGEGEN_006: ImagenService,
+    GenerationModelEnum.IMAGEGEN_005: ImagenService,
+    GenerationModelEnum.IMAGEGEN_002: ImagenService,
+    GenerationModelEnum.GEMINI_25_FLASH_IMAGE_PREVIEW: GeminiService,
+}
+
 
 @router.post("/generate-images")
 async def generate_images(
@@ -42,7 +54,7 @@ async def generate_images(
     current_user: User = Depends(get_current_user),
 ) -> MediaItemResponse | None:
     try:
-        service = ImagenService()
+        service = image_service_by_model_mapping.get(image_request.generation_model, None)
         return await service.generate_images(
             request_dto=image_request, user_email=current_user.email
         )

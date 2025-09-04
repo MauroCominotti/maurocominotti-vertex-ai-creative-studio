@@ -1,0 +1,122 @@
+# --- Service Accounts ---
+resource "google_service_account" "run_sa" {
+  account_id   = "${var.resource_prefix}-${var.environment}-run"
+  display_name = "SA for ${var.service_name} (${var.environment}) Runtime"
+}
+
+resource "google_service_account" "trigger_sa" {
+  account_id   = "${var.resource_prefix}-${var.environment}-trig"
+  display_name = "SA for ${var.service_name} (${var.environment}) Trigger"
+}
+
+
+
+# --- Core Resources ---
+resource "google_artifact_registry_repository" "repo" {
+  location      = var.gcp_region
+  repository_id = "${var.resource_prefix}-${var.environment}-repo"
+  description   = "Docker repository for ${var.service_name}"
+  format        = "DOCKER"
+}
+
+resource "google_cloud_run_v2_service" "this" {
+  name             = var.service_name
+  location         = var.gcp_region
+  custom_audiences = var.custom_audiences
+
+  template {
+    service_account = google_service_account.run_sa.email
+    containers {
+      image = "us-docker.pkg.dev/cloudrun/container/hello:latest"
+      resources {
+        limits = {
+          cpu    = var.cpu
+          memory = var.memory
+        }
+      }
+      dynamic "env" {
+        for_each = var.container_env_vars
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+    }
+    scaling {
+      min_instance_count = var.scaling_min_instances
+      max_instance_count = var.scaling_max_instances
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image, client, client_version]
+  }
+}
+
+resource "google_cloudbuild_trigger" "this" {
+  name            = "${var.service_name}-trigger"
+  location        = var.gcp_region
+  service_account = google_service_account.trigger_sa.id
+  filename        = var.cloudbuild_yaml_path
+  substitutions   = var.build_substitutions
+
+  repository_event_config {
+    repository = var.source_repository_id
+    push {
+      branch = "^${var.github_branch_name}$"
+    }
+  }
+
+  included_files = var.included_files_glob
+}
+
+# --- Common IAM Bindings ---
+resource "google_project_iam_member" "logging_writer_binding" {
+  project = var.gcp_project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.trigger_sa.email}"
+}
+
+resource "google_artifact_registry_repository_iam_member" "ar_writer_binding" {
+  location   = var.gcp_region
+  repository = google_artifact_registry_repository.repo.name
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${google_service_account.trigger_sa.email}"
+}
+
+resource "google_cloud_run_v2_service_iam_member" "run_developer_binding" {
+  name     = google_cloud_run_v2_service.this.name
+  location = google_cloud_run_v2_service.this.location
+  role     = "roles/run.developer"
+  member   = "serviceAccount:${google_service_account.trigger_sa.email}"
+}
+
+resource "google_service_account_iam_member" "run_sa_user_binding" {
+  service_account_id = google_service_account.run_sa.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.trigger_sa.email}"
+}
+
+resource "google_project_iam_member" "aiplatform_user_binding" {
+  project = var.gcp_project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.run_sa.email}"
+}
+
+resource "google_project_iam_member" "storage_object_admin_binding" {
+  project = var.gcp_project_id
+  role    = "roles/storage.objectAdmin"
+  member  = "serviceAccount:${google_service_account.run_sa.email}"
+}
+
+resource "google_project_iam_member" "firestore_developer_binding" {
+  project = var.gcp_project_id
+  role    = "roles/firebase.developAdmin"
+  member  = "serviceAccount:${google_service_account.run_sa.email}"
+}
+
+resource "google_project_iam_member" "sa_token_creator_binding" {
+  project = var.gcp_project_id
+  role    = "roles/iam.serviceAccountTokenCreator"
+  member  = "serviceAccount:${google_service_account.run_sa.email}"
+}

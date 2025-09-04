@@ -178,6 +178,7 @@ brew install ffmpeg
 gcloud auth list
 gcloud config list
 
+gcloud config set account <your account email>
 gcloud auth login
 gcloud config set project <your project id>
 gcloud auth application-default set-quota-project <your project id>

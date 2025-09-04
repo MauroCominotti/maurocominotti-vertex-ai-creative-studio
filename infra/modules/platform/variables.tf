@@ -3,8 +3,8 @@ variable "gcp_region" { type = string }
 variable "environment" { type = string }
 
 variable "firebase_db_name" {
-    type = string
-default = "cstudio"
+  type = string
+  default = "cstudio"
 }
 
 # Backend specific variables

@@ -1,4 +1,5 @@
 from typing import Annotated, Literal, Optional
+from typing import List
 
 from fastapi import Query
 from google.genai import types
@@ -59,7 +60,7 @@ class CreateImagenDto(BaseDto):
         description="Whether to add a watermark to the generated image.",
     )
     upscale_factor: Literal["", "x2", "x4"] = Field(
-        default="x4",
+        default="",
         description="""Factor of the upscale, either x2 or x4. If empty it will not upscale""",
     )
     image_1: Optional[ImageDataDto] = Field(
@@ -93,3 +94,14 @@ class CreateImagenDto(BaseDto):
         if value not in valid_video_ratios:
             raise ValueError("Invalid generation model for imagen.")
         return value
+
+
+class AcceptBatchProcessingRequestResponse(BaseDto):
+    message: str = Field(default="Image generation batch started in the background.")
+
+
+class CreateImagenBatchDto(CreateImagenDto):
+   source_images_uris: List[ImageDataDto] = Field(
+       default=[],
+       description="List of source images uris"
+   )

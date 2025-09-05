@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi import status as Status
 from src.auth.auth_guard import RoleChecker, get_current_user
 from src.galleries.dto.gallery_response_dto import MediaItemResponse
+from src.images.dto.create_imagen_dto import \
+    AcceptBatchProcessingRequestResponse
+from src.images.dto.create_imagen_dto import CreateImagenBatchDto
 from src.images.dto.create_imagen_dto import CreateImagenDto
 from src.images.dto.edit_imagen_dto import EditImagenDto
 from src.images.dto.upscale_imagen_dto import UpscaleImagenDto
@@ -60,6 +63,43 @@ async def generate_images(
             detail=str(e),
         )
 
+
+@router.post("/generate-images-batch")
+async def generate_images_batch(
+    generate_images_batch_request: CreateImagenBatchDto,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+) -> AcceptBatchProcessingRequestResponse | None:
+    try:
+        service = ImagenService()
+        for source_image_uri in generate_images_batch_request.source_images_uris:
+            source_data = generate_images_batch_request.model_dump()
+
+            # Get the set of fields the destination model knows about
+            destination_fields = CreateImagenDto.model_fields.keys()
+
+            # Create a new dict with only the fields that exist in the destination
+            filtered_data = {
+                key: value for key, value in source_data.items() if key in destination_fields
+            }
+
+            # Now, this works perfectly because you're only passing valid fields
+            generate_images_request = CreateImagenDto(
+                **filtered_data,
+
+            )
+            generate_images_request.image_1 = source_image_uri
+            background_tasks.add_task(
+                service.generate_images,
+                request_dto=generate_images_request,
+                user_email=current_user.email
+            )
+        return {"message": "Image generation batch started in the background."}
+    except Exception as e:
+        raise HTTPException(
+            status_code=Status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 @router.post("/generate-images-for-vto")
 async def generate_images_vto(

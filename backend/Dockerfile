@@ -12,43 +12,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+# Dockerfile
 
-# Install the project into `/app`
+# ---- Stage 1: Builder ----
+# This stage uses the larger 'uv' image to efficiently build our virtual environment.
+# None of the tools or layers from this stage will be in the final image.
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim as builder
+
 WORKDIR /app
 
-# Enable bytecode compilation
-ENV UV_COMPILE_BYTECODE=1
+# Create a virtual environment inside the working directory.
+RUN python -m venv .venv
 
-# Copy from the cache instead of linking since it's a mounted volume
-ENV UV_LINK_MODE=copy
+# Copy only the dependency definition files first.
+# This creates a separate layer that is cached by Docker.
+COPY pyproject.toml uv.lock ./
 
-# Install the project's dependencies using the lockfile and settings
+# Install dependencies into the virtual environment.
+# This step only re-runs if your 'uv.lock' file changes.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-install-project --no-dev
+    .venv/bin/uv sync --locked --no-dev
 
-# Then, add the rest of the project source code and install it
-# Installing separately from its dependencies allows optimal layer caching
-COPY . /app
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev
+# Copy the rest of your application source code.
+COPY . .
 
-# Place executables in the environment at the front of the path
-ENV PATH="/app/.venv/bin:$PATH"
+# ---- Stage 2: Final Image ----
+# This is our final, slim, production-ready image.
+FROM python:3.12-slim-bookworm
 
-# Update package lists and install ffmpeg
-RUN apt-get update && apt-get install -y ffmpeg
+# Create a non-root user for better security.
+RUN useradd --create-home appuser
+WORKDIR /home/appuser
+USER appuser
 
-# Reset the entrypoint, don't invoke `uv`
-ENTRYPOINT []
+# Install ffmpeg and immediately clean up the apt cache to keep the layer small.
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set default environment variables
+# Copy ONLY the virtual environment and your application code from the 'builder' stage.
+COPY --from=builder /app/.venv ./.venv
+COPY --from=builder /app ./
+
+# Add the virtual environment's bin directory to the system's PATH.
+ENV PATH="/home/appuser/.venv/bin:$PATH"
+
+# Set default environment variables. These can be overridden by Cloud Run.
 ENV ENVIRONMENT="development"
 ENV FRONTEND_URL="http://localhost:4200"
 
 EXPOSE 8080
 
+# The final command to run your application.
 CMD ["gunicorn", "main:app", "--workers=4", "--worker-class=uvicorn.workers.UvicornWorker", "--timeout=36000", "--bind=0.0.0.0:8080"]

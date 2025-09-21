@@ -361,12 +361,9 @@ class VeoService:
         self.gcs_service = GcsService()
         self.source_asset_repo = SourceAssetRepository()
 
-    def start_video_generation_job(
-        self,
-        request_dto: CreateVeoDto,
+    def start_video_generation_job(self, request_dto: CreateVeoDto,
         user: UserModel,
-        executor: ProcessPoolExecutor,
-    ) -> MediaItemResponse:
+        executor: ProcessPoolExecutor) -> MediaItemResponse:
         """
         Immediately creates a placeholder MediaItem and starts the video generation
         in the background.

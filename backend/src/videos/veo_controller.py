@@ -20,7 +20,7 @@ from src.auth.auth_guard import RoleChecker, get_current_user
 from src.galleries.dto.gallery_response_dto import MediaItemResponse
 from src.users.user_model import UserModel, UserRoleEnum
 from src.videos.dto.create_veo_dto import CreateVeoDto
-from src.videos.veo_executors import CloudFunctionExecutor, DEFAULT_VEO_EXECUTOR_TYPE
+from src.videos.veo_executor_service import VeoExecutorService
 from src.videos.veo_service import VeoService
 
 # Define role checkers for convenience
@@ -44,19 +44,11 @@ async def generate_videos(
     service: VeoService = Depends(),
 ) -> MediaItemResponse | None:
     try:
-        # Get the process pool from the application state
-        veo_processing_executors = {
-            DEFAULT_VEO_EXECUTOR_TYPE: request.app.state.process_pool,
-            "remote": CloudFunctionExecutor(),
-        }
-        veo_executor_type = getenv("VEO_EXECUTOR_TYPE",
-                                   DEFAULT_VEO_EXECUTOR_TYPE)
-        executor = veo_processing_executors.get(veo_executor_type)
-
+        veo_executor_service = VeoExecutorService(request.app.state.process_pool)
+        veo_executor = veo_executor_service.get_executor()
         placeholder_item = service.start_video_generation_job(
-            request_dto=video_request,
-            user=current_user,
-            executor=executor,  # Pass the pool to the service
+            request_dto=video_request, user=current_user,
+            executor=veo_executor
         )
         return placeholder_item
     except HTTPException as http_exception:

@@ -25,6 +25,8 @@ dependencies = [
     "python-multipart>=0.0.20",
     "pydantic[email]>=2.11.7",
     "pydantic-settings>=2.10.1",
+    "google-cloud-pubsub>=2.31.1",
+    "functions-framework>=3.9.2",
 ]
 
 [project.optional-dependencies]

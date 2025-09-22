@@ -48,6 +48,8 @@ class ConfigService(BaseSettings):
 
     # --- Veo ---
     VEO_MODEL_ID: str = "veo-2.0-generate-001"
+    VEO_EXECUTOR_TYPE: str = "local"
+    VEO_REMOTE_EXECUTOR_PUBSUB_TOPIC_ID: str = ""
 
     # --- VTO ---
     VTO_MODEL_ID: str = "virtual-try-on-preview-08-04"

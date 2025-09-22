@@ -361,6 +361,10 @@ Finally run using uvicorn
 uvicorn main:app --reload --port 8080
 ```
 
+## Running the Remote Video Generation Executor (Cloud Run Function)
+
+Run `deploy_remote_video_generation_executor.sh`. It will read Environment variables from .env file, assign appropriate permissions and deploy the code to Cloud Run Function.
+
 ## Code Styling & Commit Guidelines
 
 To maintain code quality and consistency:

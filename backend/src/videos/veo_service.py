@@ -246,7 +246,8 @@ def _process_video_in_background(media_item_id: str, request_dto: CreateVeoDto):
             permanent_thumbnail_gcs_uris = []
             for generated_video in operation.response.generated_videos:
                 if generated_video.video and generated_video.video.uri:
-                    output_path = f"{generated_video.video.uri.replace(f"gs://{cfg.GENMEDIA_BUCKET}/", "")}"
+                    output_path = generated_video.video.uri.replace(
+                        f"gs://{cfg.GENMEDIA_BUCKET}/", "")
 
                     # Step 1: Download the Video from GCS
                     local_output_path = f"thumbnails/{output_path}"

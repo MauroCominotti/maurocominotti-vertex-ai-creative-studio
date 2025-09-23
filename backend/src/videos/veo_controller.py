@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import concurrent
 from os import getenv
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi import status as Status
@@ -52,6 +54,51 @@ async def generate_videos(
         )
         return placeholder_item
     except HTTPException as http_exception:
+        raise http_exception
+    except ValueError as value_error:
+        raise HTTPException(
+            status_code=Status.HTTP_400_BAD_REQUEST,
+            detail=str(value_error),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=Status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+@router.post("/generate-videos-batch")
+async def generate_videos_batch(
+    video_requests: List[CreateVeoDto],
+    request: Request,
+    current_user: UserModel = Depends(get_current_user),
+    service: VeoService = Depends(),
+) -> List[MediaItemResponse | None]:
+    try:
+        veo_executor_service = VeoExecutorService(request.app.state.process_pool)
+        veo_executor = veo_executor_service.get_executor()
+        successful_results = []
+        failed_tasks = []
+        for video_request in video_requests:
+            try:
+                placeholder_item = service.start_video_generation_job( # TODO: Should be triggered in parallel
+                    request_dto=video_request,
+                    user=current_user,
+                    executor=veo_executor
+                )
+                successful_results.append(placeholder_item)
+            except Exception as e:
+                failed_tasks.append((video_request, e))
+
+
+        if failed_tasks:
+            error_message = f"Processing failed for {len(failed_tasks)} out of {len(video_requests)} tasks:\n"
+
+            for video_request, error in failed_tasks:
+                error_message += f"  - Item: {type(error).__name__}('{error}')\n"
+
+            raise Exception(error_message)
+        return successful_results
+    except HTTPException as http_exception: # noqa: F821
         raise http_exception
     except ValueError as value_error:
         raise HTTPException(

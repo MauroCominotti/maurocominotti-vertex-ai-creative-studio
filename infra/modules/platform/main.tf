@@ -499,7 +499,26 @@ resource "google_firestore_index" "source_assets_user_crtd_mime_name" {
 
 # --- END OF NEW source_assets INDEXES ---
 
+# BRAND GUIDELINES INDEXES
+# Index for: source_assets by workspace_id, created_at, __name__
+resource "google_firestore_index" "source_assets_user_crtd_mime_name" {
+  project    = var.gcp_project_id
+  database   = google_firestore_database.default.name
+  collection = "brand_guidelines"
 
+  fields {
+    field_path = "workspace_id"
+    order      = "ASCENDING"
+  }
+  fields {
+    field_path = "created_at"
+    order      = "DESCENDING"
+  }
+  fields {
+    field_path = "__name__"
+    order      = "DESCENDING"
+  }
+}
 
 # --- Cloud Build Repository Connection ---
 resource "google_cloudbuildv2_repository" "source_repo" {

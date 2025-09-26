@@ -501,7 +501,7 @@ resource "google_firestore_index" "source_assets_user_crtd_mime_name" {
 
 # BRAND GUIDELINES INDEXES
 # Index for: source_assets by workspace_id, created_at, __name__
-resource "google_firestore_index" "source_assets_user_crtd_mime_name" {
+resource "google_firestore_index" "brand_guidelines_wrkid_created_name" {
   project    = var.gcp_project_id
   database   = google_firestore_database.default.name
   collection = "brand_guidelines"

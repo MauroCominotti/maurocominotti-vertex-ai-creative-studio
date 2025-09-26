@@ -14,13 +14,16 @@
 
 import logging
 import os
+
 import firebase_admin
-from firebase_admin import credentials, firestore, auth
-from fastapi import HTTPException, status
 import google.auth
+from fastapi import HTTPException, status
+from firebase_admin import auth, credentials, firestore
 from google.auth.exceptions import RefreshError
 from google.cloud import resourcemanager_v3
 from google.cloud.firestore import Client
+
+from src.config.config_service import config_service
 
 logger = logging.getLogger(__name__)
 
@@ -73,9 +76,9 @@ class FirebaseClient:
             )
             raise RuntimeError(f"Failed to initialize Firebase Admin SDK: {e}")
 
-        # Init Firestore DB
-        self.db = firestore.client()
-
+        db_name = config_service.FIREBASE_DB
+        logger.info(f"Connecting to Firestore database: '{db_name}'")
+        self.db = firestore.client(database_id=db_name)
 
     def check_adc_authentication(self):
         """
@@ -102,7 +105,7 @@ class FirebaseClient:
             logger.info(f"ADC found for project: {project_id}. Attempting a test API call...")
 
             # 2. Make a lightweight, authenticated API call to test the credentials
-            client = resourcemanager_v3.ProjectsClient(credentials=credentials)
+            client = resourcemanager_v3.ProjectsClient(credentials=credentials)  # type: ignore
             project_name = f"projects/{project_id}"
             client.get_project(name=project_name) # This call requires 'resourcemanager.projects.get' permission
 
@@ -120,6 +123,42 @@ class FirebaseClient:
             # Catch other potential exceptions (e.g., permissions, project not found)
             logger.error(f"An unexpected error occurred during ADC check: {e}")
             raise e
+
+    def _ensure_default_workspace_exists(self):
+        """
+        Checks if a public workspace exists on application startup and creates
+        one if it doesn't. This is crucial for features like the public gallery.
+        """
+        # Import locally to break circular dependency
+        from src.workspaces.repository.workspace_repository import (
+            WorkspaceRepository,
+        )
+        from src.workspaces.schema.workspace_model import (
+            WorkspaceModel,
+            WorkspaceScopeEnum,
+        )
+
+        try:
+            logger.info("Checking for default public workspace...")
+            workspace_repo = WorkspaceRepository()
+            if not workspace_repo.get_public_workspace():
+                logger.warning(
+                    "No public workspace found. Creating a default one."
+                )
+                default_workspace = WorkspaceModel(
+                    name="Google Workspace",
+                    owner_id="system",  # Owned by the system, not a user
+                    scope=WorkspaceScopeEnum.PUBLIC,
+                    members=[],
+                )
+                workspace_repo.save(default_workspace)
+                logger.info(
+                    "Default public 'Google Workspace' created successfully."
+                )
+        except Exception as e:
+            logger.error(
+                f"Failed to ensure default workspace exists: {e}", exc_info=True
+            )
 
 
 firebase_client = FirebaseClient()

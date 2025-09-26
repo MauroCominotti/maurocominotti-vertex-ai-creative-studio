@@ -26,7 +26,6 @@
   gap: .5rem;
 }
 
-
 // Small devices (landscape phones, 576px and up)
 @media (min-width: 576px) {
 }
@@ -35,14 +34,14 @@
 @media (min-width: 768px) {
   .mat-menu-floating {
     bottom: auto;
-    top: 5vh;
+    top: 10vh;
     left: 5vw;
     width: 4.5rem;
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    padding: 16px 0 18px 0;
+    padding: 10px 0
   }
 }
 

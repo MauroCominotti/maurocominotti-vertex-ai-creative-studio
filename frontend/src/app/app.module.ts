@@ -45,7 +45,7 @@ import {ToastMessageComponent} from './common/components/toast-message/toast-mes
 import {LoginComponent} from './login/login.component';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {provideAnalytics, getAnalytics} from '@angular/fire/analytics';
-
+import {MatRadioModule} from '@angular/material/radio';
 import {AngularFireModule} from '@angular/fire/compat';
 import {AngularFireAuthModule} from '@angular/fire/compat/auth';
 import {AngularFireDatabaseModule} from '@angular/fire/compat/database';
@@ -74,6 +74,11 @@ import {MediaDetailComponent} from './gallery/media-detail/media-detail.componen
 import {ScrollingModule} from '@angular/cdk/scrolling';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 import { MediaLightboxComponent } from './common/components/media-lightbox/media-lightbox.component';
+import {VtoComponent} from './vto/vto.component';
+import {ImageSelectorComponent} from './common/components/image-selector/image-selector.component';
+import {MatDialogModule} from '@angular/material/dialog';
+import {SourceAssetGalleryComponent} from './common/components/source-asset-gallery/source-asset-gallery.component';
+import {SharedModule} from './common/shared.module';
 
 @NgModule({
   declarations: [
@@ -90,6 +95,9 @@ import { MediaLightboxComponent } from './common/components/media-lightbox/media
     MediaGalleryComponent,
     MediaDetailComponent,
     MediaLightboxComponent,
+    VtoComponent,
+    ImageSelectorComponent,
+    SourceAssetGalleryComponent,
   ],
   imports: [
     BrowserModule,
@@ -100,6 +108,7 @@ import { MediaLightboxComponent } from './common/components/media-lightbox/media
     MatDividerModule,
     MatButtonModule,
     MatChipsModule,
+    MatRadioModule,
     MatIconModule,
     MatStepperModule,
     MatFormFieldModule,
@@ -117,6 +126,8 @@ import { MediaLightboxComponent } from './common/components/media-lightbox/media
     MatProgressBarModule,
     MatExpansionModule,
     MatTabsModule,
+    MatDialogModule,
+    SharedModule,
   ],
   providers: [
     provideClientHydration(),

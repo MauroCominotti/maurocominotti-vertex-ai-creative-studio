@@ -17,7 +17,7 @@ import logging
 from typing import Optional
 import google.auth
 from google.genai import Client
-from src.config.config_service import ConfigService
+from src.config.config_service import config_service
 
 logger = logging.getLogger(__name__)
 
@@ -36,17 +36,21 @@ class GenAIModelSetup:
         """
         if cls._client is None:
             try:
-                cfg = ConfigService()
-                config = ConfigService()
+                config = config_service
                 project_id = config.PROJECT_ID
                 location = config.LOCATION
-                model_id = config.GEMINI_MODEL_ID
-                if None in [project_id, location, model_id]:
+                if None in [project_id, location]:
                     raise ValueError("All parameters must be set.")
 
-                logger.info(f"Initializing shared GenAI client for project '{project_id}' in location '{cfg.LOCATION}'")
+                logger.info(
+                    f"Initializing shared GenAI client for project '{project_id}' in location '{location}'"
+                )
 
-                cls._client = Client(project=project_id, location=cfg.LOCATION, vertexai=cfg.INIT_VERTEX)
+                cls._client = Client(
+                    project=project_id,
+                    location=location,
+                    vertexai=config.INIT_VERTEX,
+                )
             except Exception as e:
                 logger.error(f"Failed to initialize GenAI client: {e}")
                 raise

@@ -1,10 +1,14 @@
 import datetime
-from typing import Any, Dict, Generic, TypeVar, Optional, List
 import uuid
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Any, Dict, Generic, List, Optional, TypeVar
+
 from google.cloud import firestore
-from src.auth import firebase_client_service
+from google.cloud.firestore_v1.base_query import FieldFilter
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+
+from src.auth import firebase_client_service
+
 
 class BaseDocument(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -42,7 +46,8 @@ class BaseRepository(Generic[T]):
         doc = doc_ref.get()
         if not doc.exists:
             return None
-        return self.model.model_validate(doc.to_dict())
+        data = doc.to_dict()
+        return self.model.model_validate({**data, "id": doc.id})  # type: ignore
 
     def save(self, item: T) -> str:
         """
@@ -82,3 +87,32 @@ class BaseRepository(Generic[T]):
 
         # 3. Return the full, updated document.
         return self.get_by_id(item_id)
+
+    def delete(self, item_id: str) -> bool:
+        """
+        Deletes a document by its ID.
+        Returns True if deletion was successful, False otherwise.
+        """
+        doc_ref = self.collection_ref.document(item_id)
+        if not doc_ref.get().exists:
+            return False
+
+        doc_ref.delete()
+        return True
+
+    def find_by_filter(self, filter_condition: FieldFilter) -> List[T]:
+        """
+        Finds documents based on a single FieldFilter condition.
+
+        Args:
+            filter_condition: A Firestore FieldFilter object.
+
+        Returns:
+            A list of model instances matching the filter.
+        """
+        query = self.collection_ref.where(filter=filter_condition)
+        docs = query.stream()
+        return [
+            self.model.model_validate({**doc.to_dict(), "id": doc.id})
+            for doc in docs
+        ]

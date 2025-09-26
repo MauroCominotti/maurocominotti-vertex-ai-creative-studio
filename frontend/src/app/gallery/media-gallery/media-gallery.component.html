@@ -95,75 +95,77 @@
       <p class="pt-5 text-white">Loading media...</p>
     </div>
 
-    <div
-      *ngIf="!isLoading"
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 justify-evenly align-center p-4 rounded-lg mt-4"
-    >
-      <!-- Email Filter -->
-      <div class="flex flex-col">
-        <mat-form-field class="w-full">
-          <mat-label>User Email</mat-label>
-          <input
-            matInput
-            [(ngModel)]="userEmailFilter"
-            placeholder="Filter by email"
-            [disabled]="showOnlyMyMedia"
-          />
-        </mat-form-field>
-        <mat-checkbox
-          [(ngModel)]="showOnlyMyMedia"
-          (change)="onShowOnlyMyMediaChange($event)"
-          class="!text-white -mt-2"
-        >
-          Show only my media
-        </mat-checkbox>
-      </div>
-
-      <!-- Media Type Filter -->
-      <div class="flex flex-col">
-        <mat-form-field class="w-full h-auto">
-          <mat-label>Media Type</mat-label>
-          <mat-select [(ngModel)]="mediaTypeFilter">
-            <mat-option>None</mat-option>
-            <mat-option value="image/png">Image</mat-option>
-            <mat-option value="video/mp4">Video</mat-option>
-            <mat-option value="audio/mpeg">Audio</mat-option>
-          </mat-select>
-        </mat-form-field>
-      </div>
-
-      <!-- Generation Model Filter -->
-      <div class="flex flex-col">
-        <mat-form-field class="w-full h-auto">
-          <mat-label>Generation Model</mat-label>
-          <mat-select [(ngModel)]="generationModelFilter">
-            <mat-option>None</mat-option>
-            <mat-option
-              *ngFor="let model of generationModels"
-              [value]="model.value"
-            >
-              {{ model.viewValue }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-      </div>
-
-      <!-- Search Button -->
-      <button
-        mat-raised-button
-        class="!bg-white !h-12 !px-6"
-        (click)="searchTerm()"
+    <ng-container *ngIf="!isSelectionMode">
+      <div
+        *ngIf="!isLoading"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 justify-evenly align-center p-4 rounded-lg mt-4"
       >
-        <mat-icon svgIcon="gemini-spark-icon"></mat-icon>
-        <span
-          class="!text-lg font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-red-400 bg-clip-text text-transparent"
-        >
-          Search
-        </span>
-      </button>
-    </div>
+        <!-- Email Filter -->
+        <div class="flex flex-col">
+          <mat-form-field class="w-full">
+            <mat-label>User Email</mat-label>
+            <input
+              matInput
+              [(ngModel)]="userEmailFilter"
+              placeholder="Filter by email"
+              [disabled]="showOnlyMyMedia"
+            />
+          </mat-form-field>
+          <mat-checkbox
+            [(ngModel)]="showOnlyMyMedia"
+            (change)="onShowOnlyMyMediaChange($event)"
+            class="!text-white -mt-2"
+          >
+            Show only my media
+          </mat-checkbox>
+        </div>
 
-    <div class="flex flex-row gap-4" *ngIf="(columns?.length || 0) > 0">
+        <!-- Media Type Filter -->
+        <div class="flex flex-col" *ngIf="!filterByType">
+          <mat-form-field class="w-full h-auto">
+            <mat-label>Media Type</mat-label>
+            <mat-select [(ngModel)]="mediaTypeFilter">
+              <mat-option>None</mat-option>
+              <mat-option value="image/png">Image</mat-option>
+              <mat-option value="video/mp4">Video</mat-option>
+              <mat-option value="audio/mpeg">Audio</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <!-- Generation Model Filter -->
+        <div class="flex flex-col">
+          <mat-form-field class="w-full h-auto">
+            <mat-label>Generation Model</mat-label>
+            <mat-select [(ngModel)]="generationModelFilter">
+              <mat-option>None</mat-option>
+              <mat-option
+                *ngFor="let model of generationModels"
+                [value]="model.value"
+              >
+                {{ model.viewValue }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <!-- Search Button -->
+        <button
+          mat-raised-button
+          class="!bg-white !h-12 !px-6"
+          (click)="searchTerm()"
+        >
+          <mat-icon svgIcon="gemini-spark-icon"></mat-icon>
+          <span
+            class="!text-lg font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-red-400 bg-clip-text text-transparent"
+          >
+            Search
+          </span>
+        </button>
+      </div>
+    </ng-container>
+
+    <div class="flex flex-row gap-4" *ngIf="images.length > 0 && (columns?.length || 0) > 0">
       <div *ngFor="let column of columns" class="flex flex-1 flex-col gap-4">
         <div
           *ngFor="let media of column; trackBy: trackByImage"
@@ -172,8 +174,10 @@
           (mouseleave)="onMouseLeave(media)"
         >
           <a
-            [routerLink]="['/gallery', media.id]"
+            [routerLink]="isSelectionMode ? null : ['/gallery', media.id]"
             [state]="{mediaItem: media}"
+            (click)="selectMedia(media, $event)"
+            [class.cursor-pointer]="isSelectionMode"
             class="transition-opacity duration-500 block"
           >
             <ng-container *ngIf="media.mimeType === 'image/png'">
@@ -326,10 +330,16 @@
     </div>
 
     <div
-      *ngIf="!isLoading && images.length === 0"
+      *ngIf="!isLoading && allImagesLoaded && images.length === 0"
       class="text-center text-white"
     >
-      <p>No media items found</p>
+      <p *ngIf="!filterByType">No media items found</p>
+      <p *ngIf="filterByType">
+        No {{ filterByType.split('/')[0] }} media items found in the gallery.
+      </p>
     </div>
+
+    <!-- Sentinel element for infinite scroll -->
+    <div #sentinel></div>
   </div>
 </div>

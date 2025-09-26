@@ -25,6 +25,7 @@ import {ArenaComponent} from './arena/arena.component';
 import {MediaGalleryComponent} from './gallery/media-gallery/media-gallery.component';
 import {MediaDetailComponent} from './gallery/media-detail/media-detail.component';
 import {AdminAuthGuard} from './admin/admin-auth.guard';
+import {VtoComponent} from './vto/vto.component';
 
 const routes: Routes = [
   {path: 'login', component: LoginComponent},
@@ -36,6 +37,7 @@ const routes: Routes = [
   },
   {path: 'video', component: VideoComponent, canActivate: [AuthGuardService]},
   {path: 'arena', component: ArenaComponent, canActivate: [AuthGuardService]},
+  {path: 'vto', component: VtoComponent, canActivate: [AuthGuardService]},
   // When a user goes to '/gallery', show the main feed.
   {
     path: 'gallery',

@@ -14,8 +14,7 @@
 
 
 import logging
-from fastapi import APIRouter, status as Status
-from pydantic import BaseModel
+from fastapi import APIRouter
 from fastapi import File, UploadFile
 from google.cloud import speech
 from fastapi import APIRouter, Depends

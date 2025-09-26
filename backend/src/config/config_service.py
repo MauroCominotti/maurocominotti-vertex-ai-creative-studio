@@ -1,62 +1,126 @@
-from dataclasses import dataclass, field
-from os import getenv
+from typing import Any, Set
+
 import google.auth
+from google.auth.exceptions import DefaultCredentialsError
+from pydantic import Field, computed_field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-@dataclass
-class ConfigService:
-    """ConfigService class"""
 
-    # Gemini
-    _, project_id = google.auth.default()
-    PROJECT_ID: str = getenv("PROJECT_ID", project_id or "")
-    LOCATION: str = getenv("LOCATION", "us-central1")
-    GEMINI_MODEL_ID: str = getenv("GEMINI_MODEL_ID", "gemini-2.5-flash")
+class ConfigService(BaseSettings):
+    """
+    Manages application configuration using Pydantic.
+    It automatically reads from environment variables, provides type safety,
+    and fails fast if critical settings are missing.
+    """
+
+    # This tells Pydantic to look for a .env file for local development.
+    # In production (e.g., Cloud Run), where this file doesn't exist,
+    # Pydantic will automatically and correctly fall back to using
+    # system environment variables.
+    # The path is relative to this file's location (src/config/).
+    model_config = SettingsConfigDict(
+        case_sensitive=True, env_file="../../.env", env_file_encoding="utf-8"
+    )
+
+    # --- Core Project Settings ---
+    PROJECT_ID: str = ""
+    LOCATION: str = "global"
+    ENVIRONMENT: str = "development"
+    FRONTEND_URL: str = "http://localhost:4200"
+    LOG_LEVEL: str = "INFO"
     INIT_VERTEX: bool = True
-    GEMINI_AUDIO_ANALYSIS_MODEL_ID: str = getenv(
-        "GEMINI_AUDIO_ANALYSIS_MODEL_ID", "gemini-2.5-flash"
+
+    # --- Google Identity ---
+    GOOGLE_TOKEN_AUDIENCE: str = ""
+    ALLOWED_ORGS_STR: str = Field(
+        default="", alias="IDENTITY_PLATFORM_ALLOWED_ORGS"
     )
 
-    # Collections
-    GENMEDIA_FIREBASE_DB: str = getenv("GENMEDIA_FIREBASE_DB", "(default)")
-    GENMEDIA_COLLECTION_NAME: str = getenv(
-        "GENMEDIA_COLLECTION_NAME", "genmedia"
+    # --- Storage ---
+    # The defaults will be set in the validator below to prevent recursion.
+    GENMEDIA_BUCKET: str = ""
+
+    # --- Gemini ---
+    GEMINI_MODEL_ID: str = "gemini-2.5-pro"
+    GEMINI_AUDIO_ANALYSIS_MODEL_ID: str = "gemini-2.5-pro"
+
+    # --- Collections ---
+    FIREBASE_DB: str = "(default)"
+
+    # --- Veo ---
+    VEO_MODEL_ID: str = "veo-2.0-generate-001"
+
+    # --- VTO ---
+    VTO_MODEL_ID: str = "virtual-try-on-preview-08-04"
+
+    # --- Lyria ---
+    LYRIA_MODEL_VERSION: str = "lyria-002"
+    LYRIA_PROJECT_ID: str = ""
+
+    # --- Imagen ---
+    MODEL_IMAGEN_PRODUCT_RECONTEXT: str = (
+        "imagen-product-recontext-preview-06-30"
+    )
+    IMAGEN_GENERATED_SUBFOLDER: str = "generated_images"
+    IMAGEN_EDITED_SUBFOLDER: str = "edited_images"
+    IMAGEN_RECONTEXT_SUBFOLDER: str = "recontext_images"
+
+    # --- Email Service ---
+    SENDER_EMAIL: str = (
+        ""  # The email address to send from (e.g., no-reply@your-domain.com)
     )
 
-    # storage
-    GENMEDIA_BUCKET: str = getenv("GENMEDIA_BUCKET", f"{PROJECT_ID}-assets")
-    VIDEO_BUCKET: str = getenv("VIDEO_BUCKET", f"{PROJECT_ID}-assets/videos")
-    IMAGE_BUCKET: str = getenv("IMAGE_BUCKET", f"{PROJECT_ID}-assets/images")
+    @model_validator(mode="before")
+    @classmethod
+    def get_default_project_id(cls, values: Any) -> Any:
+        """Sets the default PROJECT_ID from ADC if not provided in the environment."""
+        if not values.get("PROJECT_ID"):
+            try:
+                _, project_id = google.auth.default()
+                if project_id:
+                    values["PROJECT_ID"] = project_id
+            except DefaultCredentialsError:
+                pass  # Fail gracefully, let required fields catch this if needed.
+        return values
 
-    # Veo
-    VEO_MODEL_ID: str = getenv("VEO_MODEL_ID", "veo-2.0-generate-001")
-    VEO_PROJECT_ID: str = getenv("VEO_PROJECT_ID", PROJECT_ID)
+    # <<< FIX 2: New validator to handle dependent default values >>>
+    @model_validator(mode="after")
+    def set_dependent_defaults(self) -> "ConfigService":
+        """
+        Sets default values for fields that depend on other fields (like PROJECT_ID),
+        after the initial values have been loaded and validated.
+        """
+        if not self.PROJECT_ID:
+            raise ValueError(
+                "PROJECT_ID could not be determined. Please set it via environment variable."
+            )
 
-    VEO_EXP_MODEL_ID: str = getenv("VEO_EXP_MODEL_ID", "veo-3.0-generate-preview")
-    VEO_EXP_FAST_MODEL_ID: str = getenv("VEO_EXP_FAST_MODEL_ID", "veo-3.0-fast-generate-preview")
-    VEO_EXP_PROJECT_ID: str = getenv("VEO_EXP_PROJECT_ID", PROJECT_ID)
+        # If these fields were not set by environment variables, set their default now.
+        if not self.GENMEDIA_BUCKET:
+            self.GENMEDIA_BUCKET = f"{self.PROJECT_ID}-assets"
 
-    # VTO
-    VTO_MODEL_ID: str = getenv("VTO_MODEL_ID", "virtual-try-on-exp-05-31")
+        return self
 
-    # Lyria
-    LYRIA_MODEL_VERSION: str = getenv("LYRIA_MODEL_VERSION", "lyria-002")
-    LYRIA_PROJECT_ID: str = getenv("LYRIA_PROJECT_ID", "")
-    MEDIA_BUCKET: str = getenv("MEDIA_BUCKET", f"{PROJECT_ID}-assets")
+    # This computed field cleanly separates the raw string from the processed set.
+    @computed_field
+    @property
+    def ALLOWED_ORGS(self) -> Set[str]:
+        return set(
+            org.strip()
+            for org in self.ALLOWED_ORGS_STR.split(",")
+            if org.strip()
+        )
 
-    # Imagen
-    MODEL_IMAGEN_PRODUCT_RECONTEXT: str = getenv("MODEL_IMAGEN_PRODUCT_RECONTEXT", "imagen-product-recontext-preview-06-30")
+    @computed_field
+    @property
+    def VIDEO_BUCKET(self) -> str:
+        return f"{self.GENMEDIA_BUCKET}/videos"
 
-    IMAGEN_GENERATED_SUBFOLDER: str = getenv("IMAGEN_GENERATED_SUBFOLDER", "generated_images")
-    IMAGEN_EDITED_SUBFOLDER: str = getenv("IMAGEN_EDITED_SUBFOLDER", "edited_images")
+    @computed_field
+    @property
+    def IMAGE_BUCKET(self) -> str:
+        return f"{self.GENMEDIA_BUCKET}/images"
 
-    IMAGEN_PROMPTS_JSON = "prompts/imagen_prompts.json"
 
-    image_modifiers: list[str] = field(
-        default_factory=lambda: [
-            "aspect_ratio",
-            "content_type",
-            "color_tone",
-            "lighting",
-            "composition",
-        ]
-    )
+# Create a single, cached instance of the settings to be used throughout the app.
+config_service = ConfigService()

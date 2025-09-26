@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.common.dto.pagination_response_dto import PaginationResponseDto
-from src.users.dto.user_create_dto import (
-    UserCreateDto,
-    UserUpdateRoleDto,
-)
-from src.users.dto.user_search_dto import UserSearchDto
-from src.users.user_service import UserService
 from src.auth.auth_guard import RoleChecker, get_current_user
-from src.users.user_model import User, UserRoleEnum
+from src.common.dto.pagination_response_dto import PaginationResponseDto
+from src.users.dto.user_create_dto import UserCreateDto, UserUpdateRoleDto
+from src.users.dto.user_search_dto import UserSearchDto
+from src.users.user_model import UserModel, UserRoleEnum
+from src.users.user_service import UserService
 
 # Define role checkers for convenience and clean code
 admin_only = Depends(RoleChecker(allowed_roles=[UserRoleEnum.ADMIN]))
@@ -19,13 +16,14 @@ router = APIRouter(
     tags=["Users"],
 )
 
+
 # You can still have a UserService dependency for other operations if needed.
 # However, for getting the current user, the auth dependency is all you need.
-@router.get("/me", response_model=User, status_code=status.HTTP_200_OK)
+@router.get("/me", response_model=UserModel, status_code=status.HTTP_200_OK)
 async def get_my_profile(
     # This is the magic. FastAPI runs get_current_user, which authenticates
     # the user and provides their UserData object here.
-    current_user: User = Depends(get_current_user)
+    current_user: UserModel = Depends(get_current_user),
 ):
     """
     Retrieves the profile for the currently authenticated user.
@@ -42,7 +40,7 @@ async def get_my_profile(
 # --- Admin-Only Endpoints ---
 @router.get(
     "",
-    response_model=PaginationResponseDto[User],
+    response_model=PaginationResponseDto[UserModel],
     summary="List All Users (Admin Only)",
     dependencies=[admin_only],
 )
@@ -59,7 +57,7 @@ async def list_all_users(
 
 @router.get(
     "/{user_id}",
-    response_model=User,
+    response_model=UserModel,
     summary="Get User by ID (Admin Only)",
     dependencies=[admin_only],
 )
@@ -77,7 +75,7 @@ async def get_user_by_id(user_id: str, user_service: UserService = Depends()):
 
 @router.put(
     "/{user_id}",
-    response_model=User,
+    response_model=UserModel,
     summary="Update a User's Role (Admin Only)",
     dependencies=[admin_only],
 )

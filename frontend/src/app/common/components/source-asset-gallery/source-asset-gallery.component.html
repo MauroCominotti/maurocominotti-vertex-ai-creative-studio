@@ -1,0 +1,42 @@
+<div *ngIf="isLoading" class="loading-container">
+  <mat-progress-spinner color="primary" mode="indeterminate"></mat-progress-spinner>
+  <p>Loading your assets...</p>
+</div>
+
+<div *ngIf="!isLoading && assets.length === 0" class="no-assets-container">
+  <p *ngIf="!filterByType">You have not uploaded any assets yet.</p>
+  <p *ngIf="filterByType">
+    You have not uploaded any {{ filterByType.split('/')[0] }} assets yet.
+  </p>
+</div>
+
+<div class="asset-grid" *ngIf="assets.length > 0 && !isLoading">
+  <div
+    *ngFor="let asset of assets; trackBy: trackByAsset"
+    class="asset-item"
+    (click)="selectAsset(asset)"
+  >
+    <img
+      [src]="asset.presignedThumbnailUrl || asset.presignedUrl"
+      [alt]="asset.originalFilename"
+    />
+    <div *ngIf="asset.mimeType?.startsWith('video/')" class="play-indicator-overlay">
+      <svg
+        class="play-indicator-icon"
+        fill="currentColor"
+        viewBox="0 0 20 20"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+          clip-rule="evenodd"
+        ></path>
+      </svg>
+    </div>
+    <mat-icon *ngIf="asset.mimeType?.startsWith('video/')" class="video-indicator">videocam</mat-icon>
+  </div>
+</div>
+
+<!-- Sentinel element for infinite scroll -->
+<div #sentinel></div>

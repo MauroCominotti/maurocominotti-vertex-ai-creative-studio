@@ -32,7 +32,7 @@ export class MediaTemplateFormComponent implements OnInit, OnDestroy {
 
   imageModels: GenerationModelEnum[] = Object.values(
     GenerationModelEnum,
-  ).filter(model => model.startsWith('imagen') || model.startsWith('imagegen'));
+  ).filter(model => model.includes('image'));
   videoModels: GenerationModelEnum[] = Object.values(
     GenerationModelEnum,
   ).filter(model => model.startsWith('veo'));

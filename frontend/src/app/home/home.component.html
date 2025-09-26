@@ -93,7 +93,19 @@
       <!-- Image Gallery -->
       <ng-template #imageGallery>
         <div class="grid grid-cols-1 gap-4">
-          <app-media-lightbox *ngIf="imagenDocuments" [mediaItem]="imagenDocuments" [initialIndex]="0" [showSeeMoreInfoButton]="true" style="max-height: 80vh;"></app-media-lightbox>
+          <app-media-lightbox
+            *ngIf="imagenDocuments"
+            [mediaItem]="imagenDocuments"
+            [initialIndex]="0"
+            [showSeeMoreInfoButton]="true"
+            [showEditButton]="true"
+            [showGenerateVideoButton]="true"
+            [showVtoButton]="true"
+            (editClicked)="editResultImage($event)"
+            (generateVideoClicked)="generateVideoWithImage($event)"
+            (sendToVtoClicked)="sendToVto($event)"
+            style="max-height: 60vh;"
+          ></app-media-lightbox>
         </div>
       </ng-template>
     </ng-template>
@@ -123,6 +135,7 @@
             mat-menu-item
             (click)="selectAspectRatio(ratio.value)"
           >
+            <mat-icon>{{ ratio.icon }}</mat-icon>
             <span>{{ ratio.viewValue }}</span>
           </button>
         </mat-menu>
@@ -137,9 +150,19 @@
           [matMenuTriggerFor]="modelMenu"
           class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300"
         >
-          <mat-icon svgIcon="content-type-icon"></mat-icon>
+          @if (selectedGenerationModelObject.isImage) {
+            <img
+              [src]="selectedGenerationModelObject.imageSrc"
+              class="w-8 h-8"
+              alt="model icon"
+            />
+          } @else {
+            <mat-icon svgIcon="content-type-icon"></mat-icon>
+          }
         </button>
-        <div class="text-center justify-center text-neutral-200 text-base mt-2">
+        <div
+          class="text-center justify-center text-neutral-200 text-base mt-2 inline-flex items-center"
+        >
           {{ selectedGenerationModel }}
         </div>
         <mat-menu #modelMenu="matMenu">
@@ -148,6 +171,19 @@
             mat-menu-item
             (click)="selectModel(model)"
           >
+            <img
+              *ngIf="model.isImage"
+              [src]="model.imageSrc"
+              class="menu-image-icon"
+              alt="model icon"
+            />
+            <mat-icon *ngIf="!model.isImage && !model.isSvg">{{
+              model.icon
+            }}</mat-icon>
+            <mat-icon
+              *ngIf="!model.isImage && model.isSvg"
+              [svgIcon]="model.icon"
+            ></mat-icon>
             <span>{{ model.viewValue }}</span>
           </button>
         </mat-menu>
@@ -344,7 +380,7 @@
           </button>
         </mat-menu>
       </div>
-      <div
+      <!-- <div
         matTooltip="Replay Last Execution"
         class="cursor-pointer w-12 h-12 bg-black rounded-3xl flex justify-center items-center gap-2.5 overflow-hidden mt-4"
       >
@@ -354,10 +390,10 @@
         >
           <mat-icon>replay</mat-icon>
         </button>
-      </div>
+      </div> -->
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 my-8">
       <div class="lg:col-span-3 flex flex-col justify-start items-start gap-4">
         <div
           class="justify-center text-neutral-200 text-base font-bold leading-7"
@@ -367,17 +403,17 @@
         <textarea
           id="promptId"
           [(ngModel)]="searchRequest.prompt"
-          class="self-stretch w-full h-56 p-4 bg-transparent md:bg-zinc-700 rounded-2xl text-stone-300 text-base font-normal leading-7 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          class="self-stretch w-full h-48 p-4 bg-transparent md:bg-zinc-700 rounded-2xl text-stone-300 text-base font-normal leading-7 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           placeholder="Enter your prompt here..."
         ></textarea>
         <div
           class="inline-flex justify-between items-center grid grid-cols-1 md:flex gap-4"
         >
           <div class="flex justify-start items-center gap-4">
-            <button mat-raised-button color="primary" (click)="getRandomPrompt()" [disabled]="isLoading">
+            <!-- <button mat-raised-button color="primary" (click)="getRandomPrompt()" [disabled]="isLoading">
               <mat-icon>shuffle</mat-icon>
               Random
-            </button>
+            </button> -->
             <button mat-raised-button color="primary" (click)="rewritePrompt()" [disabled]="isLoading">
               <mat-icon>drive_file_rename_outline</mat-icon>
               Rewrite
@@ -387,25 +423,48 @@
               <span
                 class="font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-red-400 bg-clip-text text-transparent"
               >
-                Generate Ad
+                Generate
               </span>
             </button>
           </div>
           <button mat-stroked-button class="!text-white" (click)="resetAllFilters()" [disabled]="isLoading">Clear</button>
         </div>
       </div>
-      <div class="lg:col-span-1 flex flex-col justify-start items-start gap-4">
+      <div class="lg:col-span-1 grid grid-cols-2 gap-4 text-center">
         <div
-          class="justify-end text-neutral-200 text-base font-bold leading-7"
-          style="align-self: flex-end"
+          class="drop-zone"
+          (click)="openImageSelector(1)"
+          (dragover)="$event.preventDefault()"
+          (drop)="onDrop($event, 1)"
         >
-          Magazine Editor
+          <div *ngIf="!image1Preview" class="drop-zone-placeholder">
+            <mat-icon>add_photo_alternate</mat-icon>
+            <span>Drop product/image 1 or click to select</span>
+          </div>
+          <div *ngIf="image1Preview" class="image-preview-container">
+            <img [src]="image1Preview" alt="Dropped Image 1" />
+            <button (click)="clearImage(1, $event)" class="clear-button" mat-icon-button>
+                <mat-icon>close</mat-icon>
+            </button>
+          </div>
         </div>
-        <textarea
-          id="magazinId"
-          class="w-full h-56 p-4 bg-transparent md:bg-zinc-700 rounded-xl text-neutral-200 text-base font-normal leading-7 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-          placeholder="This image has a great energy and captures the sophisticated, modern aesthetic of the Cymbal brand perfectly."
-        ></textarea>
+        <div
+          class="drop-zone"
+          (dragover)="$event.preventDefault()"
+          (click)="openImageSelector(2)"
+          (drop)="onDrop($event, 2)"
+        >
+          <div *ngIf="!image2Preview" class="drop-zone-placeholder">
+            <mat-icon>add_photo_alternate</mat-icon>
+            <span>Drop scene/image 2 or click to select</span>
+          </div>
+          <div *ngIf="image2Preview" class="image-preview-container">
+            <img [src]="image2Preview" alt="Dropped Image 2" />
+            <button (click)="clearImage(2, $event)" class="clear-button" mat-icon-button>
+                <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -1,15 +1,21 @@
-from typing import  Optional
+from typing import Optional
+
 from fastapi import Query
-from pydantic import  Field, field_validator
+from pydantic import Field, field_validator
 from typing_extensions import Annotated
+
 from src.common.base_dto import (
+    AspectRatioEnum,
     BaseDto,
     ColorAndToneEnum,
-    GenerationModelEnum,
-    AspectRatioEnum,
-    StyleEnum,
-    LightingEnum,
     CompositionEnum,
+    GenerationModelEnum,
+    LightingEnum,
+    StyleEnum,
+)
+from src.common.schema.media_item_model import (
+    AssetRoleEnum,
+    SourceMediaItemLink,
 )
 
 
@@ -21,6 +27,9 @@ class CreateVeoDto(BaseDto):
 
     prompt: Annotated[str, Query(max_length=10000)] = Field(
         description="Prompt term to be passed to the model"
+    )
+    workspace_id: str = Field(
+        min_length=1, description="The ID of the workspace for this generation."
     )
     generation_model: GenerationModelEnum = Field(
         default=GenerationModelEnum.VEO_3_FAST,
@@ -62,11 +71,46 @@ class CreateVeoDto(BaseDto):
         le=8,
         description="Duration in seconds for the videos to generate (between 1 and 8 secs).",
     )
+    start_image_asset_id: Optional[str] = Field(
+        default=None,
+        description="The ID of the SourceAsset to use as the starting image.",
+    )
+    end_image_asset_id: Optional[str] = Field(
+        default=None,
+        description="The ID of the SourceAsset to use as the ending image.",
+    )
+    source_video_asset_id: Optional[str] = Field(
+        default=None,
+        description="The ID of the SourceAsset to use as the source video.",
+    )
+    source_media_items: Optional[list[SourceMediaItemLink]] = Field(
+        default=None,
+        description="A list of previously generated media items (from the gallery) to be used as inputs (e.g., start/end frames).",
+    )
 
     @field_validator("prompt")
     def prompt_must_not_be_empty(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("Prompt cannot be empty or whitespace only")
+        return value
+
+    @field_validator("source_media_items")
+    def validate_source_media_item_roles(
+        cls, value: Optional[list[SourceMediaItemLink]]
+    ) -> Optional[list[SourceMediaItemLink]]:
+        """Ensures that source_media_items for video have a valid role."""
+        if value:
+            valid_roles = {
+                AssetRoleEnum.START_FRAME,
+                AssetRoleEnum.END_FRAME,
+                AssetRoleEnum.VIDEO_EXTENSION_SOURCE,
+            }
+            for item in value:
+                if item.role not in valid_roles:
+                    raise ValueError(
+                        f"Invalid role '{item.role}' for source_media_item in video generation. "
+                        f"Allowed roles are: {', '.join(r.value for r in valid_roles)}"
+                    )
         return value
 
     @field_validator("aspect_ratio")

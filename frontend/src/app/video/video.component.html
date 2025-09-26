@@ -27,8 +27,37 @@
         </div>
       </div>
     </ng-container>
+
     <ng-template #videoOrGallery>
-      <ng-container *ngIf="(videoDocuments?.presignedUrls?.length || 0) === 0; else videoGallery">
+
+      <ng-container *ngIf="activeVideoJob$ | async as job">
+        <div *ngIf="job.status === JobStatus.PROCESSING" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black bg-opacity-70 rounded-xl">
+          <mat-progress-spinner color="primary" mode="indeterminate" [diameter]="50"></mat-progress-spinner>
+          <p class="mt-4 text-white text-lg">Your video is being generated...</p>
+          <p class="text-gray-400 text-sm">This may take a few minutes. You can safely navigate away.</p>
+        </div>
+
+        <div *ngIf="job.status === JobStatus.FAILED && showErrorOverlay" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black bg-opacity-70 rounded-xl text-center p-4">
+          <mat-icon class="text-red-500 !w-16 !h-16 !text-6xl">error_outline</mat-icon>
+          <p class="mt-4 text-white text-lg">Video Generation Failed</p>
+          <p class="text-gray-400 text-sm max-w-md">{{ job.errorMessage || job.error_message }}</p>
+          <button mat-raised-button color="primary" (click)="closeErrorOverlay()" class="mt-4">Close</button>
+        </div>
+
+
+        <!-- Video Gallery -->
+        <app-media-lightbox
+          *ngIf="job.status === JobStatus.COMPLETED"
+          [mediaItem]="job"
+          [initialIndex]="0"
+          [showSeeMoreInfoButton]="true"
+          (extendWithAiClicked)="handleExtendWithAi($event)"
+          (concatenateClicked)="handleConcatenate($event)"
+          style="max-height: 60vh;"
+        ></app-media-lightbox>
+      </ng-container>
+
+      <ng-container *ngIf="(activeVideoJob$ | async)?.status !== JobStatus.COMPLETED">
         <div class="video-container">
           <video
             class="w-full rounded-xl"
@@ -51,12 +80,6 @@
           </div>
         </div>
       </ng-container>
-      <!-- Video Gallery -->
-      <ng-template #videoGallery>
-        <div class="grid grid-cols-1 gap-4">
-          <app-media-lightbox *ngIf="videoDocuments" [mediaItem]="videoDocuments" [initialIndex]="0" [showSeeMoreInfoButton]="true" style="max-height: 80vh;"></app-media-lightbox>
-        </div>
-      </ng-template>
     </ng-template>
 
     <!-- Control Options -->
@@ -325,7 +348,7 @@
         </mat-menu>
       </div>
 
-      <div
+      <!-- <div
         matTooltip="Replay Last Execution"
         class="cursor-pointer w-12 h-12 bg-black rounded-3xl flex justify-center items-center gap-2.5 overflow-hidden mt-4"
       >
@@ -335,11 +358,11 @@
         >
           <mat-icon>replay</mat-icon>
         </button>
-      </div>
+      </div> -->
     </div>
 
     <!-- Prompt Generator -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 my-8">
       <!-- Prompt Section -->
       <div class="lg:col-span-3 flex flex-col justify-start items-start gap-4">
         <div
@@ -347,20 +370,20 @@
         >
           Prompt:
         </div>
-        <textarea
+        <textarea [disabled]="isConcatenateMode"
           id="promptId"
           [(ngModel)]="searchRequest.prompt"
-          class="self-stretch w-full h-56 p-4 bg-transparent md:bg-zinc-700 rounded-2xl text-stone-300 text-base font-normal leading-7 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          class="self-stretch w-full h-48 p-4 bg-transparent md:bg-zinc-700 rounded-2xl text-stone-300 text-base font-normal leading-7 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           placeholder="Enter your prompt here..."
         ></textarea>
         <div
           class="inline-flex justify-between items-center grid grid-cols-1 lg:flex gap-4"
         >
           <div class="flex justify-start items-center gap-4">
-            <button mat-raised-button color="primary" (click)="getRandomPrompt()" [disabled]="isLoading">
+            <!-- <button mat-raised-button color="primary" (click)="getRandomPrompt()" [disabled]="isLoading">
               <mat-icon>shuffle</mat-icon>
               Random
-            </button>
+            </button> -->
             <button mat-raised-button color="primary" (click)="rewritePrompt()" [disabled]="isLoading">
               <mat-icon>drive_file_rename_outline</mat-icon>
               Rewrite
@@ -370,26 +393,54 @@
               <span
                 class="font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-red-400 bg-clip-text text-transparent"
               >
-                Generate Ads
+                @if (isExtensionMode) { Extend with AI } @else if (isConcatenateMode) {
+                  Concatenate
+                } @else {
+                  Generate
+                }
               </span>
             </button>
           </div>
           <button mat-stroked-button class="!text-white" (click)="resetAllFilters()" [disabled]="isLoading">Clear</button>
         </div>
       </div>
-      <!-- Magazin Editor Section -->
-      <div class="lg:col-span-1 flex flex-col justify-start items-start gap-4">
+
+      <div class="lg:col-span-1 grid grid-cols-2 gap-4 text-center">
         <div
-          class="justify-center text-neutral-200 text-base font-bold leading-7"
-          style="align-self: flex-end"
+          class="drop-zone"
+          (click)="openImageSelector(1)"
+          (dragover)="$event.preventDefault()"
+          (drop)="onDrop($event, 1)"
         >
-          Magazin Editor
+          <div *ngIf="!image1Preview" class="drop-zone-placeholder">
+            <mat-icon>add_photo_alternate</mat-icon>
+            <span>Drop image to start video or click to select</span>
+          </div>
+          <div *ngIf="image1Preview" class="image-preview-container">
+            <img [src]="image1Preview" alt="Dropped Image 1" />
+            <button (click)="clearImage(1, $event)" class="clear-button" mat-icon-button>
+                <mat-icon>close</mat-icon>
+            </button>
+          </div>
         </div>
-        <textarea
-          id="magazinId"
-          class="w-full h-56 p-4 bg-transparent md:bg-zinc-700 rounded-xl text-neutral-200 text-base font-normal leading-7 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-          placeholder="I am here to help with your creative design!"
-        ></textarea>
+        <div
+          class="drop-zone"
+          (click)="openImageSelector(2)"
+          (dragover)="$event.preventDefault()"
+          (drop)="onDrop($event, 2)"
+        >
+          <div *ngIf="!image2Preview" class="drop-zone-placeholder">
+            <mat-icon>add_photo_alternate</mat-icon>
+            <span>Drop image to finish video or click to select</span>
+          </div>
+          <div *ngIf="image2Preview" class="image-preview-container">
+            <img [src]="image2Preview" alt="Dropped Image 2" />
+            <button (click)="clearImage(2, $event)" class="clear-button" mat-icon-button>
+                <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>

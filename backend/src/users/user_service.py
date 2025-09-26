@@ -1,11 +1,11 @@
-from typing import List, Optional
+from typing import Optional
+
 from src.common.dto.pagination_response_dto import PaginationResponseDto
-from src.users.dto.user_create_dto import (
-    UserUpdateRoleDto,
-)
+from src.users.dto.user_create_dto import UserUpdateRoleDto
 from src.users.dto.user_search_dto import UserSearchDto
 from src.users.repository.user_repository import UserRepository
-from src.users.user_model import User, UserRoleEnum
+from src.users.user_model import UserModel, UserRoleEnum
+
 
 class UserService:
     """
@@ -14,28 +14,31 @@ class UserService:
     def __init__(self):
         self.user_repo = UserRepository()
 
-    def create_user_if_not_exists(self, uid: str, email: str, name: str, picture: str) -> User:
+    def create_user_if_not_exists(
+        self, email: str, name: str, picture: Optional[str]
+    ) -> UserModel:
         """
         Retrieves a user by their UID. If the user exists, it updates their
         last login time. If the user doesn't exist, it creates a new user
         document with the current time as the last login.
         """
+
         # 1. Check if the user already exists in the database.
-        existing_user = self.user_repo.get_by_id(uid)
+        # existing_user = self.user_repo.get_by_id(uid)
+        existing_user = self.user_repo.get_by_email(email)
 
         if existing_user:
             return existing_user
 
         # 2. If the user does not exist, create a new User model instance
         #    The document ID is the Firebase UID
-        new_user = User(
-            id=uid,
+        new_user = UserModel(
             email=email,
             roles=[
                 UserRoleEnum.USER
             ],  # Assign a default role "user" for all new users
             name=name,
-            picture=picture,
+            picture=picture or "",  # Ensure picture is a string, not None
         )
 
         # 3. Call the repository's save() method to create the new document
@@ -43,19 +46,19 @@ class UserService:
 
         return new_user
 
-    def get_user_by_id(self, user_id: str) -> Optional[User]:
+    def get_user_by_id(self, user_id: str) -> Optional[UserModel]:
         """Finds a single user by their document ID."""
         return self.user_repo.get_by_id(user_id)
 
     def find_all_users(
         self, search_dto: UserSearchDto
-    ) -> PaginationResponseDto[User]:
+    ) -> PaginationResponseDto[UserModel]:
         """Retrieves a paginated list of all users."""
         return self.user_repo.query(search_dto)
 
     def update_user_role(
         self, user_id: str, role_data: UserUpdateRoleDto
-    ) -> Optional[User]:
+    ) -> Optional[UserModel]:
         """Updates the role of a specific user."""
         # Convert the list of enums to a list of strings for Firestore
         roles_as_strings = [role.value for role in role_data.roles]

@@ -11,6 +11,6 @@ class CustomImagenResult(BaseDto):
 
 
 class ImageGenerationResult(BaseDto):
-    enhanced_prompt: str
+    enhanced_prompt: Optional[str]
     rai_filtered_reason: Optional[str]
     image: CustomImagenResult

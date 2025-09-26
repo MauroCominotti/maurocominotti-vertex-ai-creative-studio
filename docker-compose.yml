@@ -26,14 +26,8 @@ services:
       # Mount the gcloud ADC directory. Replace with the correct path for your OS if different. :ro - read-only for better security
       - ~/.config/gcloud/:/root/.config/gcloud:ro # Linux/macOS example:
       # - %APPDATA%/gcloud:/root/.config/gcloud:ro # Windows example:
-    environment:
-      ENVIRONMENT: development
-      FRONTEND_URL: http://localhost:4200
-      # Replace the following variables with your own
-      GENMEDIA_BUCKET: creative-studio-arena-genmedia
-      SIGNING_SA_EMAIL: sa-genmedia-creative-studio@creative-studio-arena.iam.gserviceaccount.com
-      GCLOUD_PROJECT: my-project-id
-      GOOGLE_APPLICATION_CREDENTIALS: "/root/.config/gcloud/application_default_credentials.json"
+    env_file:
+      - ./backend/.env # Update as needed, for ex to './backend/.local.env'
     restart: unless-stopped
     develop:
       # Create a `watch` configuration to update the app

@@ -4,6 +4,7 @@ import {
   Input,
   OnChanges,
   OnDestroy,
+  Output,
   SimpleChanges,
 } from '@angular/core';
 import {MediaItem} from '../../models/media-item.model';
@@ -11,6 +12,7 @@ import PhotoSwipeLightbox from 'photoswipe/lightbox';
 import {Clipboard} from '@angular/cdk/clipboard';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {ActivatedRoute, Router} from '@angular/router';
+import {EventEmitter} from '@angular/core';
 import {Location} from '@angular/common';
 
 @Component({
@@ -24,6 +26,25 @@ export class MediaLightboxComponent
   @Input() mediaItem: MediaItem | undefined;
   @Input() initialIndex = 0;
   @Input() showSeeMoreInfoButton = false;
+  @Input() showShareButton = true;
+  @Input() showDownloadButton = true;
+  @Input() showEditButton = false;
+  @Input() showGenerateVideoButton = false;
+  @Input() showVtoButton = false;
+  @Output() editClicked = new EventEmitter<number>();
+  @Output() generateVideoClicked = new EventEmitter<{
+    role: 'start' | 'end';
+    index: number;
+  }>();
+  @Output() sendToVtoClicked = new EventEmitter<number>();
+  @Output() extendWithAiClicked = new EventEmitter<{
+    mediaItem: MediaItem;
+    selectedIndex: number;
+  }>();
+  @Output() concatenateClicked = new EventEmitter<{
+    mediaItem: MediaItem;
+    selectedIndex: number;
+  }>();
 
   selectedIndex = 0;
   selectedUrl: string | undefined;
@@ -190,14 +211,11 @@ export class MediaLightboxComponent
     }
 
     // Create a URL tree with the path and query parameters for the specific image
-    const urlTree = this.router.createUrlTree(
-      ['/gallery', this.mediaItem.id],
-      {
-        queryParams: {
-          img_index: this.selectedIndex > 0 ? this.selectedIndex : null,
-        },
+    const urlTree = this.router.createUrlTree(['/gallery', this.mediaItem.id], {
+      queryParams: {
+        img_index: this.selectedIndex > 0 ? this.selectedIndex : null,
       },
-    );
+    });
     // Serialize the tree to a relative path string (e.g., /gallery/123?img_index=2)
     const relativeUrl = this.router.serializeUrl(urlTree);
     // Combine with the window's origin to get the full, absolute URL
@@ -223,6 +241,17 @@ export class MediaLightboxComponent
   }
 
   private updateUrlWithImageIndex(index: number): void {
+    // This component is used on multiple pages (VTO, Home, Gallery).
+    // We should ONLY manipulate the URL when on the gallery detail page.
+    // Otherwise, it can cause unintended navigations and state loss.
+    console.log('this.router.url', this.router.url);
+    if (!this.router.url.startsWith('/gallery/')) {
+      console.log(
+        'MediaLightbox: Skipping URL update because we are not on a gallery detail page. Current URL:',
+        this.router.url,
+      );
+      return;
+    }
     const url = this.router
       .createUrlTree([], {
         relativeTo: this.route,
@@ -238,7 +267,11 @@ export class MediaLightboxComponent
   seeMoreInfo(): void {
     if (this.mediaItem?.id) {
       const url = this.router.serializeUrl(
-        this.router.createUrlTree(['/gallery', this.mediaItem.id]),
+        this.router.createUrlTree(['/gallery', this.mediaItem.id], {
+          queryParams: {
+            img_index: this.selectedIndex > 0 ? this.selectedIndex : null,
+          },
+        }),
       );
       window.open(url, '_blank');
     }
@@ -268,6 +301,36 @@ export class MediaLightboxComponent
       default:
         // For arbitrary values like '4:3', '3:4', etc.
         return `aspect-[${ratio.replace(':', '/')}]`;
+    }
+  }
+
+  onEditClick(): void {
+    this.editClicked.emit(this.selectedIndex);
+  }
+
+  onGenerateVideoClick(role: 'start' | 'end'): void {
+    this.generateVideoClicked.emit({role, index: this.selectedIndex});
+  }
+
+  onSendToVtoClick(): void {
+    this.sendToVtoClicked.emit(this.selectedIndex);
+  }
+
+  onExtendWithAiClick() {
+    if (this.mediaItem) {
+      this.extendWithAiClicked.emit({
+        mediaItem: this.mediaItem,
+        selectedIndex: this.selectedIndex,
+      });
+    }
+  }
+
+  onConcatenateClick() {
+    if (this.mediaItem) {
+      this.concatenateClicked.emit({
+        mediaItem: this.mediaItem,
+        selectedIndex: this.selectedIndex,
+      });
     }
   }
 }

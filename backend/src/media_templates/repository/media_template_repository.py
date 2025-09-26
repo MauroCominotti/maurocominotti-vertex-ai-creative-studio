@@ -1,12 +1,12 @@
 from google.cloud import firestore
-from google.cloud.firestore_v1.base_query import FieldFilter
-
-from src.common.dto.pagination_response_dto import PaginationResponseDto
-from src.media_templates.schema.media_template_model import MediaTemplateModel
-from src.media_templates.dto.template_search_dto import TemplateSearchDto
-from src.common.base_repository import BaseRepository
-from google.cloud.firestore_v1.query_results import QueryResultsList
 from google.cloud.firestore_v1.base_aggregation import AggregationResult
+from google.cloud.firestore_v1.base_query import FieldFilter
+from google.cloud.firestore_v1.query_results import QueryResultsList
+
+from src.common.base_repository import BaseRepository
+from src.common.dto.pagination_response_dto import PaginationResponseDto
+from src.media_templates.dto.template_search_dto import TemplateSearchDto
+from src.media_templates.schema.media_template_model import MediaTemplateModel
 
 
 class MediaTemplateRepository(BaseRepository[MediaTemplateModel]):
@@ -15,23 +15,6 @@ class MediaTemplateRepository(BaseRepository[MediaTemplateModel]):
     def __init__(self):
         """Initializes the repository for the 'media_template_library' collection."""
         super().__init__(collection_name="media_template_library", model=MediaTemplateModel)
-
-    def delete(self, template_id: str) -> bool:
-        """
-        Deletes a template document from Firestore.
-
-        Args:
-            template_id: The ID of the document to delete.
-
-        Returns:
-            True if the document was deleted, False if it was not found.
-        """
-        doc_ref = self.collection_ref.document(template_id)
-        if not doc_ref.get().exists:
-            return False
-
-        doc_ref.delete()
-        return True
 
     def query(
         self, search_dto: TemplateSearchDto
@@ -61,7 +44,7 @@ class MediaTemplateRepository(BaseRepository[MediaTemplateModel]):
             )
         if search_dto.tag:
             base_query = base_query.where(
-                filter=FieldFilter("tags", "array-contains", search_dto.tag)
+                filter=FieldFilter("tags", "array_contains", search_dto.tag)
             )
 
         count_query = base_query.count(alias="total")

@@ -1,12 +1,14 @@
 from typing import List, Optional
-from google.cloud import firestore
 
-from src.common.dto.pagination_response_dto import PaginationResponseDto
-from src.galleries.dto.gallery_search_dto import GallerySearchDto
-from src.common.base_repository import BaseRepository
-from src.common.schema.media_item_model import MediaItemModel
-from google.cloud.firestore_v1.query_results import QueryResultsList
+from google.cloud import firestore
 from google.cloud.firestore_v1.base_aggregation import AggregationResult
+from google.cloud.firestore_v1.base_query import FieldFilter
+from google.cloud.firestore_v1.query_results import QueryResultsList
+
+from src.common.base_repository import BaseRepository
+from src.common.dto.pagination_response_dto import PaginationResponseDto
+from src.common.schema.media_item_model import MediaItemModel
+from src.galleries.dto.gallery_search_dto import GallerySearchDto
 
 
 class MediaRepository(BaseRepository[MediaItemModel]):
@@ -17,12 +19,15 @@ class MediaRepository(BaseRepository[MediaItemModel]):
         super().__init__(collection_name="media_library", model=MediaItemModel)
 
     def query(
-        self, search_dto: GallerySearchDto
+        self,
+        search_dto: GallerySearchDto,
+        extra_filters: Optional[List[FieldFilter]] = None,
     ) -> PaginationResponseDto[MediaItemModel]:
         """
         Performs a generic, paginated query on the media_library collection.
         """
         base_query = self.collection_ref
+        extra_filters = extra_filters or []
 
         if search_dto.user_email:
             base_query = base_query.where(
@@ -34,6 +39,12 @@ class MediaRepository(BaseRepository[MediaItemModel]):
             )
         if search_dto.model:
             base_query = base_query.where("model", "==", search_dto.model)
+        if search_dto.status:
+            base_query = base_query.where("status", "==", search_dto.status)
+
+        # Apply any additional filters passed in
+        for f in extra_filters:
+            base_query = base_query.where(filter=f)
 
         count_query = base_query.count(alias="total")
         aggregation_result = count_query.get()

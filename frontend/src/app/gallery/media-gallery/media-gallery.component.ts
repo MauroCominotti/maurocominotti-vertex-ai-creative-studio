@@ -1,19 +1,36 @@
-import {Component, HostListener, OnDestroy, OnInit} from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  AfterViewInit,
+  OnDestroy,
+  OnInit,
+  Input,
+  Output,
+  ElementRef,
+  ViewChild,
+  NgZone,
+} from '@angular/core';
 import {Subscription, fromEvent} from 'rxjs';
 import {debounceTime} from 'rxjs/operators';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {MatIconRegistry} from '@angular/material/icon';
-import {MediaItem} from '../../common/models/media-item.model';
+import {JobStatus, MediaItem} from '../../common/models/media-item.model';
 import {MatCheckboxChange} from '@angular/material/checkbox';
 import {GalleryService} from '../gallery.service';
+import {MediaItemSelection} from '../../common/components/image-selector/image-selector.component';
 import {UserService} from '../../common/services/user.service';
+import {GallerySearchDto} from '../../common/models/search.model';
 
 @Component({
   selector: 'app-media-gallery',
   templateUrl: './media-gallery.component.html',
   styleUrl: './media-gallery.component.scss',
 })
-export class MediaGalleryComponent implements OnInit, OnDestroy {
+export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
+  @Output() mediaItemSelected = new EventEmitter<MediaItemSelection>();
+  @Input() filterByType: 'image/png' | 'video/mp4' | 'audio/mpeg' | null = null;
+  @Input() statusFilter: JobStatus | null = JobStatus.COMPLETED;
+
   public images: MediaItem[] = [];
   public columns: MediaItem[][] = [];
   allImagesLoaded = false;
@@ -22,6 +39,8 @@ export class MediaGalleryComponent implements OnInit, OnDestroy {
   private allImagesLoadedSubscription: Subscription | undefined;
   private loadingSubscription: Subscription | undefined;
   private resizeSubscription: Subscription | undefined;
+  private _hostVisibilityObserver!: IntersectionObserver;
+  private _scrollObserver!: IntersectionObserver;
   private numColumns = 4;
   public userEmailFilter = '';
   public mediaTypeFilter = '';
@@ -29,15 +48,17 @@ export class MediaGalleryComponent implements OnInit, OnDestroy {
   public showOnlyMyMedia = false;
   public generationModels = [
     {
-      value: 'imagen-4.0-ultra-generate-preview-06-06',
+      value: 'gemini-2.5-flash-image-preview',
+      viewValue: 'Nano Banana',
+    },
+    {
+      value: 'imagen-4.0-ultra-generate-001',
       viewValue: 'Imagen 4 Ultra',
     },
-    {value: 'imagen-3.0-generate-002', viewValue: 'Imagen 3'},
-    {value: 'imagen-3.0-fast-generate-001', viewValue: 'Imagen 3 Fast'},
-    {value: 'imagen-3.0-generate-001', viewValue: 'Imagen 3 (001)'},
-    {value: 'imagegeneration@006', viewValue: 'ImageGen (006)'},
-    {value: 'imagegeneration@005', viewValue: 'ImageGen (005)'},
-    {value: 'imagegeneration@002', viewValue: 'ImageGen (002)'},
+    {
+      value: 'imagen-4.0-fast-generate-001',
+      viewValue: 'Imagen 4 Ultra',
+    },
   ];
   private autoSlideIntervals: {[id: string]: any} = {};
   public currentImageIndices: {[id: string]: number} = {};
@@ -47,6 +68,8 @@ export class MediaGalleryComponent implements OnInit, OnDestroy {
     private sanitizer: DomSanitizer,
     public matIconRegistry: MatIconRegistry,
     private userService: UserService,
+    private elementRef: ElementRef,
+    private ngZone: NgZone,
   ) {
     this.matIconRegistry
       .addSvgIcon(
@@ -59,6 +82,8 @@ export class MediaGalleryComponent implements OnInit, OnDestroy {
       );
   }
 
+  @ViewChild('sentinel') private _sentinel!: ElementRef<HTMLElement>;
+
   private path = '../../assets/images';
 
   private setPath(url: string): SafeResourceUrl {
@@ -66,6 +91,8 @@ export class MediaGalleryComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.mediaTypeFilter = this.filterByType || '';
+    this.searchTerm(); // Set initial filters
     this.loadingSubscription = this.galleryService.isLoading$.subscribe(
       loading => {
         this.isLoading = loading;
@@ -74,9 +101,9 @@ export class MediaGalleryComponent implements OnInit, OnDestroy {
 
     this.imagesSubscription = this.galleryService.images$.subscribe(images => {
       if (images) {
-        this.images = images;
-        console.log('Images:', this.images);
-        this.images.forEach(image => {
+        // Find only the new images that have been added
+        const newImages = images.slice(this.images.length);
+        newImages.forEach(image => {
           if (this.currentImageIndices[image.id] === undefined) {
             this.currentImageIndices[image.id] = 0;
           }
@@ -84,11 +111,8 @@ export class MediaGalleryComponent implements OnInit, OnDestroy {
             this.startAutoSlide(image);
           }
         });
+        this.images = images;
         this.updateColumns();
-      }
-
-      if (!images || images.length === 0) {
-        this.galleryService.loadGallery(true);
       }
     });
 
@@ -103,12 +127,63 @@ export class MediaGalleryComponent implements OnInit, OnDestroy {
       .subscribe(() => this.handleResize());
   }
 
+  ngAfterViewInit(): void {
+    // This observer's job is to wait until the component's host element is actually
+    // visible in the DOM. This is important for components inside lazy-loaded tabs.
+    this._hostVisibilityObserver = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        // Now that the component is visible, we can safely find its scrollable parent
+        // and set up the observer for infinite scrolling.
+        this.setupInfiniteScrollObserver();
+        // We only need to do this once.
+        this._hostVisibilityObserver.disconnect();
+      }
+    });
+    this._hostVisibilityObserver.observe(this.elementRef.nativeElement);
+  }
+
   ngOnDestroy(): void {
     this.imagesSubscription?.unsubscribe();
     this.loadingSubscription?.unsubscribe();
     this.allImagesLoadedSubscription?.unsubscribe();
     this.resizeSubscription?.unsubscribe();
+    this._hostVisibilityObserver?.disconnect();
+    this._scrollObserver?.disconnect();
     Object.values(this.autoSlideIntervals).forEach(clearInterval);
+  }
+
+  private getScrollableContainer(): HTMLElement | null {
+    const element = this.elementRef.nativeElement as HTMLElement;
+    // When inside a dialog, `elementRef.nativeElement` might not have a `parentElement`
+    // immediately available, especially when inside other components like MatTabs.
+    // A more robust way is to find the dialog's overlay pane and query within it.
+    const overlayPane = element.closest('.cdk-overlay-pane');
+    return (
+      overlayPane?.querySelector<HTMLElement>('.mat-mdc-dialog-content') || null
+    );
+  }
+
+  private setupInfiniteScrollObserver(): void {
+    if (!this._sentinel) {
+      return;
+    }
+
+    const scrollRoot = this.getScrollableContainer();
+
+    this._scrollObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !this.isLoading && !this.allImagesLoaded) {
+          this.ngZone.run(() => {
+            this.galleryService.loadGallery();
+          });
+        }
+      },
+      {
+        root: scrollRoot,
+      },
+    );
+
+    this._scrollObserver.observe(this._sentinel.nativeElement);
   }
 
   public trackByImage(index: number, image: MediaItem): string {
@@ -147,6 +222,18 @@ export class MediaGalleryComponent implements OnInit, OnDestroy {
     const currentIndex = this.currentImageIndices[imageId] || 0;
     this.currentImageIndices[imageId] =
       (currentIndex - 1 + urlsLength) % urlsLength;
+  }
+
+  get isSelectionMode(): boolean {
+    return this.mediaItemSelected.observed;
+  }
+
+  selectMedia(mediaItem: MediaItem, event: MouseEvent) {
+    if (this.isSelectionMode) {
+      const selectedIndex = this.currentImageIndices[mediaItem.id] || 0;
+      // Emit the full media item and the selected index
+      this.mediaItemSelected.emit({mediaItem, selectedIndex});
+    }
   }
 
   public onMouseEnter(media: MediaItem): void {
@@ -249,37 +336,28 @@ export class MediaGalleryComponent implements OnInit, OnDestroy {
   }
 
   public searchTerm(): void {
-    const filters: {[key: string]: string} = {};
+    // Reset local component state for a new search to show the main loader
+    this.images = [];
+
+    const filters: GallerySearchDto = {limit: 20};
     if (this.userEmailFilter) {
       filters['userEmail'] = this.userEmailFilter;
     }
-    if (this.mediaTypeFilter) {
-      filters['mimeType'] = this.mediaTypeFilter;
+    const mimeType = this.filterByType
+      ? this.filterByType
+      : this.isSelectionMode
+        ? null
+        : this.mediaTypeFilter;
+    if (mimeType) {
+      filters['mimeType'] = mimeType;
     }
-    if (this.generationModelFilter) {
+    if (this.generationModelFilter && !this.isSelectionMode) {
       filters['model'] = this.generationModelFilter;
     }
+    if (this.statusFilter) {
+      filters['status'] = this.statusFilter;
+    }
+    console.log('Searching gallery with filters:', filters);
     this.galleryService.setFilters(filters);
-  }
-
-  /**
-   * Listens for the main window's scroll event to trigger infinite loading.
-   */
-  @HostListener('window:scroll', [])
-  onWindowScroll(): void {
-    // Check if we are already loading or if all images have been loaded to prevent multiple calls
-    if (this.galleryService.isLoading$.value) {
-      return;
-    }
-
-    // Check if the user has scrolled to near the bottom of the page
-    // We add a buffer (e.g., 200px) so the new content starts loading
-    // just before the user hits the absolute bottom.
-    if (
-      window.innerHeight + window.scrollY >=
-      document.documentElement.scrollHeight - 800
-    ) {
-      this.galleryService.loadGallery();
-    }
   }
 }

@@ -32,6 +32,10 @@ import {MatCardModule} from '@angular/material/card';
 import {ScrollingModule} from '@angular/cdk/scrolling';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MediaTemplateFormComponent} from './media-templates-management/media-template-form/media-template-form.component';
+import {SourceAssetsManagementComponent} from './source-assets-management/source-assets-management.component';
+import {SourceAssetFormComponent} from './source-assets-management/source-asset-form/source-asset-form.component';
+import {SourceAssetUploadFormComponent} from './source-assets-management/source-asset-upload-form/source-asset-upload-form.component';
+import {SharedModule} from '../common/shared.module';
 
 @NgModule({
   declarations: [
@@ -40,9 +44,13 @@ import {MediaTemplateFormComponent} from './media-templates-management/media-tem
     MediaTemplatesManagementComponent,
     UserFormComponent,
     MediaTemplateFormComponent,
+    SourceAssetsManagementComponent,
+    SourceAssetFormComponent,
+    SourceAssetUploadFormComponent,
   ],
   imports: [
     CommonModule,
+    SharedModule,
     AdminRoutingModule,
     MatSidenavModule,
     MatListModule,

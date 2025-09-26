@@ -20,19 +20,35 @@ import {
   OnDestroy,
   AfterViewInit,
   ElementRef,
+  Inject,
   ViewChild,
+  HostListener,
 } from '@angular/core';
-import {Router} from '@angular/router';
-import {MatChipInputEvent} from '@angular/material/chips';
+import {NavigationExtras, Router} from '@angular/router';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {MatIconRegistry} from '@angular/material/icon';
-import {finalize} from 'rxjs/operators';
+import {finalize, Observable, of} from 'rxjs';
+import {MatDialog} from '@angular/material/dialog';
 import {SearchService} from '../services/search/search.service';
-import {ImagenRequest} from '../common/models/search.model';
+import {
+  ImagenRequest,
+  SourceMediaItemLink,
+} from '../common/models/search.model';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {GenerationParameters} from '../fun-templates/media-template.model';
 import {handleErrorSnackbar} from '../utils/handleErrorSnackbar';
 import {MediaItem} from '../common/models/media-item.model';
+import {
+  ImageSelectorComponent,
+  MediaItemSelection,
+} from '../common/components/image-selector/image-selector.component';
+import {HttpClient} from '@angular/common/http';
+import {MatChipInputEvent} from '@angular/material/chips';
+import {SourceAssetResponseDto} from '../common/services/source-asset.service';
+import {environment} from '../../environments/environment';
+import {ToastMessageComponent} from '../common/components/toast-message/toast-message.component';
+import {WorkspaceStateService} from '../services/workspace/workspace-state.service';
+import {AssetTypeEnum} from '../admin/source-assets-management/source-asset.model';
 
 @Component({
   selector: 'app-home',
@@ -45,13 +61,26 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   isLoading = false;
   templateParams: GenerationParameters | undefined;
   showDefaultDocuments = false;
+  sourceAssetId1: string | null = null;
+  sourceAssetId2: string | null = null;
+  image1Preview: string | null = null;
+  image2Preview: string | null = null;
+  sourceMediaItems: (SourceMediaItemLink | null)[] = [];
+  activeWorkspaceId$: Observable<string | null>;
+
+  @HostListener('window:keydown.control.enter', ['$event'])
+  handleCtrlEnter(event: KeyboardEvent) {
+    if (!this.isLoading) {
+      event.preventDefault();
+      this.searchTerm();
+    }
+  }
 
   // --- Search Request Object ---
   // This object holds the current state of all user selections.
   searchRequest: ImagenRequest = {
-    prompt:
-      'This cyberpunk cityscape is electrifying! The neon signs piercing through the rainy dusk create a stunning atmosphere, and the level of detail is impressive.  The reflections on the wet streets add a touch of realism, and the overall composition draws the eye deep into the scene. The play of light and shadow is particularly striking. It might benefit from a bit more variation in the neon colors to further enhance the vibrant, futuristic feel.',
-    generationModel: 'imagen-4.0-ultra-generate-preview-06-06',
+    prompt: '',
+    generationModel: 'gemini-2.5-flash-image-preview',
     aspectRatio: '1:1',
     style: 'Modern',
     numberOfMedia: 4,
@@ -68,30 +97,79 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   // --- Dropdown Options ---
   generationModels = [
     {
-      value: 'imagen-4.0-ultra-generate-preview-06-06',
-      viewValue: 'Imagen 4 Ultra',
+      value: 'gemini-2.5-flash-image-preview',
+      viewValue: 'Nano Banana',
+      isImage: true,
+      imageSrc: 'assets/images/banana-peel.png',
     },
-    {value: 'imagen-3.0-generate-002', viewValue: 'Imagen 3'},
-    {value: 'imagen-3.0-fast-generate-001', viewValue: 'Imagen 3 Fast'},
-    {value: 'imagen-3.0-generate-001', viewValue: 'Imagen 3 (001)'},
-    {value: 'imagegeneration@006', viewValue: 'ImageGen (006)'},
-    {value: 'imagegeneration@005', viewValue: 'ImageGen (005)'},
-    {value: 'imagegeneration@002', viewValue: 'ImageGen (002)'},
+    {
+      value: 'imagen-4.0-generate-001',
+      viewValue: 'Imagen 4', // Keeping gemini-spark-icon for Imagen
+      icon: 'gemini-spark-icon',
+      isSvg: true,
+    },
+    {
+      value: 'imagen-4.0-ultra-generate-001',
+      viewValue: 'Imagen 4 Ultra', // Keeping gemini-spark-icon for Imagen
+      icon: 'gemini-spark-icon',
+      isSvg: true,
+    },
+    {
+      value: 'imagen-4.0-fast-generate-001',
+      viewValue: 'Imagen 4 Fast', // Keeping gemini-spark-icon for Imagen
+      icon: 'gemini-spark-icon',
+      isSvg: true,
+    },
+    {
+      value: 'imagen-3.0-generate-002',
+      viewValue: 'Imagen 3',
+      icon: 'auto_awesome',
+    },
+    {
+      value: 'imagen-3.0-fast-generate-001',
+      viewValue: 'Imagen 3 Fast',
+      icon: 'auto_awesome',
+    },
   ];
+  selectedGenerationModelObject = this.generationModels[0];
   selectedGenerationModel = this.generationModels[0].viewValue;
-  aspectRatioOptions: {value: string; viewValue: string; disabled: boolean}[] =
-    [
-      {value: '1:1', viewValue: '1080x1080 \n Post', disabled: false},
-      {value: '16:9', viewValue: '1200x628 \n Landscape', disabled: false},
-      {value: '9:16', viewValue: '1080x1920 \n Story', disabled: false},
-      {value: '3:4', viewValue: '1080x1350 \n Portrait', disabled: false},
-      {value: '4:3', viewValue: '1000x1500 \n Pin', disabled: false},
-      {value: '', viewValue: '300x250 \n Medium Banner', disabled: true},
-      {value: '', viewValue: '728x90 \n Leaderboard', disabled: true},
-      {value: '', viewValue: '160x600 \n Wide Skyscraper', disabled: true},
-      {value: '1:2', viewValue: '300x600 \n Half Page', disabled: true},
-      {value: '', viewValue: '970x90 \n L. Leaderboard', disabled: true},
-    ];
+  aspectRatioOptions: {
+    value: string;
+    viewValue: string;
+    disabled: boolean;
+    icon: string;
+  }[] = [
+    {
+      value: '1:1',
+      viewValue: '1:1 \n Post',
+      disabled: false,
+      icon: 'crop_square',
+    },
+    {
+      value: '16:9',
+      viewValue: '16:9 \n Landscape',
+      disabled: false,
+      icon: 'crop_16_9',
+    },
+    {
+      value: '9:16',
+      viewValue: '9:16 \n Story',
+      disabled: false,
+      icon: 'crop_portrait',
+    },
+    {
+      value: '3:4',
+      viewValue: '3:4 \n Portrait',
+      disabled: false,
+      icon: 'crop_portrait',
+    },
+    {
+      value: '4:3',
+      viewValue: '4:3 \n Pin',
+      disabled: false,
+      icon: 'crop_landscape',
+    }
+  ];
   selectedAspectRatio = this.aspectRatioOptions[0].viewValue;
   imageStyles = [
     'Photorealistic',
@@ -163,6 +241,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     public matIconRegistry: MatIconRegistry,
     private service: SearchService,
     private _snackBar: MatSnackBar,
+    public dialog: MatDialog,
+    private http: HttpClient,
+    @Inject(WorkspaceStateService)
+    private workspaceStateService: WorkspaceStateService,
   ) {
     this.matIconRegistry
       .addSvgIcon(
@@ -190,9 +272,18 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         this.setPath(`${this.path}/mobile-white-gemini-spark-icon.svg`),
       );
 
-    this.templateParams =
-      this.router.getCurrentNavigation()?.extras.state?.['templateParams'];
-    this.applyTemplateParameters();
+    const remixState =
+      this.router.getCurrentNavigation()?.extras.state?.['remixState'];
+    if (remixState) {
+      this.applyRemixState(remixState);
+    } else {
+      // Only apply template params if there's no remix state.
+      this.templateParams =
+        this.router.getCurrentNavigation()?.extras.state?.['templateParams'];
+      this.applyTemplateParameters();
+    }
+
+    this.activeWorkspaceId$ = this.workspaceStateService.activeWorkspaceId$;
   }
 
   private path = '../../assets/images';
@@ -230,8 +321,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private applyTemplateParameters(): void {
-    console.log('Applying template parameters:', this.templateParams);
-
     if (!this.templateParams) {
       return;
     }
@@ -310,9 +399,10 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  selectModel(model: {value: string; viewValue: string}): void {
+  selectModel(model: any): void {
     this.searchRequest.generationModel = model.value;
     this.selectedGenerationModel = model.viewValue;
+    this.selectedGenerationModelObject = model;
   }
 
   selectAspectRatio(ratio: string): void {
@@ -360,12 +450,60 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   searchTerm() {
     if (!this.searchRequest.prompt) return;
 
-    this.searchRequest.negativePrompt = this.negativePhrases.join(', ');
+    const hasSourceAssets = this.sourceAssetId1 || this.sourceAssetId2;
+    const isImagen4 = [
+      'imagen-4.0-generate-001',
+      'imagen-4.0-ultra-generate-001',
+      'imagen-4.0-fast-generate-001',
+    ].includes(this.searchRequest.generationModel);
+
+    if (hasSourceAssets && isImagen4) {
+      const imagen3Model = this.generationModels.find(
+        m => m.value === 'imagen-3.0-generate-002',
+      );
+      if (imagen3Model) {
+        this.selectModel(imagen3Model);
+        this._snackBar.openFromComponent(ToastMessageComponent, {
+          panelClass: ['green-toast'],
+          duration: 8000,
+          data: {
+            text: "Imagen 4 doesn't support images as input, so we've switched to Imagen 3 for you!",
+            matIcon: 'info_outline',
+          },
+        });
+        return;
+      }
+    }
+
+    const validSourceMediaItems = this.sourceMediaItems.filter(
+      Boolean,
+    ) as SourceMediaItemLink[];
+    const activeWorkspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    const payload: ImagenRequest = {
+      ...this.searchRequest,
+      negativePrompt: this.negativePhrases.join(', '),
+      sourceMediaItems: validSourceMediaItems.length
+        ? validSourceMediaItems
+        : undefined,
+      workspaceId: activeWorkspaceId ?? undefined,
+    };
+
+    const sourceAssetIds = [];
+    if (this.sourceAssetId1) {
+      sourceAssetIds.push(this.sourceAssetId1);
+    }
+    if (this.sourceAssetId2) {
+      sourceAssetIds.push(this.sourceAssetId2);
+    }
+    if (sourceAssetIds.length > 0) {
+      payload.sourceAssetIds = sourceAssetIds;
+    }
+
     this.isLoading = true;
     this.imagenDocuments = null;
 
     this.service
-      .searchImagen(this.searchRequest)
+      .searchImagen(payload)
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
         next: (searchResponse: MediaItem) => {
@@ -418,7 +556,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   resetAllFilters() {
     this.searchRequest = {
       prompt: '',
-      generationModel: 'imagen-4.0-ultra-generate-preview-06-06',
+      generationModel: 'gemini-2.5-flash-image-preview',
       aspectRatio: '1:1',
       style: 'Modern',
       numberOfMedia: 4,
@@ -445,4 +583,196 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.animationFrameId = requestAnimationFrame(this.move);
   };
+
+  openImageSelector(imageNumber: 1 | 2) {
+    const dialogRef = this.dialog.open(ImageSelectorComponent, {
+      width: '90vw',
+      height: '80vh',
+      maxWidth: '90vw',
+      data: {
+        mimeType: 'image/*',
+      },
+      panelClass: 'image-selector-dialog',
+    });
+
+    dialogRef
+      .afterClosed()
+      .subscribe((result: MediaItemSelection | SourceAssetResponseDto) => {
+        if (result) {
+          const targetAssetId =
+            imageNumber === 1 ? 'sourceAssetId1' : 'sourceAssetId2';
+          const targetPreview =
+            imageNumber === 1 ? 'image1Preview' : 'image2Preview';
+
+          if ('gcsUri' in result) {
+            // Uploaded image (SourceAssetResponseDto)
+            this[targetAssetId] = result.id;
+            this[targetPreview] = result.presignedUrl || null;
+            this.clearSourceMediaItem(imageNumber); // Clear the corresponding media item slot
+          } else {
+            // Gallery image (MediaItem)
+            const selection = result as MediaItemSelection;
+            this.clearSourceMediaItem(imageNumber); // Clear the corresponding media item slot
+            this.sourceMediaItems[imageNumber - 1] = {
+              mediaItemId: selection.mediaItem.id,
+              mediaIndex: selection.selectedIndex,
+              role: 'input',
+            };
+            this[targetPreview] =
+              selection.mediaItem.presignedUrls?.[0] || null;
+            this[targetAssetId] = null;
+          }
+        }
+      });
+  }
+
+  private uploadAsset(file: File): Observable<SourceAssetResponseDto> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const activeWorkspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (activeWorkspaceId) {
+      formData.append('workspaceId', activeWorkspaceId);
+    }
+    return this.http.post<SourceAssetResponseDto>(
+      `${environment.backendURL}/source_assets/upload`,
+      formData,
+    );
+  }
+
+  onDrop(event: DragEvent, imageNumber: 1 | 2) {
+    event.preventDefault();
+    const file = event.dataTransfer?.files[0];
+    if (file) {
+      this.isLoading = true;
+      this.uploadAsset(file)
+        .pipe(finalize(() => (this.isLoading = false)))
+        .subscribe({
+          next: asset => {
+            const targetAssetId =
+              imageNumber === 1 ? 'sourceAssetId1' : 'sourceAssetId2';
+            const targetPreview =
+              imageNumber === 1 ? 'image1Preview' : 'image2Preview';
+            this[targetAssetId] = asset.id;
+            this[targetPreview] = asset.presignedUrl || null;
+          },
+          error: error => {
+            handleErrorSnackbar(this._snackBar, error, 'Image upload');
+          },
+        });
+    }
+  }
+
+  clearImage(imageNumber: 1 | 2, event: MouseEvent) {
+    event.stopPropagation();
+    if (imageNumber === 1) {
+      this.sourceAssetId1 = null;
+      this.image1Preview = null;
+    } else {
+      this.sourceAssetId2 = null;
+      this.image2Preview = null;
+    }
+    this.clearSourceMediaItem(imageNumber); // Clear the corresponding media item slot
+  }
+
+  editResultImage(index: number) {
+    if (!this.imagenDocuments || !this.imagenDocuments.presignedUrls) {
+      return;
+    }
+
+    // Clear existing inputs and set the new one
+    this.sourceMediaItems = [];
+    this.sourceMediaItems[0] = {
+      mediaItemId: this.imagenDocuments.id,
+      mediaIndex: index,
+      role: 'input',
+    };
+    this.sourceMediaItems[1] = null;
+
+    // Set the selected image as the first source asset
+    this.sourceAssetId1 = null; // We don't have a source asset ID for a generated image yet
+    this.image1Preview = this.imagenDocuments.presignedUrls[index];
+
+    // Clear the second source asset
+    this.sourceAssetId2 = null;
+    this.image2Preview = null;
+
+    // Switch to Nano Banana model for editing
+    const nanoBananaModel = this.generationModels.find(
+      m => m.value === 'gemini-2.5-flash-image-preview',
+    );
+    if (nanoBananaModel) this.selectModel(nanoBananaModel);
+  }
+
+  private clearSourceMediaItem(imageNumber: 1 | 2) {
+    // Set the specific index to null to clear the slot for that image.
+    if (this.sourceMediaItems.length >= imageNumber) {
+      this.sourceMediaItems[imageNumber - 1] = null;
+    }
+  }
+
+  private applyRemixState(remixState: {
+    sourceMediaItems: SourceMediaItemLink[];
+    prompt?: string;
+    previewUrl?: string;
+  }): void {
+    if (remixState.sourceMediaItems?.length > 0) {
+      this.sourceMediaItems = remixState.sourceMediaItems;
+      // For now, just use the first one for preview
+      if (remixState.previewUrl) {
+        this.image1Preview = remixState.previewUrl;
+        this.sourceAssetId1 = null; // It's not a source asset
+        this.image2Preview = null;
+        this.sourceAssetId2 = null;
+      }
+    }
+    if (remixState.prompt) this.searchRequest.prompt = remixState.prompt;
+  }
+
+  generateVideoWithImage(event: {role: 'start' | 'end'; index: number}) {
+    if (!this.imagenDocuments) {
+      return;
+    }
+
+    const sourceMediaItem: SourceMediaItemLink = {
+      mediaItemId: this.imagenDocuments.id,
+      mediaIndex: event.index,
+      role: event.role === 'start' ? 'start_frame' : 'end_frame',
+    };
+
+    const remixState = {
+      prompt: this.imagenDocuments.originalPrompt,
+      sourceMediaItems: [sourceMediaItem],
+      startImagePreviewUrl:
+        event.role === 'start'
+          ? this.imagenDocuments.presignedUrls?.[event.index]
+          : undefined,
+      endImagePreviewUrl:
+        event.role === 'end'
+          ? this.imagenDocuments.presignedUrls?.[event.index]
+          : undefined,
+    };
+
+    const navigationExtras: NavigationExtras = {
+      state: {remixState},
+    };
+    this.router.navigate(['/video'], navigationExtras);
+  }
+
+  sendToVto(index: number) {
+    if (!this.imagenDocuments) {
+      return;
+    }
+
+    const navigationExtras: NavigationExtras = {
+      state: {
+        remixState: {
+          modelImageAssetId: this.imagenDocuments.id,
+          modelImagePreviewUrl: this.imagenDocuments.presignedUrls?.[index],
+          modelImageGcsUri: this.imagenDocuments.gcsUris?.[index],
+          modelImageMediaIndex: index,
+        },
+      },
+    };
+    this.router.navigate(['/vto'], navigationExtras);
+  }
 }

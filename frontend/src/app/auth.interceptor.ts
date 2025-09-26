@@ -35,16 +35,8 @@ export class AuthInterceptor implements HttpInterceptor {
     request: HttpRequest<unknown>,
     next: HttpHandler,
   ): Observable<HttpEvent<unknown>> {
-    const apiUrlsToSecure = [environment.backendURL].filter(url => !!url); // Filter out any undefined/empty URLs to prevent errors
-
-    const shouldAttachToken = apiUrlsToSecure.some(apiUrl =>
-      request.url.startsWith(apiUrl),
-    );
-
-    if (!shouldAttachToken) return next.handle(request);
-
     // Asynchronously get a valid token. This will use the cache or trigger a silent refresh.
-    return this.authService.getValidFirebaseToken$().pipe(
+    return this.authService.getValidIdentityPlatformToken$().pipe(
       switchMap(token => {
         // Token was retrieved successfully. Clone the request and add the auth header.
         const authorizedRequest = request.clone({

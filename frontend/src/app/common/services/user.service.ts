@@ -36,17 +36,6 @@ interface LooseObject {
   [key: string]: any;
 }
 
-type UserStored = {
-  id: string;
-  email: string;
-  name: string;
-  picture: string;
-  displayName: string;
-  roles: string[];
-  createdAt: string;
-  updatedAt: string;
-};
-
 const badgeURL = `${environment.backendURL}/`;
 
 @Injectable({
@@ -69,12 +58,12 @@ export class UserService {
     await deleteDoc(userRef);
   }
 
-  getUserDetails(): UserStored | null {
+  getUserDetails(): UserModel | null {
     if (!isPlatformBrowser(this.platformId)) return null;
 
     if (localStorage.getItem('USER_DETAILS') !== null) {
       const userObj = localStorage.getItem('USER_DETAILS');
-      return JSON.parse(userObj || '{}') as UserStored;
+      return JSON.parse(userObj || '{}') as UserModel;
     } else {
       const userDetails: LooseObject = {};
       userDetails['name'] = '';
@@ -82,7 +71,7 @@ export class UserService {
       userDetails['photoURL'] = '';
       userDetails['domain'] = '';
       userDetails['roles'] = [];
-      return userDetails as UserStored;
+      return userDetails as UserModel;
     }
   }
 

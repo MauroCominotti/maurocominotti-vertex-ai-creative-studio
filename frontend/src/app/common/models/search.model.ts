@@ -20,11 +20,21 @@ export type ImagenRequest = {
   aspectRatio: string;
   numberOfMedia: number;
   style: string;
-  lighting: string;
-  colorAndTone: string;
-  composition: string;
-  addWatermark: boolean;
   negativePrompt: string;
+  colorAndTone?: string;
+  lighting?: string;
+  composition?: string;
+  addWatermark: boolean;
+  upscaleFactor?: '' | 'x2' | 'x4';
+  sourceAssetIds?: string[];
+  sourceMediaItems?: SourceMediaItemLink[];
+  workspaceId?: string;
+};
+
+export type SourceMediaItemLink = {
+  mediaItemId: string;
+  mediaIndex: number;
+  role: string;
 };
 
 export type VeoRequest = {
@@ -39,6 +49,11 @@ export type VeoRequest = {
   negativePrompt: string;
   generateAudio: boolean;
   durationSeconds: number;
+  startImageAssetId?: string;
+  endImageAssetId?: string;
+  sourceVideoAssetId?: string;
+  sourceMediaItems?: SourceMediaItemLink[];
+  workspaceId?: string;
 };
 
 export type SearchResponse = {
@@ -80,4 +95,6 @@ export interface GallerySearchDto {
   userEmail?: string;
   mimeType?: string;
   model?: string;
+  status?: string;
+  workspaceId?: string;
 }

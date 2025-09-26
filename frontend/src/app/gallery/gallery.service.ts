@@ -1,32 +1,76 @@
-import {Injectable} from '@angular/core';
+import {Injectable, OnDestroy} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
-import {BehaviorSubject, Observable, of} from 'rxjs';
-import {tap, catchError, shareReplay} from 'rxjs/operators';
+import {
+  BehaviorSubject,
+  combineLatest,
+  Observable,
+  of,
+  Subscription,
+} from 'rxjs';
+import {
+  tap,
+  catchError,
+  shareReplay,
+  switchMap,
+  debounceTime,
+} from 'rxjs/operators';
 import {
   MediaItem,
   PaginatedGalleryResponse,
+  JobStatus,
 } from '../common/models/media-item.model';
 import {environment} from '../../environments/environment';
 import {GallerySearchDto} from '../common/models/search.model';
-
-export interface GalleryFilters {
-  userEmail?: string;
-  mimeType?: string;
-  model?: string;
-}
+import {WorkspaceStateService} from '../services/workspace/workspace-state.service';
 
 @Injectable({
   providedIn: 'root',
 })
-export class GalleryService {
+export class GalleryService implements OnDestroy {
   private imagesCache$ = new BehaviorSubject<MediaItem[]>([]);
   public isLoading$ = new BehaviorSubject<boolean>(false);
   private allImagesLoaded$ = new BehaviorSubject<boolean>(false);
   private nextPageCursor: string | null = null;
   private allFetchedImages: MediaItem[] = [];
-  private filters$ = new BehaviorSubject<GalleryFilters>({});
+  private filters$ = new BehaviorSubject<GallerySearchDto>({limit: 20});
+  private dataLoadingSubscription: Subscription;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private workspaceStateService: WorkspaceStateService,
+  ) {
+    this.dataLoadingSubscription = combineLatest([
+      this.workspaceStateService.activeWorkspaceId$,
+      this.filters$,
+    ])
+      .pipe(
+        // Use debounceTime to wait for filters to be set and prevent rapid reloads
+        debounceTime(50),
+        switchMap(([workspaceId, filters]) => {
+          this.isLoading$.next(true);
+          this.resetCache();
+
+          const body: GallerySearchDto = {
+            ...filters,
+            workspaceId: workspaceId ?? undefined,
+          };
+
+          return this.fetchImages(body).pipe(
+            catchError(err => {
+              console.error('Failed to fetch gallery images', err);
+              this.isLoading$.next(false);
+              this.allImagesLoaded$.next(true); // prevent loading more
+              return of(null); // Return null or an empty response to prevent breaking the stream
+            }),
+          );
+        }),
+      )
+      .subscribe(response => {
+        if (response) {
+          this.processFetchResponse(response);
+        }
+      });
+  }
 
   get images$(): Observable<MediaItem[]> {
     return this.imagesCache$.asObservable();
@@ -36,67 +80,82 @@ export class GalleryService {
     return this.allImagesLoaded$.asObservable();
   }
 
-  setFilters(filters: GalleryFilters) {
+  ngOnDestroy() {
+    this.dataLoadingSubscription.unsubscribe();
+  }
+
+  setFilters(filters: GallerySearchDto) {
     this.filters$.next(filters);
-    this.loadGallery(true);
+    // No need to call loadGallery here, the stream will automatically react.
   }
 
   loadGallery(reset = false): void {
-    // Do not load more if we are already loading or if all images have been loaded.
     if (this.isLoading$.value) {
       return;
     }
 
     if (reset) {
-      this.allFetchedImages = [];
-      this.nextPageCursor = null;
-      this.allImagesLoaded$.next(false);
+      this.resetCache();
     }
 
-    // Do not try to load more if all items have already been loaded
     if (this.allImagesLoaded$.value) {
       return;
     }
 
-    this.fetchImages()
-      .pipe(
-        tap(response => {
-          this.nextPageCursor = response.nextPageCursor ?? null;
-          // Accumulate images in our central cache and push the new list to subscribers
-          this.allFetchedImages = [...this.allFetchedImages, ...response.data];
-          this.imagesCache$.next(this.allFetchedImages);
-
-          if (!this.nextPageCursor) {
-            this.allImagesLoaded$.next(true);
-          }
-          this.isLoading$.next(false);
-        }),
-          catchError(err => {
-            console.error('Failed to fetch gallery images', err);
-            this.isLoading$.next(false);
-            this.allImagesLoaded$.next(true); // prevent loading more
-            return of([]); // Return an empty array observable to prevent breaking the stream
-          })
-      )
-      .subscribe();
-  }
-
-  private fetchImages(): Observable<PaginatedGalleryResponse> {
-    this.isLoading$.next(true);
-    const galleryUrl = `${environment.backendURL}/gallery`;
-    const currentFilters = this.filters$.value;
-
     const body: GallerySearchDto = {
-      limit: 20,
-      ...currentFilters,
+      ...this.filters$.value,
+      workspaceId:
+        this.workspaceStateService.getActiveWorkspaceId() ?? undefined,
+      startAfter: this.nextPageCursor ?? undefined,
     };
 
-    if (this.nextPageCursor) {
-      body.startAfter = this.nextPageCursor;
+    this.fetchImages(body)
+      .pipe(
+        catchError(err => {
+          console.error('Failed to fetch gallery images', err);
+          this.isLoading$.next(false);
+          this.allImagesLoaded$.next(true); // prevent loading more
+          return of(null);
+        }),
+      )
+      .subscribe(response => {
+        if (response) {
+          this.processFetchResponse(response, /* append= */ true);
+        }
+      });
+  }
+
+  private fetchImages(
+    body: GallerySearchDto,
+  ): Observable<PaginatedGalleryResponse> {
+    this.isLoading$.next(true);
+    const galleryUrl = `${environment.backendURL}/gallery/search`;
+    return this.http
+      .post<PaginatedGalleryResponse>(galleryUrl, body)
+      .pipe(shareReplay(1));
+  }
+
+  private resetCache() {
+    this.allFetchedImages = [];
+    this.nextPageCursor = null;
+    this.allImagesLoaded$.next(false);
+    this.imagesCache$.next([]);
+  }
+
+  private processFetchResponse(
+    response: PaginatedGalleryResponse,
+    append = false,
+  ) {
+    this.nextPageCursor = response.nextPageCursor ?? null;
+    this.allFetchedImages = append
+      ? [...this.allFetchedImages, ...response.data]
+      : response.data;
+    this.imagesCache$.next(this.allFetchedImages);
+
+    if (!this.nextPageCursor) {
+      this.allImagesLoaded$.next(true);
     }
-    return this.http.post<PaginatedGalleryResponse>(galleryUrl, body).pipe(
-      shareReplay(1), // important to cache the http get response
-    );
+    this.isLoading$.next(false);
   }
 
   getMedia(id: string): Observable<MediaItem> {

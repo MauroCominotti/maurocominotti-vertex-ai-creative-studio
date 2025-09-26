@@ -14,13 +14,13 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from src.auth.auth_guard import RoleChecker, get_current_user
 from src.common.dto.pagination_response_dto import PaginationResponseDto
-from src.users.user_model import UserRoleEnum
-from src.auth.auth_guard import RoleChecker
-from src.galleries.dto.gallery_search_dto import GallerySearchDto
 from src.galleries.dto.gallery_response_dto import MediaItemResponse
+from src.galleries.dto.gallery_search_dto import GallerySearchDto
 from src.galleries.gallery_service import GalleryService
-
+from src.users.user_model import UserModel, UserRoleEnum
+from src.workspaces.workspace_auth_guard import workspace_auth_service
 
 router = APIRouter(
     prefix="/api/gallery",
@@ -39,29 +39,45 @@ router = APIRouter(
 )
 
 
-@router.post("", response_model=PaginationResponseDto[MediaItemResponse])
+@router.post(
+    "/search",
+    response_model=PaginationResponseDto[MediaItemResponse],
+)
 async def search_gallery_items(
     search_dto: GallerySearchDto,
+    current_user: UserModel = Depends(get_current_user),
     service: GalleryService = Depends(),
 ):
     """
-    Performs a paginated search for media items.
+    Performs a paginated search for media items within a specific workspace.
 
     Provide filters and a `start_after` cursor in the request body
     to paginate through results.
     """
-    return await service.get_paginated_gallery(search_dto=search_dto)
+    # This dependency call acts as a gatekeeper. If the user is not authorized
+    # for the workspace_id inside search_dto, it will raise an exception.
+    workspace_auth_service.authorize(
+        workspace_id=search_dto.workspace_id, user=current_user
+    )
+
+    return await service.get_paginated_gallery(
+        search_dto=search_dto, current_user=current_user
+    )
 
 
 @router.get("/item/{item_id}", response_model=MediaItemResponse)
 async def get_single_gallery_item(
     item_id: str,
+    current_user: UserModel = Depends(get_current_user),
     service: GalleryService = Depends(),
 ):
     """
     Get a single media item by its ID.
     """
-    item = await service.get_media_by_id(item_id=item_id)
+    # The service now requires the user to perform authorization checks.
+    item = await service.get_media_by_id(
+        item_id=item_id, current_user=current_user
+    )
     if not item:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -15,14 +15,8 @@
         "--port",
         "8080"
       ],
-      "env": {
-        "FRONTEND_URL": "http://localhost:4200",
-        "ENVIRONMENT": "development",
-        "GENMEDIA_BUCKET": "creative-studio-arena-genmedia",
-        "SIGNING_SA_EMAIL": "sa-genmedia-creative-studio@creative-studio-arena.iam.gserviceaccount.com",
-        "PROJECT_ID": "creative-studio-arena"
-      },
       "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/backend/.env",
       "jinja": true
     },
     {

@@ -1,0 +1,11 @@
+variable "gcp_project_id" { type = string }
+variable "gcp_region" {type = string}
+variable "firebase_project_id" { type = string }
+variable "service_name" { type = string }
+variable "environment" { type = string }
+variable "resource_prefix" { type = string }
+variable "source_repository_id" { type = string }
+variable "github_branch_name" { type = string }
+variable "cloudbuild_yaml_path" { type = string }
+variable "included_files_glob" { type = list(string) }
+variable "build_substitutions" { type = map(string) }

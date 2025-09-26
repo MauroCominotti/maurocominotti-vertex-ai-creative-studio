@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import List
+
 from pydantic import Field, field_validator
 
 from src.common.base_repository import BaseDocument
@@ -16,7 +17,7 @@ class UserRoleEnum(str, Enum):
     ADMIN = "admin"  # Has full administrative privileges, including user management.
 
 
-class User(BaseDocument):
+class UserModel(BaseDocument):
     """
     Represents a user document in the Firestore database.
     The document ID for this model should be the Firebase Auth UID.
@@ -24,7 +25,7 @@ class User(BaseDocument):
     email: str
     roles: List[UserRoleEnum] = Field(default_factory=list)
     name: str
-    picture: str
+    picture: str = ""
 
     @field_validator("roles", mode="after")
     @classmethod

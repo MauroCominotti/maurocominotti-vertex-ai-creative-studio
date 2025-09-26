@@ -16,7 +16,7 @@
 
 import {Injectable, PLATFORM_ID, inject} from '@angular/core';
 import {Router} from '@angular/router';
-import {UserModel} from '../models/user.model';
+import {UserModel, UserRolesEnum} from '../models/user.model';
 import {HttpClient, HttpHeaders, HttpErrorResponse} from '@angular/common/http';
 import {environment} from '../../../environments/environment';
 import {Auth, IdTokenResult} from '@angular/fire/auth';
@@ -42,8 +42,6 @@ interface FirebaseSession {
   expiry: number; // Expiration timestamp in milliseconds
 }
 
-const loginInfoUrl = `${environment.backendURL}/login-info`;
-
 @Injectable({
   providedIn: 'root',
 })
@@ -56,10 +54,6 @@ export class AuthService {
   private currentOAuthAccessToken: string | null = null;
   private firebaseIdToken: string | null = null; // To store the Firebase token for the test
   private firebaseTokenExpiry: number | null = null; // To store token expiration time (in ms)
-  private allowedAdminEmails: string[] = [
-    'maurocominotti@google.com',
-    'robbysingh@google.com',
-  ];
 
   constructor(
     private router: Router,
@@ -107,7 +101,9 @@ export class AuthService {
       }),
       catchError((error: any) => {
         console.error('An error occurred during the sign-in process:', error);
-        return throwError(() => new Error('Sign-in failed. Please try again.'));
+        return throwError(
+          () => new Error(`Sign-in failed. Please try again. ${error}`),
+        );
       }),
     );
   }
@@ -152,6 +148,109 @@ export class AuthService {
     return of(this.firebaseIdToken!);
   }
 
+  /**
+   * A test sign-in method to get a Google ID token compatible with Identity Platform.
+   *
+   * @returns An Observable that emits the Identity Platform-compatible ID token.
+   */
+  signInForGoogleIdentityPlatform(): Observable<string> {
+    return this.promptForIdentityPlatformToken$().pipe(
+      switchMap(idToken => {
+        const payload = JSON.parse(atob(idToken.split('.')[1]));
+        const userEmail = payload.email?.toLowerCase();
+
+        // If allowed, proceed to save session and return token
+        this.firebaseIdToken = idToken;
+        this.firebaseTokenExpiry = payload.exp * 1000;
+
+        const session: FirebaseSession = {
+          token: idToken,
+          expiry: this.firebaseTokenExpiry,
+        };
+        localStorage.setItem(FIREBASE_SESSION_KEY, JSON.stringify(session));
+
+        // Call the backend to get or create the user profile.
+        return this.syncUserWithBackend$(idToken).pipe(
+          map(() => idToken), // Pass the token along for the final result.
+        );
+      }),
+    );
+  }
+
+  private promptForIdentityPlatformToken$(): Observable<string> {
+    const GOOGLE_CLIENT_ID = environment.GOOGLE_CLIENT_ID;
+
+    return new Observable<string>(observer => {
+      if (typeof google === 'undefined') {
+        return observer.error(
+          new Error(
+            'Google Identity Services script not loaded. Add it to index.html',
+          ),
+        );
+      }
+
+      const loginTimeout = setTimeout(() => {
+        observer.error(
+          new Error(
+            'Login timed out or third party sign-in may be disabled. Please try again and enable third party sign-in by clicking on the information button at the top left side of the browser.',
+          ),
+        );
+      }, 15000);
+
+      try {
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: (response: any) => {
+            clearTimeout(loginTimeout);
+            const idToken = response.credential;
+            if (idToken) {
+              observer.next(idToken);
+              observer.complete();
+            } else {
+              observer.error(
+                new Error(
+                  'Google Sign-In response did not contain a credential.',
+                ),
+              );
+            }
+          },
+        });
+
+        // Trigger the One Tap prompt.
+        // Per new docs, we don't use the notification object for flow control.
+        google.accounts.id.prompt();
+      } catch (error) {
+        clearTimeout(loginTimeout);
+        console.error(
+          'Error during Google Identity Platform sign-in initialization:',
+          error,
+        );
+        observer.error(error);
+      }
+    });
+  }
+
+  /**
+   * Asynchronously gets a valid Identity Platform token.
+   * 1. Checks for a valid, non-expired token in memory/cache.
+   * 2. If expired or missing, attempts a silent refresh.
+   * 3. If silent refresh fails, it emits an error, signaling a required re-login.
+   */
+  getValidIdentityPlatformToken$(): Observable<string> {
+    // First, check our own session info which is loaded from localStorage.
+    // This is synchronous and tells us if we have a valid, non-expired token.
+    if (!this.isLoggedIn()) {
+      return throwError(
+        () => new Error('User session is not valid or has expired.'),
+      );
+    }
+
+    // Fallback case: The Firebase Auth instance is not yet initialized, but we
+    // have a valid token from localStorage. We can use this for the current
+    // request. The next request will likely hit the ideal case above.
+    return of(this.firebaseIdToken!);
+  }
+
   private syncUserWithBackend$(token: string): Observable<UserModel> {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     return this.httpClient
@@ -167,7 +266,10 @@ export class AuthService {
           // This is a critical error, so we should propagate it.
           return throwError(
             () =>
-              new Error('Could not synchronize user profile with the server.'),
+              new Error(
+                error?.error?.detail ||
+                  `Could not synchronize user profile with the server. ${error?.error?.detail}`,
+              ),
           );
         }),
       );
@@ -241,12 +343,7 @@ export class AuthService {
     if (!isPlatformBrowser(this.platformId)) return false;
 
     const user_role = this.userService.getUserDetails()?.roles;
-    return user_role?.includes(environment.ADMIN) || false;
-
-    // TODO: Now the role will come in the Firebase JWT
-    // const userDetails = this.userService.getUserDetails(); // Get user details from localStorage
-    // const userEmail = userDetails?.email?.toLowerCase();
-    // return this.allowedAdminEmails.includes(userEmail.toLowerCase());
+    return user_role?.includes(UserRolesEnum.ADMIN) || false;
   }
 
   getToken() {
@@ -260,66 +357,6 @@ export class AuthService {
   getOAuthAccessToken(): string | null {
     // Renamed from getAccessToken for clarity
     return this.currentOAuthAccessToken;
-  }
-
-  /**
-   * Initiates Google Sign-In Popup, requests cloud-platform scope,
-   * and stores the access token upon success.
-   */
-  signInWithGoogleAdminPermissions(): Observable<string> {
-    const provider = new GoogleAuthProvider();
-
-    // --- CRITICAL: Request necessary scopes ---
-    // This scope allows calling most Google Cloud APIs
-    provider.addScope('https://www.googleapis.com/auth/cloud-platform');
-    // You might add 'profile' and 'email' if needed, though Firebase gets basic profile info
-    provider.addScope('profile');
-    provider.addScope('email');
-
-    // Use custom parameters for forcing account selection
-    provider.setCustomParameters({
-      prompt: 'select_account',
-    });
-
-    // `from` converts the Promise returned by signInWithPopup into an Observable
-    return from(signInWithPopup(this.auth, provider)).pipe(
-      tap((result: UserCredential) => {
-        // Optional: Log user info
-        const user = result.user;
-      }),
-      map((result: UserCredential) => {
-        // --- Extract the OAuth Access Token ---
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        if (credential?.accessToken) {
-          this.currentOAuthAccessToken = credential.accessToken;
-          return this.currentOAuthAccessToken;
-        } else {
-          console.error(
-            'Could not retrieve OAuth Access Token from credential.',
-          );
-          // Throw an error that can be caught downstream
-          throw new Error('OAuth Access Token not found.');
-        }
-      }),
-      catchError(error => {
-        // Handle different errors
-        console.error('Google Sign-In Error:', error);
-        if (error.code === 'auth/popup-closed-by-user') {
-          console.warn('Sign-in popup closed by user.');
-        } else if (error.code === 'auth/cancelled-popup-request') {
-          console.warn('Multiple popups opened, cancelling this one.');
-        } else if (error.code === 'auth/unauthorized-domain') {
-          console.error('ERROR: Domain not authorized in Firebase console.');
-        } else if (error.message === 'OAuth Access Token not found.') {
-          // Keep the specific error message
-          return throwError(() => new Error(error.message));
-        }
-        // For other errors, return a generic error or handle specifically
-        return throwError(
-          () => new Error('Google Sign-In failed. Please try again.'),
-        );
-      }),
-    );
   }
 
   /**

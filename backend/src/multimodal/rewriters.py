@@ -71,6 +71,8 @@ REWRITE_AUDIO_TEXT_PROMPT_TEMPLATE = """ """
 REWRITE_IMAGE_JSON_PROMPT_TEMPLATE = """Write a prompt for a text-to-image model following the JSON style of the examples of prompts, and then I will give you a prompt that I want you to rewrite.
 Do not generate images, provide only the rewritten prompt.
 
+**Crucial Instruction:** If a 'Target Model' or 'Generation Model' is specified in the user's prompt, you **MUST** use that exact model name for the 'target_model' field in the JSON output. Do not change or replace it.
+
 Example 1 of prompts:
 {
   "metadata": {
@@ -170,6 +172,8 @@ The User Prompt to rewrite with the corresponding JSON format:
 
 REWRITE_VIDEO_JSON_PROMPT_TEMPLATE = """Write a prompt for a text-to-video model following the JSON style of the examples of prompts, and then I will give you a prompt that I want you to rewrite.
 Do not generate videos, provide only the rewritten prompt.
+
+**Crucial Instruction:** If a 'Target Model' or 'Generation Model' is specified in the user's prompt, you **MUST** use that exact model name for the 'target_model' field in the JSON output. Do not change or replace it.
 
 Example 1 of prompts:
 {

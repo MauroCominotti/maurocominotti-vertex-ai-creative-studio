@@ -18,6 +18,7 @@ steps:
     id: 'Install Dependencies'
     entrypoint: 'npm'
     args: ['ci']
+    dir: frontend
 
   # 2. Build Angular application based on environment
   - name: 'node:20-alpine'
@@ -29,6 +30,7 @@ steps:
     env:
       - 'NODE_OPTIONS=--max_old_space_size=4096'
     waitFor: ['Install Dependencies']
+    dir: frontend
 
   # 3. Trigger deployment in the target project
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -38,7 +40,7 @@ steps:
       - 'builds'
       - 'submit'
       - '--project=${_TARGET_PROJECT_ID}'
-      - '--config=cloudbuild-deploy.yaml' # Path to the deployment config
+      - '--config=frontend/cloudbuild-deploy.yaml' # Path to the deployment config
       - '--substitutions=_FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID}'
       - '--async' # Run the triggered build asynchronously
     waitFor: ['Build Angular']

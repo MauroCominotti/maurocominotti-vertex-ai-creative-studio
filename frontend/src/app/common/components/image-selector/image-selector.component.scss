@@ -1,0 +1,52 @@
+.upload-area {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.3s,
+    background-color 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+}
+
+.upload-area:hover {
+  border-color: #007bff;
+  background-color: #f0f8ff;
+}
+
+.upload-area.uploading {
+  cursor: not-allowed;
+  background-color: #333;
+  border-color: #555;
+}
+
+.upload-area.uploading:hover {
+  background-color: #333;
+  border-color: #555;
+}
+
+.upload-area p {
+  margin-top: 1rem;
+}
+
+.my-uploads-container {
+  margin-top: 1.5rem;
+  border-top: 1px solid #444;
+  padding-top: 1.5rem;
+
+  h3 {
+    color: white;
+    margin-bottom: 1rem;
+  }
+}
+
+::ng-deep .image-selector-dialog .mat-mdc-tab-body-content {
+  padding-top: 20px;
+  height: 100%;
+  overflow-y: auto;
+}

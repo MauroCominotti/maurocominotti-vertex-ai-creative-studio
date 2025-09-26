@@ -21,6 +21,7 @@ import {Router} from '@angular/router';
 import {UserService} from '../common/services/user.service';
 import {AuthService} from '../common/services/auth.service';
 import {environment} from '../../environments/environment';
+import {UserModel} from '../common/models/user.model';
 
 @Component({
   selector: 'app-header',
@@ -28,11 +29,13 @@ import {environment} from '../../environments/environment';
   styleUrls: ['./header.component.scss'],
 })
 export class HeaderComponent {
+  currentUser: UserModel | null;
+
   constructor(
     private sanitizer: DomSanitizer,
     public matIconRegistry: MatIconRegistry,
     public router: Router,
-    public _UserService: UserService,
+    public userService: UserService,
     public authService: AuthService,
   ) {
     this.matIconRegistry
@@ -44,6 +47,8 @@ export class HeaderComponent {
         'fun-templates-icon',
         this.setPath(`${this.path}/fun-templates-icon.svg`),
       );
+
+    this.currentUser = this.userService.getUserDetails();
   }
 
   private path = '../../assets/images';
@@ -58,9 +63,5 @@ export class HeaderComponent {
 
   navigate() {
     void this.router.navigateByUrl('/');
-  }
-
-  getFeedbackFormUrl() {
-    return environment.FEEDBACK_FORM_URL;
   }
 }

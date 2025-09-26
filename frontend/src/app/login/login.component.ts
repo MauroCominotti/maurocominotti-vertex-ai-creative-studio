@@ -59,9 +59,9 @@ export class LoginComponent {
     this.errorMessage = '';
 
     // This will use the Google Identity Services library to get an FIREBASE-compatible token.
-    this.authService.signInWithGoogleFirebase().subscribe({
+    this.authService.signInForGoogleIdentityPlatform().subscribe({
       next: (firebaseToken: string) => {
-        // The signInWithGoogleFirebase method already stored the token and minimal user details
+        // The signInForGoogleIdentityPlatform method already stored the token and minimal user details
         // in localStorage. We just need to redirect to trigger the AuthGuard.
         this.ngZone.run(() => {
           this.loader = false;
@@ -70,6 +70,7 @@ export class LoginComponent {
       },
       error: error => {
         this.loader = false;
+        console.log(error);
         // Handle specific errors from the auth service
         if (
           error.message?.includes('timed out') ||
@@ -78,7 +79,8 @@ export class LoginComponent {
           this.handleLoginError(error.message);
         } else {
           this.handleLoginError(
-            'An unexpected error occurred during sign-in. Please try again.',
+            error ||
+              'An unexpected error occurred during sign-in. Please try again.',
           );
         }
         console.error('FIREBASE Login Process Error:', error);

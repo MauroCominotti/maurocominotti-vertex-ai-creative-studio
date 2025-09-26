@@ -13,19 +13,40 @@
 # limitations under the License.
 
 import logging
+from os import getenv
 import sys
+from google.cloud.logging import Client as LoggerClient
+from google.cloud.logging.handlers import CloudLoggingHandler
 
 def setup_logging():
     """
     Configures the root logger for the entire application.
     This should be called once at application startup.
     """
-    logging.basicConfig(
-        level=logging.INFO,
-        stream=sys.stderr,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        encoding="utf-8",
-    )
+    # Get the logger instance that Uvicorn is using
+    # Check the environment to provide readable logs locally
+    # and structured JSON logs in production.
+    # Attach the Google Cloud Logging handler.
+    # This handler automatically formats logs as JSON and sends them to Cloud Logging.
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)  # Set the minimum level for all handlers
 
-# Call the setup function when this module is imported.
-setup_logging()
+    # Clear any existing handlers to prevent duplicate logs
+    if root_logger.handlers:
+        for handler in root_logger.handlers:
+            root_logger.removeHandler(handler)
+
+    if getenv("ENVIRONMENT") == "production":
+        # In PRODUCTION, attach the Google Cloud Logging handler.
+        # This sends logs as structured JSON to Google Cloud.
+        client = LoggerClient()
+        handler = CloudLoggingHandler(client, name="creative-studio-main")
+        root_logger.addHandler(handler)
+    else:
+        # In DEVELOPMENT, use a simple stream handler for readable console output.
+        handler = logging.StreamHandler(sys.stderr)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        handler.setFormatter(formatter)
+        root_logger.addHandler(handler)

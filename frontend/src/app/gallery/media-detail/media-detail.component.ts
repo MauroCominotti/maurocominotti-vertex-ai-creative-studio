@@ -1,5 +1,5 @@
 import {Component, OnDestroy} from '@angular/core';
-import {ActivatedRoute, Router} from '@angular/router';
+import {ActivatedRoute, NavigationExtras, Router} from '@angular/router';
 import {Location} from '@angular/common';
 import {first, Subscription} from 'rxjs';
 import {MediaItem} from '../../common/models/media-item.model';
@@ -9,6 +9,7 @@ import {MatSnackBar} from '@angular/material/snack-bar';
 import {ToastMessageComponent} from '../../common/components/toast-message/toast-message.component';
 import {CreatePromptMediaDto} from '../../common/models/prompt.model';
 import {AuthService} from '../../common/services/auth.service';
+import {SourceMediaItemLink} from '../../common/models/search.model';
 
 @Component({
   selector: 'app-media-detail',
@@ -24,6 +25,7 @@ export class MediaDetailComponent implements OnDestroy {
   public isAdmin = false;
   public initialSlideIndex = 0;
   promptJson: CreatePromptMediaDto | undefined;
+  isPromptExpanded = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -196,5 +198,133 @@ export class MediaDetailComponent implements OnDestroy {
           });
         },
       });
+  }
+
+  togglePromptExpansion(): void {
+    this.isPromptExpanded = !this.isPromptExpanded;
+  }
+
+  generateWithThisImage(index: number): void {
+    if (!this.mediaItem) {
+      return;
+    }
+
+    const sourceMediaItem: SourceMediaItemLink = {
+      mediaItemId: this.mediaItem.id,
+      mediaIndex: index,
+      role: 'input',
+    };
+
+    const navigationExtras: NavigationExtras = {
+      state: {
+        remixState: {
+          sourceMediaItems: [sourceMediaItem],
+          prompt: this.mediaItem.originalPrompt,
+          previewUrl: this.mediaItem.presignedUrls?.[index],
+        },
+      },
+    };
+    this.router.navigate(['/'], navigationExtras);
+  }
+
+  generateVideoWithImage(event: {role: 'start' | 'end'; index: number}): void {
+    if (!this.mediaItem) {
+      return;
+    }
+
+    const sourceMediaItem: SourceMediaItemLink = {
+      mediaItemId: this.mediaItem.id,
+      mediaIndex: event.index,
+      role: event.role === 'start' ? 'start_frame' : 'end_frame',
+    };
+
+    const remixState = {
+      prompt: this.mediaItem.originalPrompt,
+      sourceMediaItems: [sourceMediaItem],
+      startImagePreviewUrl:
+        event.role === 'start'
+          ? this.mediaItem.presignedUrls?.[event.index]
+          : undefined,
+      endImagePreviewUrl:
+        event.role === 'end'
+          ? this.mediaItem.presignedUrls?.[event.index]
+          : undefined,
+    };
+
+    const navigationExtras: NavigationExtras = {
+      state: {remixState},
+    };
+    this.router.navigate(['/video'], navigationExtras);
+  }
+
+  sendToVto(index: number): void {
+    if (!this.mediaItem) {
+      return;
+    }
+
+    const navigationExtras: NavigationExtras = {
+      state: {
+        remixState: {
+          modelImageAssetId: this.mediaItem.id,
+          modelImagePreviewUrl: this.mediaItem.presignedUrls?.[index],
+          modelImageMediaIndex: index,
+          modelImageGcsUri: this.mediaItem.gcsUris?.[index],
+        },
+      },
+    };
+    this.router.navigate(['/vto'], navigationExtras);
+  }
+
+  handleExtendWithAi(event: {
+    mediaItem: MediaItem;
+    selectedIndex: number;
+  }): void {
+    if (!this.mediaItem) {
+      return;
+    }
+
+    const sourceMediaItem: SourceMediaItemLink = {
+      mediaItemId: this.mediaItem.id,
+      mediaIndex: event.selectedIndex,
+      role: 'video_extension_source',
+    };
+
+    const remixState = {
+      prompt: this.mediaItem.originalPrompt,
+      sourceMediaItems: [sourceMediaItem],
+      // Since it's a video, we can use the thumbnail as a preview.
+      startImagePreviewUrl:
+        this.mediaItem.presignedThumbnailUrls?.[event.selectedIndex],
+      generationModel: 'veo-2.0-generate-001', // Switch to Veo 2 for video input
+    };
+
+    const navigationExtras: NavigationExtras = {
+      state: {remixState},
+    };
+    this.router.navigate(['/video'], navigationExtras);
+  }
+
+  handleConcatenate(event: {
+    mediaItem: MediaItem;
+    selectedIndex: number;
+  }): void {
+    if (!this.mediaItem) {
+      return;
+    }
+
+    const sourceMediaItem: SourceMediaItemLink = {
+      mediaItemId: this.mediaItem.id,
+      mediaIndex: event.selectedIndex,
+      role: 'concatenation_source', // Generic role for concatenation
+    };
+
+    const remixState = {
+      sourceMediaItems: [sourceMediaItem],
+      startImagePreviewUrl:
+        this.mediaItem.presignedThumbnailUrls?.[event.selectedIndex],
+      startConcatenation: true,
+    };
+
+    this.router.navigate(['/video'], {state: {remixState}});
   }
 }

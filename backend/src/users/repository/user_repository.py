@@ -1,25 +1,26 @@
 import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from google.cloud import firestore
+from google.cloud.firestore_v1.base_aggregation import AggregationResult
 from google.cloud.firestore_v1.base_query import FieldFilter
 from google.cloud.firestore_v1.query_results import QueryResultsList
-from google.cloud.firestore_v1.base_aggregation import AggregationResult
 
-from src.common.dto.pagination_response_dto import PaginationResponseDto
-from src.users.user_model import User
 from src.common.base_repository import BaseRepository
+from src.common.dto.pagination_response_dto import PaginationResponseDto
 from src.users.dto.user_search_dto import UserSearchDto
+from src.users.user_model import UserModel
 
 
-class UserRepository(BaseRepository[User]):
+class UserRepository(BaseRepository[UserModel]):
     """
     Handles all database operations for the User collection.
     """
 
     def __init__(self):
-        super().__init__(collection_name="users", model=User)
+        super().__init__(collection_name="users", model=UserModel)
 
-    def create(self, user: User) -> User:
+    def create(self, user: UserModel) -> UserModel:
         """
         Creates a new user document in Firestore.
 
@@ -40,24 +41,7 @@ class UserRepository(BaseRepository[User]):
 
         return user
 
-    def delete(self, user_id: str) -> bool:
-        """
-        Deletes a user document from Firestore.
-
-        Args:
-            user_id: The ID of the user document to delete.
-
-        Returns:
-            True if the deletion was successful, False if the user was not found.
-        """
-        doc_ref = self.collection_ref.document(user_id)
-        if not doc_ref.get().exists:
-            return False
-
-        doc_ref.delete()
-        return True
-
-    def get_by_email(self, email: str) -> Optional[User]:
+    def get_by_email(self, email: str) -> Optional[UserModel]:
         """
         Finds a single user by their email address.
 
@@ -77,7 +61,9 @@ class UserRepository(BaseRepository[User]):
 
         return self.model.model_validate(results[0].to_dict())
 
-    def query(self, search_dto: UserSearchDto) -> PaginationResponseDto[User]:
+    def query(
+        self, search_dto: UserSearchDto
+    ) -> PaginationResponseDto[UserModel]:
         """
         Performs a paginated query that includes the total document count.
         """
@@ -90,7 +76,7 @@ class UserRepository(BaseRepository[User]):
         if search_dto.role:
             base_query = base_query.where(
                 filter=FieldFilter(
-                    "roles", "array-contains", search_dto.role.value
+                    "roles", "array_contains", search_dto.role.value
                 )
             )
 
@@ -134,7 +120,7 @@ class UserRepository(BaseRepository[User]):
             next_page_cursor = documents[-1].id
 
         # 6. Return the structured paginated response.
-        return PaginationResponseDto[User](
+        return PaginationResponseDto[UserModel](
             count=total_count,
             next_page_cursor=next_page_cursor,
             data=user_data,

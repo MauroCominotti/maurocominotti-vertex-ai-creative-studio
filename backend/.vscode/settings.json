@@ -15,7 +15,7 @@
     "editor.codeActionsOnSave": {
         "source.organizeImports": "always"
     },
-    "files.autoSave": "afterDelay",
+    "files.autoSave": "off",
     "python.testing.pytestArgs": [
         "tests"
     ],

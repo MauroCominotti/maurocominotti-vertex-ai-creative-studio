@@ -25,11 +25,9 @@ export const environment = {
     measurementId: '',
   },
   production: true,
+  backendURL: 'http://localhost:8080/api',
   EMAIL_REGEX:
     /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
   ADMIN: 'admin',
-  CLOUD_FUNCTION_URL: '',
-  FEEDBACK_FORM_URL: '',
-  PROD_URL: '',
-  backendURL: 'http://localhost:8080/api',
+  GOOGLE_CLIENT_ID: '',
 };

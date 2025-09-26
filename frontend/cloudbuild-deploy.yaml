@@ -34,7 +34,7 @@ steps:
 
         # Inject into Firebase config (firebase.json)
         sed -i "s|SITE_ID_PLACEHOLDER|${PROJECT_ID}|g" firebase.json
-        sed -i "s|BACKEND_SERVICE_ID_PLACEHOLDER|$${_BACKEND_SERVICE_ID}|g"
+        sed -i "s|BACKEND_SERVICE_ID_PLACEHOLDER|$${_BACKEND_SERVICE_ID}|g" firebase.json
     dir: 'frontend'
     env:
       - 'BACKEND_URL=${_BACKEND_URL}'

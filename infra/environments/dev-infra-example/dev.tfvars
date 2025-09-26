@@ -3,8 +3,8 @@ gcp_region     = "us-central1"
 environment    = "development"
 
 # --- Service Names ---
-backend_service_name  = "creative-studio-backend-dev"
-frontend_service_name = "creative-studio-frontend-dev"
+backend_service_name  = "cstudio-backend-dev"
+frontend_service_name = "cstudio-frontend-dev"
 
 # --- GitHub Repo Details ---
 github_conn_name   = "gh-repo-owner-con"
@@ -31,6 +31,24 @@ be_env_vars = {
     FIREBASE_DB = "cstudio"
     IDENTITY_PLATFORM_ALLOWED_ORGS = "" # If empty then any org is allowed
   }
+}
+
+fe_build_substitutions = {
+  _ANGULAR_BUILD_COMMAND = "build-dev"
+}
+
+frontend_secrets = [
+  "FIREBASE_API_KEY",
+  "FIREBASE_AUTH_DOMAIN",
+  "GOOGLE_CLIENT_ID",
+]
+
+backend_secrets = [
+  "GOOGLE_TOKEN_AUDIENCE",
+]
+
+backend_runtime_secrets = {
+  "GOOGLE_TOKEN_AUDIENCE" = "GOOGLE_TOKEN_AUDIENCE"
 }
 
 apis_to_enable = [

@@ -1,6 +1,6 @@
 terraform {
   backend "gcs" {
-    bucket = "creative-studio-arena-cstudio-dev-tfstate"
+    bucket = "cstudio-infra-example-cstudio-dev-tfstate"
     prefix = "infra/dev/state"
   }
 }

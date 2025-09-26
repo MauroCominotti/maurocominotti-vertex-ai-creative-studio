@@ -13,11 +13,6 @@ variable "environment" {
   description = "The name of the environment, e.g., 'development'."
 }
 
-variable "firebase_db_name" {
-  type = string
-  default = "cstudio"
-}
-
 # --- Service Names ---
 variable "backend_service_name" {
   type        = string
@@ -66,6 +61,36 @@ variable "be_env_vars" {
   type        = map(map(string))
   description = "A map containing common and environment-specific variables for the backend."
 }
+
+variable "be_build_substitutions" {
+  type        = map(string)
+  description = "A map of substitution variables for the backend Cloud Build trigger."
+  default     = {}
+}
+
+variable "fe_build_substitutions" {
+  type        = map(string)
+  description = "A map of substitution variables for the backend Cloud Build trigger."
+  default     = {}
+}
+
+variable "frontend_secrets" {
+  type        = list(string)
+  description = "A list of secret names required by the frontend build."
+  default = []
+}
+
+variable "backend_secrets" {
+  type        = list(string)
+  description = "A list of secret names required by the backend build."
+  default = []
+}
+
+variable "backend_runtime_secrets" {
+  type        = map(string)
+  description = "Secrets to mount in the backend container at runtime."
+}
+
 
 # --- List of APIs to enable ---
 variable "apis_to_enable" {

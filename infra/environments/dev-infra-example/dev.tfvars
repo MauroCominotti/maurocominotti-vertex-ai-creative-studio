@@ -23,12 +23,12 @@ be_env_vars = {
   }
   development = {
     ENVIRONMENT  = "development"
-    FIREBASE_DB = "cstudio"
+    FIREBASE_DB = "cstudio-development"
     IDENTITY_PLATFORM_ALLOWED_ORGS = "" # If empty then any org is allowed
   }
   production = {
     ENVIRONMENT  = "production"
-    FIREBASE_DB = "cstudio"
+    FIREBASE_DB = "cstudio-development"
     IDENTITY_PLATFORM_ALLOWED_ORGS = "" # If empty then any org is allowed
   }
 }

@@ -25,7 +25,7 @@ class WorkspaceRepository(BaseRepository[WorkspaceModel]):
         This is typically used for the main homepage gallery.
         """
         query = self.collection_ref.where(
-            "scope", "==", WorkspaceScopeEnum.PUBLIC
+            "scope", "==", WorkspaceScopeEnum.PUBLIC.value
         ).limit(1)
         docs = query.stream()
         for doc in docs:

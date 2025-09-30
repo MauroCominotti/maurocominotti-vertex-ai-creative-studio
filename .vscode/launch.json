@@ -15,6 +15,16 @@
         "--port",
         "8080"
       ],
+      "env": {
+        "FRONTEND_URL":"http://localhost:4200",
+        "ENVIRONMENT":"development",
+        "LOG_LEVEL":"INFO",
+        "PROJECT_ID":"nachov-argolis",
+        "GENMEDIA_BUCKET":"nachov-argolis-creative-studio-arena-genmedia",
+        "SIGNING_SA_EMAIL":"sa-genmedia-creative-studio@nachov-argolis.iam.gserviceaccount.com",
+        "GOOGLE_TOKEN_AUDIENCE":"464814743320-capeh5tgc0eb43pk1dr7u12rg18p1g3k.apps.googleusercontent.com",
+        "IDENTITY_PLATFORM_ALLOWED_ORGS":"",
+      },
       "cwd": "${workspaceFolder}/backend",
       "envFile": "${workspaceFolder}/backend/.env",
       "jinja": true

@@ -1,32 +1,30 @@
+import { HttpClient } from '@angular/common/http';
 import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
   OnInit,
-  ViewChild,
-  inject,
+  ViewChild
 } from '@angular/core';
-import {FormBuilder, Validators, FormGroup} from '@angular/forms';
-import {MediaItem} from '../common/models/media-item.model';
-import {HttpClient} from '@angular/common/http';
-import {VtoInputLink, VtoRequest, VtoSourceMediaItemLink} from './vto.model';
-import {environment} from '../../environments/environment';
-import {MatDialog} from '@angular/material/dialog';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
+import { MatIconRegistry } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatStepper } from '@angular/material/stepper';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { NavigationExtras, Router } from '@angular/router';
+import { finalize, Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 import {
   ImageSelectorComponent,
   MediaItemSelection,
 } from '../common/components/image-selector/image-selector.component';
-import {SourceAssetResponseDto} from '../common/services/source-asset.service';
-import {MatSnackBar} from '@angular/material/snack-bar';
-import {finalize, Observable} from 'rxjs';
-import {handleErrorSnackbar} from '../utils/handleErrorSnackbar';
-import {NavigationExtras, Router} from '@angular/router';
-import {MatStepper} from '@angular/material/stepper';
-import {ToastMessageComponent} from '../common/components/toast-message/toast-message.component';
-import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
-import {MatIconRegistry} from '@angular/material/icon';
-import {WorkspaceStateService} from '../services/workspace/workspace-state.service';
-import {AssetTypeEnum} from '../admin/source-assets-management/source-asset.model';
+import { ToastMessageComponent } from '../common/components/toast-message/toast-message.component';
+import { MediaItem } from '../common/models/media-item.model';
+import { SourceAssetResponseDto } from '../common/services/source-asset.service';
+import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
+import { handleErrorSnackbar } from '../utils/handleErrorSnackbar';
+import { VtoInputLink, VtoRequest, VtoSourceMediaItemLink } from './vto.model';
 
 interface Garment {
   id: string;
@@ -57,6 +55,7 @@ interface Model {
   selector: 'app-vto',
   templateUrl: './vto.component.html',
   styleUrls: ['./vto.component.scss'],
+  standalone: false
 })
 export class VtoComponent implements OnInit, AfterViewInit {
   firstFormGroup: FormGroup;
@@ -74,7 +73,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
   selectedDress: Garment | null = null;
   selectedShoes: Garment | null = null;
 
-  uploadExamples: {imageUrl: string; alt: string}[] = [
+  uploadExamples: { imageUrl: string; alt: string }[] = [
     {
       imageUrl: 'assets/images/vto/upload-photo-1.png',
       alt: 'Well-lit, full body example 1',
@@ -156,14 +155,14 @@ export class VtoComponent implements OnInit, AfterViewInit {
       this.selectedTop = top;
       if (top) {
         this.selectedDress = null;
-        this.secondFormGroup.get('dress')?.reset(null, {emitEvent: false});
+        this.secondFormGroup.get('dress')?.reset(null, { emitEvent: false });
       }
     });
     this.secondFormGroup.get('bottom')?.valueChanges.subscribe(bottom => {
       this.selectedBottom = bottom;
       if (bottom) {
         this.selectedDress = null;
-        this.secondFormGroup.get('dress')?.reset(null, {emitEvent: false});
+        this.secondFormGroup.get('dress')?.reset(null, { emitEvent: false });
       }
     });
     this.secondFormGroup.get('dress')?.valueChanges.subscribe(dress => {
@@ -171,8 +170,8 @@ export class VtoComponent implements OnInit, AfterViewInit {
       if (dress) {
         this.selectedTop = null;
         this.selectedBottom = null;
-        this.secondFormGroup.get('top')?.reset(null, {emitEvent: false});
-        this.secondFormGroup.get('bottom')?.reset(null, {emitEvent: false});
+        this.secondFormGroup.get('top')?.reset(null, { emitEvent: false });
+        this.secondFormGroup.get('bottom')?.reset(null, { emitEvent: false });
       }
     });
     this.secondFormGroup.get('shoes')?.valueChanges.subscribe(shoes => {
@@ -243,7 +242,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
       name: asset.originalFilename,
       imageUrl: asset.presignedUrl,
       size: 'M', // Default size or handle differently
-      inputLink: {sourceAssetId: asset.id},
+      inputLink: { sourceAssetId: asset.id },
     };
   }
 
@@ -256,7 +255,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
       name: asset.originalFilename,
       imageUrl: asset.presignedUrl,
       type: type,
-      inputLink: {sourceAssetId: asset.id},
+      inputLink: { sourceAssetId: asset.id },
     };
   }
 
@@ -266,7 +265,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
       height: '80vh',
       maxWidth: '90vw',
       panelClass: 'image-selector-dialog',
-      data: {mimeType: 'image/*'},
+      data: { mimeType: 'image/*' },
     });
 
     dialogRef
@@ -280,7 +279,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
               name: result.originalFilename,
               imageUrl: result.presignedUrl,
               size: 'custom',
-              inputLink: {sourceAssetId: result.id},
+              inputLink: { sourceAssetId: result.id },
             };
             this.firstFormGroup.get('model')?.setValue(uploadedModel);
           } else {
@@ -331,7 +330,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
               name: asset.originalFilename,
               imageUrl: asset.presignedUrl,
               size: 'custom',
-              inputLink: {sourceAssetId: asset.id},
+              inputLink: { sourceAssetId: asset.id },
             };
             this.firstFormGroup.get('model')?.setValue(uploadedModel);
           },
@@ -477,7 +476,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/'], navigationExtras);
   }
 
-  generateVideoWithResult(event: {role: 'start' | 'end'; index: number}): void {
+  generateVideoWithResult(event: { role: 'start' | 'end'; index: number }): void {
     if (!this.imagenDocuments) {
       return;
     }
@@ -503,7 +502,7 @@ export class VtoComponent implements OnInit, AfterViewInit {
     };
 
     const navigationExtras: NavigationExtras = {
-      state: {remixState},
+      state: { remixState },
     };
     this.router.navigate(['/video'], navigationExtras);
   }

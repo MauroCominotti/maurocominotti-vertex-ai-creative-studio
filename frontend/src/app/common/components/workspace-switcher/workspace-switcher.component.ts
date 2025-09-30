@@ -23,7 +23,10 @@ import {WorkspaceService} from '../../../services/workspace/workspace.service';
 import {WorkspaceStateService} from '../../../services/workspace/workspace-state.service';
 import {CreateWorkspaceModalComponent} from '../create-workspace-modal/create-workspace-modal.component';
 import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
-import {handleErrorSnackbar, handleSuccessSnackbar} from '../../../utils/handleErrorSnackbar';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../../utils/handleErrorSnackbar';
 import {
   InviteUserData,
   InviteUserModalComponent,
@@ -38,9 +41,10 @@ import {BrandGuidelineService} from '../../services/brand-guideline/brand-guidel
 import {finalize, map, switchMap} from 'rxjs';
 
 @Component({
-  selector: 'app-workspace-switcher',
-  templateUrl: './workspace-switcher.component.html',
-  styleUrls: ['./workspace-switcher.component.scss'],
+    selector: 'app-workspace-switcher',
+    templateUrl: './workspace-switcher.component.html',
+    styleUrls: ['./workspace-switcher.component.scss'],
+    standalone: false
 })
 export class WorkspaceSwitcherComponent implements OnInit {
   workspaces: Workspace[] = [];

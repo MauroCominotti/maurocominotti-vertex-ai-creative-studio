@@ -8,9 +8,10 @@ import {MatSnackBar} from '@angular/material/snack-bar';
 import {handleErrorSnackbar} from '../../../utils/handleErrorSnackbar';
 
 @Component({
-  selector: 'app-source-asset-upload-form',
-  templateUrl: './source-asset-upload-form.component.html',
-  styleUrls: ['./source-asset-upload-form.component.scss'],
+    selector: 'app-source-asset-upload-form',
+    templateUrl: './source-asset-upload-form.component.html',
+    styleUrls: ['./source-asset-upload-form.component.scss'],
+    standalone: false
 })
 export class SourceAssetUploadFormComponent {
   form: FormGroup;

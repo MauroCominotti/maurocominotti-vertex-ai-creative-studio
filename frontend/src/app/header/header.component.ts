@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import {Component, OnDestroy} from '@angular/core';
-import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
-import {MatIconRegistry} from '@angular/material/icon';
-import {Router} from '@angular/router';
-import {UserService} from '../common/services/user.service';
-import {AuthService} from '../common/services/auth.service';
-import {environment} from '../../environments/environment';
-import {UserModel} from '../common/models/user.model';
+import { Component } from '@angular/core';
+import { MatIconRegistry } from '@angular/material/icon';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Router } from '@angular/router';
+import { UserModel } from '../common/models/user.model';
+import { AuthService } from '../common/services/auth.service';
+import { UserService } from '../common/services/user.service';
 
 @Component({
   selector: 'app-header',
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss'],
+  standalone: false
 })
 export class HeaderComponent {
   currentUser: UserModel | null;
@@ -46,7 +46,8 @@ export class HeaderComponent {
       .addSvgIcon(
         'fun-templates-icon',
         this.setPath(`${this.path}/fun-templates-icon.svg`),
-      );
+      )
+      .addSvgIcon('flows-icon', this.setPath(`${this.path}/flows-icon.svg`));
 
     this.currentUser = this.userService.getUserDetails();
   }

@@ -18,10 +18,11 @@ import {Component, Inject, ViewEncapsulation} from '@angular/core';
 import {MatSnackBar, MAT_SNACK_BAR_DATA} from '@angular/material/snack-bar';
 
 @Component({
-  selector: 'app-toast-message',
-  templateUrl: './toast-message.component.html',
-  styleUrls: ['./toast-message.component.scss'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-toast-message',
+    templateUrl: './toast-message.component.html',
+    styleUrls: ['./toast-message.component.scss'],
+    encapsulation: ViewEncapsulation.None,
+    standalone: false
 })
 export class ToastMessageComponent {
   text: string;

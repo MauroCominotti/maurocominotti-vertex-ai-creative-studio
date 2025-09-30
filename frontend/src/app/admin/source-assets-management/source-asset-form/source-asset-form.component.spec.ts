@@ -1,6 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { SourceAssetFormComponent } from './source-asset-form.component';
+import {SourceAssetFormComponent} from './source-asset-form.component';
 
 describe('SourceAssetFormComponent', () => {
   let component: SourceAssetFormComponent;
@@ -8,9 +8,8 @@ describe('SourceAssetFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [SourceAssetFormComponent]
-    })
-    .compileComponents();
+      declarations: [SourceAssetFormComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(SourceAssetFormComponent);
     component = fixture.componentInstance;

@@ -14,30 +14,32 @@
  * limitations under the License.
  */
 
-import {NgModule} from '@angular/core';
-import {RouterModule, Routes} from '@angular/router';
-import {HomeComponent} from './home/home.component';
-import {LoginComponent} from './login/login.component';
-import {AuthGuardService} from './common/services/auth.guard.service';
-import {FunTemplatesComponent} from './fun-templates/fun-templates.component';
-import {VideoComponent} from './video/video.component';
-import {ArenaComponent} from './arena/arena.component';
-import {MediaGalleryComponent} from './gallery/media-gallery/media-gallery.component';
-import {MediaDetailComponent} from './gallery/media-detail/media-detail.component';
-import {AdminAuthGuard} from './admin/admin-auth.guard';
-import {VtoComponent} from './vto/vto.component';
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { AdminAuthGuard } from './admin/admin-auth.guard';
+import { ArenaComponent } from './arena/arena.component';
+import { AuthGuardService } from './common/services/auth.guard.service';
+import { FunTemplatesComponent } from './fun-templates/fun-templates.component';
+import { MediaDetailComponent } from './gallery/media-detail/media-detail.component';
+import { MediaGalleryComponent } from './gallery/media-gallery/media-gallery.component';
+import { HomeComponent } from './home/home.component';
+import { LoginComponent } from './login/login.component';
+import { OauthCallbackComponent } from './opal/oauth-callback.component';
+import { OpalComponent } from './opal/opal.component';
+import { VideoComponent } from './video/video.component';
+import { VtoComponent } from './vto/vto.component';
 
 const routes: Routes = [
-  {path: 'login', component: LoginComponent},
-  {path: '', component: HomeComponent, canActivate: [AuthGuardService]},
+  { path: 'login', component: LoginComponent },
+  { path: '', component: HomeComponent, canActivate: [AuthGuardService] },
   {
     path: 'fun-templates',
     component: FunTemplatesComponent,
     canActivate: [AuthGuardService],
   },
-  {path: 'video', component: VideoComponent, canActivate: [AuthGuardService]},
-  {path: 'arena', component: ArenaComponent, canActivate: [AuthGuardService]},
-  {path: 'vto', component: VtoComponent, canActivate: [AuthGuardService]},
+  { path: 'video', component: VideoComponent, canActivate: [AuthGuardService] },
+  { path: 'arena', component: ArenaComponent, canActivate: [AuthGuardService] },
+  { path: 'vto', component: VtoComponent, canActivate: [AuthGuardService] },
   // When a user goes to '/gallery', show the main feed.
   {
     path: 'gallery',
@@ -50,6 +52,8 @@ const routes: Routes = [
     component: MediaDetailComponent,
   },
   // Optional: Redirect the base URL to the gallery
+  { path: 'opals/oauth', component: OauthCallbackComponent },
+  { path: 'opal', component: OpalComponent },
   {
     path: '',
     redirectTo: '/gallery',
@@ -66,4 +70,4 @@ const routes: Routes = [
   imports: [RouterModule.forRoot(routes)],
   exports: [RouterModule],
 })
-export class AppRoutingModule {}
+export class AppRoutingModule { }

@@ -16,9 +16,10 @@ import {MatSnackBar} from '@angular/material/snack-bar';
 import {UserModel, UserRolesEnum} from '../../common/models/user.model';
 
 @Component({
-  selector: 'app-users-management',
-  templateUrl: './users-management.component.html',
-  styleUrls: ['./users-management.component.scss'],
+    selector: 'app-users-management',
+    templateUrl: './users-management.component.html',
+    styleUrls: ['./users-management.component.scss'],
+    standalone: false
 })
 export class UsersManagementComponent implements OnInit, OnDestroy {
   displayedColumns: string[] = [

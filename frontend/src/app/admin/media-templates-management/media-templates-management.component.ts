@@ -9,9 +9,10 @@ import {of} from 'rxjs';
 import {MediaTemplate} from '../../fun-templates/media-template.model';
 
 @Component({
-  selector: 'app-media-templates-management',
-  templateUrl: './media-templates-management.component.html',
-  styleUrls: ['./media-templates-management.component.scss'],
+    selector: 'app-media-templates-management',
+    templateUrl: './media-templates-management.component.html',
+    styleUrls: ['./media-templates-management.component.scss'],
+    standalone: false
 })
 export class MediaTemplatesManagementComponent
   implements OnInit, AfterViewInit

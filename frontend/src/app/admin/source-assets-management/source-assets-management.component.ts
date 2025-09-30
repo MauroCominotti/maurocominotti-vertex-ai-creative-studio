@@ -13,9 +13,10 @@ import {SourceAssetResponseDto} from '../../common/services/source-asset.service
 import {SourceAssetUploadFormComponent} from './source-asset-upload-form/source-asset-upload-form.component';
 
 @Component({
-  selector: 'app-source-assets-management',
-  templateUrl: './source-assets-management.component.html',
-  styleUrls: ['./source-assets-management.component.scss'],
+    selector: 'app-source-assets-management',
+    templateUrl: './source-assets-management.component.html',
+    styleUrls: ['./source-assets-management.component.scss'],
+    standalone: false
 })
 export class SourceAssetsManagementComponent implements OnInit {
   displayedColumns: string[] = [

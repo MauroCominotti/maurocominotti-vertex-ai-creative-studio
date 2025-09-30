@@ -4,7 +4,7 @@
   <div mat-dialog-content class="view-mode">
     <h2 class="text-xl font-semibold mb-2">{{ data.guideline.name }}</h2>
 
-    @if (data.guideline.colorPalette?.length) {
+    @if (data.guideline.colorPalette.length > 0) {
       <div class="detail-section">
         <strong>Color Palette:</strong>
         <div class="flex flex-wrap gap-2 mt-1">
@@ -57,7 +57,7 @@
       </div>
     }
 
-    @if (data.guideline.presignedSourcePdfUrls?.length) {
+    @if (data.guideline.presignedSourcePdfUrls?.length ?? 0 > 0) {
       <div class="detail-section">
         <strong>Source Documents:</strong>
         <ul class="mt-1 space-y-2">

@@ -1,6 +1,6 @@
 import {Component, Inject, OnDestroy, OnInit} from '@angular/core';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
-import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
+import {FormBuilder, FormGroup, Validators, FormArray} from '@angular/forms';
 import {
   MediaTemplate,
   IndustryEnum,
@@ -16,9 +16,10 @@ import {MatChipInputEvent} from '@angular/material/chips';
 import {Subscription} from 'rxjs';
 
 @Component({
-  selector: 'app-media-template-form',
-  templateUrl: './media-template-form.component.html',
-  styleUrls: ['./media-template-form.component.scss'],
+    selector: 'app-media-template-form',
+    templateUrl: './media-template-form.component.html',
+    styleUrls: ['./media-template-form.component.scss'],
+    standalone: false
 })
 export class MediaTemplateFormComponent implements OnInit, OnDestroy {
   form: FormGroup;

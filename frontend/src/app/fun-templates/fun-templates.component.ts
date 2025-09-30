@@ -28,9 +28,10 @@ import {MediaItem} from '../common/models/media-item.model';
 import {MediaTemplatesService} from '../admin/media-templates-management/media-templates.service';
 
 @Component({
-  selector: 'app-fun-templates',
-  templateUrl: './fun-templates.component.html',
-  styleUrl: './fun-templates.component.scss',
+    selector: 'app-fun-templates',
+    templateUrl: './fun-templates.component.html',
+    styleUrl: './fun-templates.component.scss',
+    standalone: false
 })
 export class FunTemplatesComponent implements OnInit, OnDestroy {
   public isLoading = true;

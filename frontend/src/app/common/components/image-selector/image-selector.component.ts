@@ -17,9 +17,10 @@ export interface MediaItemSelection {
 }
 
 @Component({
-  selector: 'app-image-selector',
-  templateUrl: './image-selector.component.html',
-  styleUrls: ['./image-selector.component.scss'],
+    selector: 'app-image-selector',
+    templateUrl: './image-selector.component.html',
+    styleUrls: ['./image-selector.component.scss'],
+    standalone: false
 })
 export class ImageSelectorComponent {
   isUploading = false;

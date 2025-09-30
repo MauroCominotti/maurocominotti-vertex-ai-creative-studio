@@ -20,17 +20,22 @@ import {AssetTypeEnum} from '../../../admin/source-assets-management/source-asse
 import {UserService} from '../../services/user.service';
 
 @Component({
-  selector: 'app-source-asset-gallery',
-  templateUrl: './source-asset-gallery.component.html',
-  styleUrls: ['./source-asset-gallery.component.scss'],
+    selector: 'app-source-asset-gallery',
+    templateUrl: './source-asset-gallery.component.html',
+    styleUrls: ['./source-asset-gallery.component.scss'],
+    standalone: false
 })
 export class SourceAssetGalleryComponent
   implements OnInit, OnDestroy, AfterViewInit
 {
   @Output() assetSelected = new EventEmitter<SourceAssetResponseDto>();
   @Input() filterByType: AssetTypeEnum | null = null;
-  @Input() filterByMimeType: 'image/*' | 'image/png' | 'video/mp4' | 'audio/mpeg' | null =
-    null;
+  @Input() filterByMimeType:
+    | 'image/*'
+    | 'image/png'
+    | 'video/mp4'
+    | 'audio/mpeg'
+    | null = null;
   @ViewChild('sentinel') private sentinel!: ElementRef<HTMLElement>;
 
   public assets: SourceAssetResponseDto[] = [];

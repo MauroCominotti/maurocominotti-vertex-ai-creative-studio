@@ -22,6 +22,7 @@ from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 from os import getenv
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -49,6 +50,7 @@ from src.workspaces.workspace_controller import router as workspace_router
 
 # Get a logger instance for use in this file. It will inherit the root setup.
 logger = logging.getLogger(__name__)
+load_dotenv()
 
 
 def configure_cors(app):

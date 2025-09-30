@@ -51,9 +51,10 @@ import {WorkspaceStateService} from '../services/workspace/workspace-state.servi
 import {AssetTypeEnum} from '../admin/source-assets-management/source-asset.model';
 
 @Component({
-  selector: 'app-home',
-  templateUrl: './home.component.html',
-  styleUrl: './home.component.scss',
+    selector: 'app-home',
+    templateUrl: './home.component.html',
+    styleUrl: './home.component.scss',
+    standalone: false
 })
 export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   // --- Component State ---

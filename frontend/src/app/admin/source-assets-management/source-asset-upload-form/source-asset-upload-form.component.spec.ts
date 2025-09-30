@@ -1,6 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { SourceAssetUploadFormComponent } from './source-asset-upload-form.component';
+import {SourceAssetUploadFormComponent} from './source-asset-upload-form.component';
 
 describe('SourceAssetUploadFormComponent', () => {
   let component: SourceAssetUploadFormComponent;
@@ -8,9 +8,8 @@ describe('SourceAssetUploadFormComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [SourceAssetUploadFormComponent]
-    })
-    .compileComponents();
+      declarations: [SourceAssetUploadFormComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(SourceAssetUploadFormComponent);
     component = fixture.componentInstance;

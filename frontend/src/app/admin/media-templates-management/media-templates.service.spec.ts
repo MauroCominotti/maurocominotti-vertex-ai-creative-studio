@@ -1,6 +1,6 @@
-import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { MediaTemplatesService } from './media-templates.service';
+import {TestBed} from '@angular/core/testing';
+import {HttpClientTestingModule} from '@angular/common/http/testing';
+import {MediaTemplatesService} from './media-templates.service';
 
 describe('MediaTemplatesService', () => {
   let service: MediaTemplatesService;
@@ -8,7 +8,7 @@ describe('MediaTemplatesService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [MediaTemplatesService]
+      providers: [MediaTemplatesService],
     });
     service = TestBed.inject(MediaTemplatesService);
   });

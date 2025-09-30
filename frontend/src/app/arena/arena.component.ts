@@ -17,8 +17,9 @@
 import {Component} from '@angular/core';
 
 @Component({
-  selector: 'app-arena',
-  templateUrl: './arena.component.html',
-  styleUrl: './arena.component.scss',
+    selector: 'app-arena',
+    templateUrl: './arena.component.html',
+    styleUrl: './arena.component.scss',
+    standalone: false
 })
 export class ArenaComponent {}

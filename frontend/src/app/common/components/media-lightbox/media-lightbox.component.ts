@@ -16,9 +16,10 @@ import {EventEmitter} from '@angular/core';
 import {Location} from '@angular/common';
 
 @Component({
-  selector: 'app-media-lightbox',
-  templateUrl: './media-lightbox.component.html',
-  styleUrls: ['./media-lightbox.component.scss'],
+    selector: 'app-media-lightbox',
+    templateUrl: './media-lightbox.component.html',
+    styleUrls: ['./media-lightbox.component.scss'],
+    standalone: false
 })
 export class MediaLightboxComponent
   implements OnChanges, AfterViewInit, OnDestroy

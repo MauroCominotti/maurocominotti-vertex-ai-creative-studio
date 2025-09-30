@@ -18,12 +18,12 @@
     <div
       class="workspace-container bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[48px] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px] z-[100]"
       [matMenuTriggerFor]="workspaceMenu"
-      [matTooltip]="'You are on a ' + activeWorkspace?.scope + ' workspace. Click to switch workspaces!'"
+      [matTooltip]="'You are on a ' + activeWorkspace.scope + ' workspace. Click to switch workspaces!'"
     >
       <mat-icon>{{
-        activeWorkspace?.scope === WorkspaceScope.PUBLIC ? 'public' : 'lock'
+        activeWorkspace.scope === WorkspaceScope.PUBLIC ? 'public' : 'lock'
       }}</mat-icon>
-      <span class="workspace-name">{{ activeWorkspace?.name || "Undefined" }}</span>
+      <span class="workspace-name">{{ activeWorkspace.name || "Undefined" }}</span>
       <mat-icon>unfold_more</mat-icon>
     </div>
 

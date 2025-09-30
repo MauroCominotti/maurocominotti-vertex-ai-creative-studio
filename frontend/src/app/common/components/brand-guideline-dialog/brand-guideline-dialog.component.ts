@@ -14,26 +14,17 @@
  * limitations under the License.
  */
 
-import {Component, Inject} from '@angular/core';
+import { Component, Inject } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
-  FormsModule,
-  ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
 import {
   MAT_DIALOG_DATA,
-  MatDialogModule,
   MatDialogRef,
 } from '@angular/material/dialog';
-import {MatFormFieldModule} from '@angular/material/form-field';
-import {MatInputModule} from '@angular/material/input';
-import {MatButtonModule} from '@angular/material/button';
-import {MatIconModule} from '@angular/material/icon';
-import {CommonModule} from '@angular/common';
-import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-import {BrandGuidelineModel} from '../../models/brand-guideline.model';
+import { BrandGuidelineModel } from '../../models/brand-guideline.model';
 
 export interface BrandGuidelineDialogData {
   workspaceId: string;
@@ -44,6 +35,7 @@ export interface BrandGuidelineDialogData {
   selector: 'app-brand-guideline-dialog',
   templateUrl: './brand-guideline-dialog.component.html',
   styleUrls: ['./brand-guideline-dialog.component.scss'],
+  standalone: false
 })
 export class BrandGuidelineDialogComponent {
   form: FormGroup;
@@ -69,7 +61,7 @@ export class BrandGuidelineDialogComponent {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
-      this.form.patchValue({file: file});
+      this.form.patchValue({ file: file });
       this.fileName = file.name;
     }
   }
@@ -86,7 +78,7 @@ export class BrandGuidelineDialogComponent {
   }
 
   onDelete(): void {
-    this.dialogRef.close({delete: true});
+    this.dialogRef.close({ delete: true });
   }
 
   replaceGuideline(): void {

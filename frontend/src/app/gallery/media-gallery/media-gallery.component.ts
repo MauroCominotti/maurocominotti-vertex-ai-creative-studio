@@ -22,9 +22,10 @@ import {UserService} from '../../common/services/user.service';
 import {GallerySearchDto} from '../../common/models/search.model';
 
 @Component({
-  selector: 'app-media-gallery',
-  templateUrl: './media-gallery.component.html',
-  styleUrl: './media-gallery.component.scss',
+    selector: 'app-media-gallery',
+    templateUrl: './media-gallery.component.html',
+    styleUrl: './media-gallery.component.scss',
+    standalone: false
 })
 export class MediaGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
   @Output() mediaItemSelected = new EventEmitter<MediaItemSelection>();

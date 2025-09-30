@@ -12,9 +12,10 @@ import {AuthService} from '../../common/services/auth.service';
 import {SourceMediaItemLink} from '../../common/models/search.model';
 
 @Component({
-  selector: 'app-media-detail',
-  templateUrl: './media-detail.component.html',
-  styleUrls: ['./media-detail.component.scss'],
+    selector: 'app-media-detail',
+    templateUrl: './media-detail.component.html',
+    styleUrls: ['./media-detail.component.scss'],
+    standalone: false
 })
 export class MediaDetailComponent implements OnDestroy {
   private routeSub?: Subscription;

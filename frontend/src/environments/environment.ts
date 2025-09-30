@@ -15,19 +15,31 @@
  */
 
 export const environment = {
+  // Argolis env vars
   firebase: {
-    apiKey: '',
-    authDomain: '',
-    projectId: '',
-    storageBucket: '',
-    messagingSenderId: '',
-    appId: '',
-    measurementId: '',
+    apiKey: 'TBD',
+    authDomain: 'TBD',
+    projectId: 'TBD',
+    storageBucket: 'TBD',
+    messagingSenderId: 'TBD',
+    appId: 'TBD',
+    measurementId: 'TBD',
   },
-  production: true,
+  production: false,
   backendURL: 'http://localhost:8080/api',
+  // backendURL:
+  //   'https://creative-studio-api-403537020690.us-central1.run.app/api',
+  GOOGLE_CLIENT_ID:
+    'TBD',
+
+  // Common env vars
   EMAIL_REGEX:
     /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
   ADMIN: 'admin',
-  GOOGLE_CLIENT_ID: '',
+
+  // OPAL
+  // Your app's origin when running locally
+  selfOrigin: 'http://localhost:4200',
+  // Or if deploying: 'https://my-app.com'
+  opalOrigin: 'https://opal.corp.goog',
 };

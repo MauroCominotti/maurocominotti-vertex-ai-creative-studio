@@ -23,7 +23,8 @@
 // Include the common styles for Angular Material. We include this here so that you only
 // have to load a single css file for Angular Material in your app.
 // Be sure that you only ever include this mixin once!
-@include mat.core();
+@include mat.elevation-classes();
+@include mat.app-background();
 
 // Define the theme object.
 $creative-studio-theme: mat.define-theme((
@@ -70,6 +71,8 @@ $creative-studio-theme: mat.define-theme((
 /* You can add global styles to this file, and also import other style files */
 
 @import url(//fonts.googleapis.com/css2?family=Google+Sans);
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
 
 html, body { background-color: transparent; }
 body { margin: 0; font-family: 'Google Sans', Roboto, Arial, "Helvetica Neue", sans-serif !important; }

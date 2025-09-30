@@ -20,9 +20,10 @@ import {Router} from '@angular/router';
 const PRIVACY_POLICY_URL = 'https://policies.google.com/privacy?hl=en-US';
 
 @Component({
-  selector: 'app-footer',
-  templateUrl: './footer.component.html',
-  styleUrls: ['./footer.component.scss'],
+    selector: 'app-footer',
+    templateUrl: './footer.component.html',
+    styleUrls: ['./footer.component.scss'],
+    standalone: false
 })
 export class FooterComponent {
   constructor(private router: Router) {}

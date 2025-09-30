@@ -32,9 +32,10 @@ import {WorkspaceStateService} from '../services/workspace/workspace-state.servi
 import {AssetTypeEnum} from '../admin/source-assets-management/source-asset.model';
 
 @Component({
-  selector: 'app-video',
-  templateUrl: './video.component.html',
-  styleUrl: './video.component.scss',
+    selector: 'app-video',
+    templateUrl: './video.component.html',
+    styleUrl: './video.component.scss',
+    standalone: false
 })
 export class VideoComponent implements AfterViewInit {
   // This observable will always reflect the current job's state
@@ -843,7 +844,11 @@ export class VideoComponent implements AfterViewInit {
     });
   }
 
-  private getMimeTypeForSelector(): 'image/*' | 'image/png' | 'video/mp4' | null {
+  private getMimeTypeForSelector():
+    | 'image/*'
+    | 'image/png'
+    | 'video/mp4'
+    | null {
     const anyInputIsPresent = !!this.image1Preview || !!this.image2Preview;
     const anyInputIsVideo = this._input1IsVideo || this._input2IsVideo;
 

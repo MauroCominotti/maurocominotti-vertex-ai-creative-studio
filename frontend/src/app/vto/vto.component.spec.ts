@@ -1,6 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import { VtoComponent } from './vto.component';
+import {VtoComponent} from './vto.component';
 
 describe('VtoComponent', () => {
   let component: VtoComponent;
@@ -8,9 +8,8 @@ describe('VtoComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [VtoComponent]
-    })
-    .compileComponents();
+      declarations: [VtoComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(VtoComponent);
     component = fixture.componentInstance;

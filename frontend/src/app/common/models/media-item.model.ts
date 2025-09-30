@@ -99,5 +99,4 @@ export interface MediaItem {
  * Defines the response structure for a paginated gallery query,
  * mirroring the Pydantic model from the backend.
  */
-export interface PaginatedGalleryResponse
-  extends PaginatedResponse<MediaItem> {}
+export type PaginatedGalleryResponse = PaginatedResponse<MediaItem>;

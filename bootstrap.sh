@@ -338,18 +338,21 @@ setup_firebase_app() {
 
     info "Checking for existing Firebase web app named '$FE_SERVICE_NAME'...";
     if ! firebase apps:list --project="$GCP_PROJECT_ID" | grep -q "$FE_SERVICE_NAME"; then
-        info "No existing app found. Creating a new Firebase web app..."; firebase apps:create WEB "$FE_SERVICE_NAME" --project="$GCP_PROJECT_ID"
+        info "No existing app found. Creating a new Firebase web app..."; 
+		firebase apps:create WEB "$FE_SERVICE_NAME" --project="$GCP_PROJECT_ID"
     else info "Firebase web app '$FE_SERVICE_NAME' already exists."; fi
-    info "Fetching Firebase SDK configuration to store in memory..."; local APP_ID=$(firebase apps:list --project="$GCP_PROJECT_ID" --json | jq -r --arg name "$FE_SERVICE_NAME" '.result[] | select(.displayName == $name) | .appId')
+
+    info "Fetching Firebase SDK configuration to store in memory..."; 
+	local APP_ID=$(firebase apps:list --project="$GCP_PROJECT_ID" --json | jq -r --arg name "$FE_SERVICE_NAME" '.result[] | select(.displayName == $name) | .appId')
     local SDK_CONFIG_JSON=$(firebase apps:sdkconfig WEB "$APP_ID" --project="$GCP_PROJECT_ID" --json)
 
-    AUTO_FIREBASE_API_KEY=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.apiKey')
-    AUTO_FIREBASE_AUTH_DOMAIN=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.authDomain')
-    AUTO_FIREBASE_PROJECT_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.projectId')
-    AUTO_FIREBASE_STORAGE_BUCKET=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.storageBucket')
-    AUTO_FIREBASE_MESSAGING_SENDER_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.messagingSenderId')
-    AUTO_FIREBASE_APP_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.appId')
-    AUTO_FIREBASE_MEASUREMENT_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.measurementId')
+    AUTO_FIREBASE_API_KEY=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.apiKey // empty')
+    AUTO_FIREBASE_AUTH_DOMAIN=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.authDomain // empty')
+    AUTO_FIREBASE_PROJECT_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.projectId // empty')
+    AUTO_FIREBASE_STORAGE_BUCKET=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.storageBucket // empty')
+    AUTO_FIREBASE_MESSAGING_SENDER_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.messagingSenderId // empty')
+    AUTO_FIREBASE_APP_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.appId // empty')
+    AUTO_FIREBASE_MEASUREMENT_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.measurementId // empty')
 
     if [ -z "$AUTO_FIREBASE_API_KEY" ]; then fail "Could not automatically fetch Firebase API Key. Please check your Firebase setup."; fi
     success "Firebase secrets have been fetched and will be populated automatically after Terraform runs."
@@ -412,8 +415,6 @@ run_terraform() {
     terraform apply -auto-approve -var-file="$TFVARS_FILE_PATH" -parallelism=30
 }
 
-
-
 update_oauth_client() {
     step 10 "Configuring OAuth Client URIs"; cd "$REPO_ROOT"
     if [ -z "$AUTO_OAUTH_CLIENT_ID" ]; then warn "Could not find OAuth Client ID automatically. Skipping URI update."; return; fi
@@ -444,14 +445,14 @@ update_secrets() {
             local APP_ID=$(firebase apps:list --project="$GCP_PROJECT_ID" --json | jq -r --arg name "$FE_SERVICE_NAME" '.result[] | select(.displayName == $name) | .appId')
             if [ -n "$APP_ID" ]; then
                 local SDK_CONFIG_JSON=$(firebase apps:sdkconfig WEB "$APP_ID" --project="$GCP_PROJECT_ID" --json)
-                AUTO_FIREBASE_API_KEY=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.apiKey')
+				AUTO_FIREBASE_API_KEY=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.apiKey // empty')
                 # ... (re-populate all other AUTO_... variables)
-                AUTO_FIREBASE_AUTH_DOMAIN=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.authDomain')
-                AUTO_FIREBASE_PROJECT_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.projectId')
-                AUTO_FIREBASE_STORAGE_BUCKET=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.storageBucket')
-                AUTO_FIREBASE_MESSAGING_SENDER_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.messagingSenderId')
-                AUTO_FIREBASE_APP_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.appId')
-                AUTO_FIREBASE_MEASUREMENT_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.measurementId')
+				AUTO_FIREBASE_AUTH_DOMAIN=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.authDomain // empty')
+				AUTO_FIREBASE_PROJECT_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.projectId // empty')
+				AUTO_FIREBASE_STORAGE_BUCKET=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.storageBucket // empty')
+				AUTO_FIREBASE_MESSAGING_SENDER_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.messagingSenderId // empty')
+				AUTO_FIREBASE_APP_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.appId // empty')
+				AUTO_FIREBASE_MEASUREMENT_ID=$(echo "$SDK_CONFIG_JSON" | jq -r '.result.sdkConfig.measurementId // empty')
                 success "Successfully re-discovered Firebase configuration."
             fi
         fi
@@ -477,7 +478,7 @@ update_secrets() {
             "GOOGLE_TOKEN_AUDIENCE")          info "  Value is handled by the OAuth population step. Skipping."; continue ;;
         esac
 
-        if [ "$AUTO_DISCOVERED" = true ] && [ -n "$SECRET_VALUE" ]; then
+        if [ "$AUTO_DISCOVERED" = true ] && [ -n "$SECRET_VALUE" && [ "$SECRET_VALUE" != "null" ] && [ "$SECRET_VALUE" != "" ]]; then
             info "  Value was auto-detected from Firebase. Populating automatically."
             echo -n "$SECRET_VALUE" | gcloud secrets versions add "$SECRET_NAME" --data-file="-" --project="$GCP_PROJECT_ID" --quiet
             success "  Successfully added new version for ${SECRET_NAME}."

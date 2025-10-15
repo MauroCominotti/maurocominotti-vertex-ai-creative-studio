@@ -29,3 +29,11 @@ export interface BrandGuidelineModel {
   status: JobStatus;
   errorMessage?: string;
 }
+
+/**
+ * DTO for the response from the generate-upload-url endpoint.
+ */
+export interface GenerateUploadUrlResponse {
+  uploadUrl: string;
+  gcsUri: string;
+}

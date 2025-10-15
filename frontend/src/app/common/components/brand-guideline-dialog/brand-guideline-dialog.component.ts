@@ -71,6 +71,8 @@ export class BrandGuidelineDialogComponent {
       const file = input.files[0];
       this.form.patchValue({file: file});
       this.fileName = file.name;
+      // Reset the input so the same file can be re-selected if needed.
+      input.value = '';
     }
   }
 
@@ -79,9 +81,7 @@ export class BrandGuidelineDialogComponent {
   }
 
   onUpload(): void {
-    if (this.form.valid) {
-      this.dialogRef.close(this.form.value);
-    }
+    this.dialogRef.close(this.form.value);
   }
 
   onDelete(): void {

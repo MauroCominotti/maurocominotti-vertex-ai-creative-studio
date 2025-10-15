@@ -280,11 +280,6 @@ export class WorkspaceSwitcherComponent implements OnInit {
             }
           });
         } else if (result.name && result.file && workspaceId) {
-          const formData = new FormData();
-          formData.append('name', result.name);
-          formData.append('file', result.file);
-          formData.append('workspaceId', workspaceId);
-
           // 1. Immediately show spinner and show initial snackbar
           this.brandGuidelineService.setProcessingState();
           handleSuccessSnackbar(
@@ -293,7 +288,9 @@ export class WorkspaceSwitcherComponent implements OnInit {
           );
 
           // 2. Start the upload process
-          this.brandGuidelineService.createBrandGuideline(formData).subscribe({
+          this.brandGuidelineService
+            .createBrandGuideline(workspaceId, result.file, result.name)
+            .subscribe({
             next: () => {
               // 3. On success, show the "processing" snackbar
               handleSuccessSnackbar(

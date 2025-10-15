@@ -216,32 +216,73 @@ setup_project() {
 
 setup_repo() {
     step 4 "Configuring Git Repository"
-    if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-        REPO_ROOT=$(git rev-parse --show-toplevel)
-        prompt "Use the current repository at '$REPO_ROOT'? (y/n)"; read -r REPLY < /dev/tty
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            cd "$REPO_ROOT"; info "Current directory set to repository root."
-        else
-            fail "Please re-run the script from outside a Git repository to clone a new one."
-        fi
+
+    # Since the script is run via curl, it never starts inside a repo. We must clone it.
+    warn "Please fork the main repository first: ${UPSTREAM_REPO_URL}/fork"
+    while true; do
+        prompt "What is the git URL of YOUR forked repository? (e.g., https://github.com/user/repo.git)"
+        read -p "   Git URL: " GITHUB_REPO_URL < /dev/tty
+        if [ -z "$GITHUB_REPO_URL" ]; then warn "Repository URL cannot be empty."; continue; fi
+        info "Validating repository URL..."
+        if git ls-remote --exit-code -h "$GITHUB_REPO_URL" > /dev/null 2>&1; then
+            success "Repository found."; break
+        else warn "Repository not found at that URL. Please check for typos and try again."; fi
+    done
+
+    local REPO_CLONE_DIR=$(basename "$GITHUB_REPO_URL" .git)
+
+    if [[ -d "$REPO_CLONE_DIR" ]]; then
+        warn "Directory '$REPO_CLONE_DIR' already exists."; prompt "Do you want to use this existing directory? (y/n)"; read -r REPLY < /dev/tty
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then fail "Please remove the directory or run the script from a different location."; fi
     else
-        warn "Please fork the repository at ${UPSTREAM_REPO_URL}/fork first."
-        while true; do
-            prompt "What is the git URL of YOUR forked repository? (e.g., https://github.com/user/repo.git)"; read -p "   Git URL: " GITHUB_REPO_URL < /dev/tty
-            info "Validating repository URL..."; if git ls-remote --exit-code -h "$GITHUB_REPO_URL" > /dev/null 2>&1; then success "Repository found."; break; else warn "Repository not found at that URL. Please check for typos and try again."; fi
-        done
-        REPO_NAME=$(basename "$GITHUB_REPO_URL" .git)
-        if [[ -d "$REPO_NAME" ]]; then
-            warn "Directory '$REPO_NAME' already exists."; prompt "Use this existing directory? (y/n)"; read -r REPLY < /dev/tty
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then fail "Please remove the directory or choose a different location and restart the script."; fi
-            cd "$REPO_NAME"
-        else
-            info "Cloning a lightweight copy of the '$DEFAULT_BRANCH_NAME' branch..."; git clone --single-branch --branch "$DEFAULT_BRANCH_NAME" --depth=1 "$GITHUB_REPO_URL"; cd "$REPO_NAME"; success "Repository cloned successfully."
-        fi
+        info "Cloning a lightweight copy of the '$DEFAULT_BRANCH_NAME' branch into './${REPO_CLONE_DIR}'..."
+        git clone --single-branch --branch "$DEFAULT_BRANCH_NAME" --depth=1 "$GITHUB_REPO_URL"
+        success "Repository cloned successfully."
     fi
-    REPO_ROOT=$(git rev-parse --show-toplevel); export REPO_ROOT
-    GITHUB_REPO_OWNER=$(git remote get-url origin | sed -n 's/.*github.com\/\(.*\)\/.*/\1/p'); GITHUB_REPO_NAME=$(basename "$REPO_ROOT")
-    info "Detected GitHub owner: $GITHUB_REPO_OWNER"; info "Detected GitHub repo name: $GITHUB_REPO_NAME"
+
+	# --- Automatic Project Path Detection ---
+    info "Automatically detecting project structure..."
+    local RELATIVE_PROJECT_PATH=""
+    local FALLBACK_PATH="tools/gcc-creative-studio"
+
+    # Check if the project is at the top level
+    if [[ -d "$REPO_CLONE_DIR/infra" && -f "$REPO_CLONE_DIR/bootstrap.sh" ]]; then
+        info "Detected top-level project structure."
+        RELATIVE_PROJECT_PATH=""
+    # Check if the project is in the fallback nested path
+    elif [[ -d "$REPO_CLONE_DIR/$FALLBACK_PATH/infra" && -f "$REPO_CLONE_DIR/$FALLBACK_PATH/bootstrap.sh" ]]; then
+        info "Detected nested project structure at '$FALLBACK_PATH'."
+        RELATIVE_PROJECT_PATH="$FALLBACK_PATH"
+    else
+        fail "Could not find a valid project structure. The script requires an 'infra' directory and 'bootstrap.sh' file at the repository root or in '$FALLBACK_PATH'."
+    fi
+    # --- End of Detection ---
+
+    # --- This is the key logic for flexibility ---
+    # Define the final project path by combining the clone directory and the relative path
+    local FINAL_PROJECT_PATH="$REPO_CLONE_DIR"
+    if [ -n "$RELATIVE_PROJECT_PATH" ]; then
+        FINAL_PROJECT_PATH="$FINAL_PROJECT_PATH/$RELATIVE_PROJECT_PATH"
+    fi
+
+    # Change directory to the final, correct project root.
+    if [ ! -d "$FINAL_PROJECT_PATH" ]; then
+        fail "The specified project path '$FINAL_PROJECT_PATH' does not exist in the cloned repository."
+    fi
+    cd "$FINAL_PROJECT_PATH"
+
+    # Now that we are in the correct directory, set REPO_ROOT to the absolute path.
+    REPO_ROOT=$(pwd)
+    export REPO_ROOT
+    success "Project root successfully set to: $REPO_ROOT"
+
+    # This logic now runs correctly from within the project's root directory
+    GITHUB_REPO_OWNER=$(git remote get-url origin | sed -n 's/.*github.com\/\(.*\)\/.*/\1/p')
+    # Use the name of the top-level cloned directory as the repo name
+    GITHUB_REPO_NAME=$REPO_CLONE_DIR
+    
+    info "Detected GitHub owner: $GITHUB_REPO_OWNER"
+    info "Detected GitHub repo name: $GITHUB_REPO_NAME"
 }
 
 configure_environment() {

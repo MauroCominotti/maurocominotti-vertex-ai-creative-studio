@@ -28,11 +28,15 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.brand_guidelines.dto.brand_guideline_search_dto import BrandGuidelineSearchDto
+from src.brand_guidelines.dto.brand_guideline_search_dto import (
+    BrandGuidelineSearchDto,
+)
 from src.brand_guidelines.repository.brand_guideline_repository import (
     BrandGuidelineRepository,
 )
-from src.brand_guidelines.schema.brand_guideline_model import BrandGuidelineModel
+from src.brand_guidelines.schema.brand_guideline_model import (
+    BrandGuidelineModel,
+)
 from src.common.base_dto import GenerationModelEnum
 from src.config.config_service import config_service
 from src.images.dto.create_imagen_dto import CreateImagenDto

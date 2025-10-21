@@ -29,21 +29,44 @@
     </ng-container>
 
     <ng-template #videoOrGallery>
-
       <ng-container *ngIf="activeVideoJob$ | async as job">
-        <div *ngIf="job.status === JobStatus.PROCESSING" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black bg-opacity-70 rounded-xl">
-          <mat-progress-spinner color="primary" mode="indeterminate" [diameter]="50"></mat-progress-spinner>
-          <p class="mt-4 text-white text-lg">Your video is being generated...</p>
-          <p class="text-gray-400 text-sm">This may take a few minutes. You can safely navigate away.</p>
+        <div
+          *ngIf="job.status === JobStatus.PROCESSING"
+          class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black bg-opacity-70 rounded-xl"
+        >
+          <mat-progress-spinner
+            color="primary"
+            mode="indeterminate"
+            [diameter]="50"
+          ></mat-progress-spinner>
+          <p class="mt-4 text-white text-lg">
+            Your video is being generated...
+          </p>
+          <p class="text-gray-400 text-sm">
+            This may take a few minutes. You can safely navigate away.
+          </p>
         </div>
 
-        <div *ngIf="job.status === JobStatus.FAILED && showErrorOverlay" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black bg-opacity-70 rounded-xl text-center p-4">
-          <mat-icon class="text-red-500 !w-16 !h-16 !text-6xl">error_outline</mat-icon>
+        <div
+          *ngIf="job.status === JobStatus.FAILED && showErrorOverlay"
+          class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black bg-opacity-70 rounded-xl text-center p-4"
+        >
+          <mat-icon class="text-red-500 !w-16 !h-16 !text-6xl"
+            >error_outline</mat-icon
+          >
           <p class="mt-4 text-white text-lg">Video Generation Failed</p>
-          <p class="text-gray-400 text-sm max-w-md">{{ job.errorMessage || job.error_message }}</p>
-          <button mat-raised-button color="primary" (click)="closeErrorOverlay()" class="mt-4">Close</button>
+          <p class="text-gray-400 text-sm max-w-md">
+            {{ job.errorMessage || job.error_message }}
+          </p>
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="closeErrorOverlay()"
+            class="mt-4"
+          >
+            Close
+          </button>
         </div>
-
 
         <!-- Video Gallery -->
         <app-media-lightbox
@@ -53,11 +76,13 @@
           [showSeeMoreInfoButton]="true"
           (extendWithAiClicked)="handleExtendWithAi($event)"
           (concatenateClicked)="handleConcatenate($event)"
-          style="max-height: 60vh;"
+          style="max-height: 60vh"
         ></app-media-lightbox>
       </ng-container>
 
-      <ng-container *ngIf="(activeVideoJob$ | async)?.status !== JobStatus.COMPLETED">
+      <ng-container
+        *ngIf="(activeVideoJob$ | async)?.status !== JobStatus.COMPLETED"
+      >
         <div class="video-container">
           <video
             class="w-full rounded-xl"
@@ -105,7 +130,9 @@
             *ngFor="let ratio of aspectRatioOptions"
             [disabled]="ratio.disabled"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.aspectRatio=== ratio.value}"
+            [ngClass]="{
+              'menu-item-selected': searchRequest.aspectRatio === ratio.value,
+            }"
             (click)="selectAspectRatio(ratio)"
           >
             <span>{{ ratio.viewValue }}</span>
@@ -130,7 +157,10 @@
           <button
             *ngFor="let model of generationModels"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.generationModel === model.value}"
+            [ngClass]="{
+              'menu-item-selected':
+                searchRequest.generationModel === model.value,
+            }"
             (click)="selectModel(model)"
           >
             <span>{{ model.viewValue }}</span>
@@ -176,13 +206,19 @@
           <mat-icon>palette</mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
-          {{ searchRequest.colorAndTone ? searchRequest.colorAndTone : 'Color & Tone' }}
+          {{
+            searchRequest.colorAndTone
+              ? searchRequest.colorAndTone
+              : 'Color & Tone'
+          }}
         </div>
         <mat-menu #colorMenu="matMenu">
           <button
             *ngFor="let color of colorsAndTones"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.colorAndTone === color}"
+            [ngClass]="{
+              'menu-item-selected': searchRequest.colorAndTone === color,
+            }"
             (click)="selectColor(color)"
           >
             <span>{{ color }}</span>
@@ -234,7 +270,9 @@
           <button
             *ngFor="let num of numberOfVideosOptions"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.numberOfMedia === num}"
+            [ngClass]="{
+              'menu-item-selected': searchRequest.numberOfMedia === num,
+            }"
             (click)="selectNumberOfVideos(num)"
           >
             <span>{{ num }}</span>
@@ -259,7 +297,9 @@
           <button
             *ngFor="let duration of durationOptions"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.durationSeconds === duration}"
+            [ngClass]="{
+              'menu-item-selected': searchRequest.durationSeconds === duration,
+            }"
             (click)="selectDuration(duration)"
           >
             <span>{{ duration }}s</span>
@@ -278,13 +318,19 @@
           <mat-icon>movie_edit</mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
-          {{ searchRequest.composition ? searchRequest.composition : 'Composition' }}
+          {{
+            searchRequest.composition
+              ? searchRequest.composition
+              : 'Composition'
+          }}
         </div>
         <mat-menu #compositionMenu="matMenu">
           <button
             *ngFor="let comp of compositions"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.composition === comp}"
+            [ngClass]="{
+              'menu-item-selected': searchRequest.composition === comp,
+            }"
             (click)="selectComposition(comp)"
           >
             <span>{{ comp }}</span>
@@ -391,7 +437,8 @@
         >
           Prompt:
         </div>
-        <textarea [disabled]="isConcatenateMode"
+        <textarea
+          [disabled]="isConcatenateMode"
           id="promptId"
           [(ngModel)]="searchRequest.prompt"
           class="self-stretch w-full h-48 p-4 bg-transparent md:bg-zinc-700 rounded-2xl text-stone-300 text-base font-normal leading-7 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
@@ -405,16 +452,28 @@
               <mat-icon>shuffle</mat-icon>
               Random
             </button> -->
-            <button mat-raised-button color="primary" (click)="rewritePrompt()" [disabled]="isLoading">
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="rewritePrompt()"
+              [disabled]="isLoading"
+            >
               <mat-icon>drive_file_rename_outline</mat-icon>
               Rewrite
             </button>
-            <button mat-raised-button class="!bg-white" (click)="searchTerm()" [disabled]="isLoading">
+            <button
+              mat-raised-button
+              class="!bg-white"
+              (click)="searchTerm()"
+              [disabled]="isLoading"
+            >
               <mat-icon svgIcon="gemini-spark-icon"></mat-icon>
               <span
                 class="font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-red-400 bg-clip-text text-transparent"
               >
-                @if (isExtensionMode) { Extend with AI } @else if (isConcatenateMode) {
+                @if (isExtensionMode) {
+                  Extend with AI
+                } @else if (isConcatenateMode) {
                   Concatenate
                 } @else {
                   Generate
@@ -422,7 +481,14 @@
               </span>
             </button>
           </div>
-          <button mat-stroked-button class="!text-white" (click)="resetAllFilters()" [disabled]="isLoading">Clear All</button>
+          <button
+            mat-stroked-button
+            class="!text-white"
+            (click)="resetAllFilters()"
+            [disabled]="isLoading"
+          >
+            Clear All
+          </button>
         </div>
       </div>
 
@@ -439,8 +505,12 @@
           </div>
           <div *ngIf="image1Preview" class="image-preview-container">
             <img [src]="image1Preview" alt="Dropped Image 1" />
-            <button (click)="clearImage(1, $event)" class="clear-button" mat-icon-button>
-                <mat-icon>close</mat-icon>
+            <button
+              (click)="clearImage(1, $event)"
+              class="clear-button"
+              mat-icon-button
+            >
+              <mat-icon>close</mat-icon>
             </button>
           </div>
         </div>
@@ -456,8 +526,12 @@
           </div>
           <div *ngIf="image2Preview" class="image-preview-container">
             <img [src]="image2Preview" alt="Dropped Image 2" />
-            <button (click)="clearImage(2, $event)" class="clear-button" mat-icon-button>
-                <mat-icon>close</mat-icon>
+            <button
+              (click)="clearImage(2, $event)"
+              class="clear-button"
+              mat-icon-button
+            >
+              <mat-icon>close</mat-icon>
             </button>
           </div>
         </div>
@@ -465,24 +539,36 @@
         <div
           class="drop-zone relative flex flex-col p-2"
           [class.disabled]="referenceImages.length >= 3"
-          (click)="referenceImages.length < 3 && openImageSelectorForReference()"
+          (click)="
+            referenceImages.length < 3 && openImageSelectorForReference()
+          "
           (dragover)="$event.preventDefault()"
           (drop)="referenceImages.length < 3 && onReferenceImageDrop($event)"
         >
-          <div *ngIf="referenceImages.length === 0" class="drop-zone-placeholder m-auto">
+          <div
+            *ngIf="referenceImages.length === 0"
+            class="drop-zone-placeholder m-auto"
+          >
             <mat-icon>collections</mat-icon>
             <span>Add Reference Images</span>
             <span>(Max 3)</span>
           </div>
 
-          <div *ngIf="referenceImages.length > 0" class="w-full h-full flex flex-col gap-2">
+          <div
+            *ngIf="referenceImages.length > 0"
+            class="w-full h-full flex flex-col gap-2"
+          >
             <div class="global-reference-toggle">
               <mat-slide-toggle
                 [checked]="referenceImagesType === 'STYLE'"
-                (change)="referenceImagesType = $event.checked ? 'STYLE' : 'ASSET'"
+                (change)="
+                  referenceImagesType = $event.checked ? 'STYLE' : 'ASSET'
+                "
                 (click)="$event.stopPropagation()"
               >
-                <span class="text-white text-sm font-medium">Use all as STYLE</span>
+                <span class="text-white text-sm font-medium"
+                  >Use all as STYLE</span
+                >
               </mat-slide-toggle>
             </div>
 
@@ -491,7 +577,10 @@
                 *ngFor="let refImage of referenceImages; let i = index"
                 class="image-preview-container small"
               >
-                <img [src]="refImage.previewUrl" [alt]="'Reference Image ' + (i + 1)" />
+                <img
+                  [src]="refImage.previewUrl"
+                  [alt]="'Reference Image ' + (i + 1)"
+                />
                 <button
                   (click)="clearReferenceImage(i, $event)"
                   class="clear-button small"
@@ -510,7 +599,6 @@
             </div>
           </div>
         </div>
-
       </div>
     </div>
   </div>

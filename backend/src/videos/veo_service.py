@@ -139,7 +139,8 @@ def _process_video_in_background(
                 )
                 if start_asset:
                     start_image_for_api = types.Image(
-                        gcs_uri=start_asset.gcs_uri, mime_type=start_asset.mime_type
+                        gcs_uri=start_asset.gcs_uri,
+                        mime_type=start_asset.mime_type,
                     )
 
             if request_dto.end_image_asset_id:
@@ -193,7 +194,9 @@ def _process_video_in_background(
                     if (
                         parent_item
                         and parent_item.gcs_uris
-                        and 0 <= gen_input.media_index < len(parent_item.gcs_uris)
+                        and 0
+                        <= gen_input.media_index
+                        < len(parent_item.gcs_uris)
                     ):
                         gcs_uri = parent_item.gcs_uris[gen_input.media_index]
                         image_for_api = types.Image(
@@ -598,7 +601,8 @@ class VeoService:
         if request_dto.end_image_asset_id:
             source_assets.append(
                 SourceAssetLink(
-                    asset_id=request_dto.end_image_asset_id, role=AssetRoleEnum.END_FRAME
+                    asset_id=request_dto.end_image_asset_id,
+                    role=AssetRoleEnum.END_FRAME,
                 )
             )
         if request_dto.source_video_asset_id:

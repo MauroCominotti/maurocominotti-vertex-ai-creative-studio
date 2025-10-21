@@ -23,7 +23,10 @@ import {WorkspaceService} from '../../../services/workspace/workspace.service';
 import {WorkspaceStateService} from '../../../services/workspace/workspace-state.service';
 import {CreateWorkspaceModalComponent} from '../create-workspace-modal/create-workspace-modal.component';
 import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
-import {handleErrorSnackbar, handleSuccessSnackbar} from '../../../utils/handleErrorSnackbar';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../../utils/handleErrorSnackbar';
 import {
   InviteUserData,
   InviteUserModalComponent,
@@ -36,6 +39,7 @@ import {
 } from '../brand-guideline-dialog/brand-guideline-dialog.component';
 import {BrandGuidelineService} from '../../services/brand-guideline/brand-guideline.service';
 import {finalize, map, switchMap} from 'rxjs';
+import {JobStatus, MediaItem} from '../../models/media-item.model';
 
 @Component({
   selector: 'app-workspace-switcher',
@@ -47,13 +51,13 @@ export class WorkspaceSwitcherComponent implements OnInit {
   activeWorkspaceId: string | null = null;
   activeWorkspace: Workspace | null = null;
   currentUser: UserModel | null;
-  isFetchingGuidelines = false;
+  readonly JobStatus = JobStatus;
   public WorkspaceScope = WorkspaceScope;
 
   constructor(
     private workspaceService: WorkspaceService,
     private workspaceStateService: WorkspaceStateService,
-    private brandGuidelineService: BrandGuidelineService,
+    public brandGuidelineService: BrandGuidelineService,
     private userService: UserService,
     private route: ActivatedRoute,
     public dialog: MatDialog,
@@ -68,14 +72,35 @@ export class WorkspaceSwitcherComponent implements OnInit {
       this.activeWorkspaceId = id;
       this.activeWorkspace = this.workspaces.find(w => w.id === id) || null;
     });
+
+    this.brandGuidelineService.activeBrandGuidelineJob$.subscribe(job => {
+      if (job) {
+        if (job.status === JobStatus.COMPLETED) {
+          handleSuccessSnackbar(
+            this.snackBar,
+            'Brand Guidelines processed successfully!',
+          );
+          // Reset the job so the spinner disappears and the button is re-enabled.
+          this.brandGuidelineService.clearActiveJob();
+        } else if (job.status === JobStatus.FAILED) {
+          handleErrorSnackbar(
+            this.snackBar,
+            {
+              message: job.errorMessage || 'Brand Guideline processing failed.',
+            },
+            'Processing Error',
+          );
+          this.brandGuidelineService.clearActiveJob();
+        }
+      }
+    });
   }
 
   loadWorkspaces(): void {
     this.workspaceService.getWorkspaces().subscribe({
       next: workspaces => {
         this.workspaces = workspaces;
-        this.activeWorkspace =
-          this.workspaces.find(w => w.id === this.activeWorkspaceId) || null;
+        // Now that we have the workspaces, we can determine the initial active one.
         this.initializeActiveWorkspace();
       },
       error: error => {
@@ -85,9 +110,17 @@ export class WorkspaceSwitcherComponent implements OnInit {
   }
 
   initializeActiveWorkspace(): void {
+    const storedWorkspaceId = localStorage.getItem('activeWorkspaceId');
     const queryParamId = this.route.snapshot.queryParamMap.get('workspaceId');
-    if (queryParamId && this.workspaces.some(w => w.id === queryParamId)) {
-      this.setActiveWorkspace(queryParamId);
+
+    // Order of precedence: URL query param > localStorage > default public.
+    const preferredWorkspaceId = queryParamId || storedWorkspaceId;
+
+    if (
+      preferredWorkspaceId &&
+      this.workspaces.some(w => w.id === preferredWorkspaceId)
+    ) {
+      this.setActiveWorkspace(preferredWorkspaceId);
       return;
     }
 
@@ -95,11 +128,10 @@ export class WorkspaceSwitcherComponent implements OnInit {
       w => w.scope === WorkspaceScope.PUBLIC,
     );
     if (googleWorkspace) {
+      // Fallback to public workspace
       this.setActiveWorkspace(googleWorkspace.id);
-      return;
-    }
-
-    if (this.workspaces.length > 0) {
+    } else if (this.workspaces.length > 0) {
+      // Fallback to the first workspace
       this.setActiveWorkspace(this.workspaces[0].id);
     }
   }
@@ -108,6 +140,12 @@ export class WorkspaceSwitcherComponent implements OnInit {
     this.workspaceStateService.setActiveWorkspaceId(workspaceId);
     this.activeWorkspace =
       this.workspaces.find(w => w.id === workspaceId) || null;
+    this.brandGuidelineService.clearCache();
+    if (workspaceId) {
+      localStorage.setItem('activeWorkspaceId', workspaceId);
+    } else {
+      localStorage.removeItem('activeWorkspaceId');
+    }
   }
 
   openCreateWorkspaceDialog(): void {
@@ -150,17 +188,25 @@ export class WorkspaceSwitcherComponent implements OnInit {
     return isOwner || isAdmin;
   }
 
-  get canEditBrandGuidelines(): boolean {
-    if (!this.currentUser || !this.activeWorkspace) {
-      return false;
-    }
+  get canAccessBrandGuidelines(): boolean {
+    if (!this.currentUser || !this.activeWorkspace) return false;
+
+    // Anyone can access guidelines on a public workspace.
+    if (this.activeWorkspace.scope === WorkspaceScope.PUBLIC) return true;
+
+    // For private workspaces, only admins or owners can access.
     const isAdmin = !!this.currentUser.roles?.includes(UserRolesEnum.ADMIN);
-    // An admin can edit any workspace's guidelines.
-    // A non-admin can only edit guidelines for private workspaces they own.
     const isOwnerOfPrivateWorkspace =
       this.activeWorkspace.scope === WorkspaceScope.PRIVATE &&
       this.currentUser.id === this.activeWorkspace.ownerId;
     return isAdmin || isOwnerOfPrivateWorkspace;
+  }
+
+  get canPerformEditActionsOnBrandGuidelines(): boolean {
+    if (!this.currentUser || !this.activeWorkspace) return false;
+    const isAdmin = !!this.currentUser.roles?.includes(UserRolesEnum.ADMIN);
+    const isOwner = this.currentUser.id === this.activeWorkspace.ownerId;
+    return isAdmin || isOwner;
   }
 
   openInviteDialog(event: MouseEvent): void {
@@ -197,14 +243,12 @@ export class WorkspaceSwitcherComponent implements OnInit {
 
   openBrandGuidelinesDialog(event: MouseEvent): void {
     event.stopPropagation();
-    if (!this.activeWorkspaceId || this.isFetchingGuidelines) return;
+    if (!this.activeWorkspaceId) return;
     const workspaceId = this.activeWorkspaceId;
 
-    this.isFetchingGuidelines = true;
     this.brandGuidelineService
       .getBrandGuidelineForWorkspace(workspaceId)
       .pipe(
-        finalize(() => (this.isFetchingGuidelines = false)),
         switchMap(guideline => {
           const dialogRef = this.dialog.open<
             BrandGuidelineDialogComponent,
@@ -213,7 +257,11 @@ export class WorkspaceSwitcherComponent implements OnInit {
             width: '800px',
             maxWidth: '90vw',
             panelClass: 'brand-guideline-dialog',
-            data: {workspaceId: workspaceId, guideline},
+            data: {
+              workspaceId: workspaceId,
+              guideline,
+              canEdit: this.canPerformEditActionsOnBrandGuidelines,
+            },
           });
           return dialogRef
             .afterClosed()
@@ -263,25 +311,28 @@ export class WorkspaceSwitcherComponent implements OnInit {
           formData.append('file', result.file);
           formData.append('workspaceId', workspaceId);
 
-          this.isFetchingGuidelines = true;
-          this.brandGuidelineService
-            .createBrandGuideline(formData)
-            .pipe(finalize(() => (this.isFetchingGuidelines = false)))
-            .subscribe({
-              next: () => {
-                handleSuccessSnackbar(
-                  this.snackBar,
-                  'Brand Guideline uploaded!',
-                );
-              },
-              error: error => {
-                handleErrorSnackbar(
-                  this.snackBar,
-                  error,
-                  'Failed to upload brand guideline.',
-                );
-              },
-            });
+          // 1. Immediately show spinner and show initial snackbar
+          this.brandGuidelineService.setProcessingState();
+          handleSuccessSnackbar(
+            this.snackBar,
+            'Uploading file, please keep this window open...',
+          );
+
+          // 2. Start the upload process
+          this.brandGuidelineService.createBrandGuideline(formData).subscribe({
+            next: () => {
+              // 3. On success, show the "processing" snackbar
+              handleSuccessSnackbar(
+                this.snackBar,
+                'File uploaded! We will process it and notify you upon completion. You can close this window or navigate away!',
+              );
+            },
+            error: error => {
+              // On error, clear the job so the spinner disappears
+              this.brandGuidelineService.clearActiveJob();
+              handleErrorSnackbar(this.snackBar, error, 'Upload failed');
+            },
+          });
         }
       });
   }

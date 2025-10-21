@@ -1,3 +1,17 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from typing import Annotated, Literal, Optional
 
 from fastapi import Query
@@ -66,9 +80,11 @@ class CreateImagenDto(BaseDto):
         default="",
         description="""Factor of the upscale, either x2 or x4. If empty it will not upscale""",
     )
-    source_asset_ids: Optional[Annotated[list[str], Field(max_length=2)]] = Field(
-        default=None,
-        description="A list of source asset IDs to be used as input for image-to-image generation.",
+    source_asset_ids: Optional[Annotated[list[str], Field(max_length=2)]] = (
+        Field(
+            default=None,
+            description="A list of source asset IDs to be used as input for image-to-image generation.",
+        )
     )
     source_media_items: Optional[
         Annotated[list[SourceMediaItemLink], Field(max_length=2)]
@@ -115,15 +131,20 @@ class CreateImagenDto(BaseDto):
         - The total number of inputs (source_asset_ids + source_media_items) cannot exceed 2.
         - For non-Gemini models, only one input is allowed, and the model must support editing.
         """
-        source_assets_count = len(self.source_asset_ids) if self.source_asset_ids else 0
-        generated_inputs_count = len(self.source_media_items) if self.source_media_items else 0
+        source_assets_count = (
+            len(self.source_asset_ids) if self.source_asset_ids else 0
+        )
+        generated_inputs_count = (
+            len(self.source_media_items) if self.source_media_items else 0
+        )
         total_inputs = source_assets_count + generated_inputs_count
 
         if total_inputs == 0:
             return self  # No inputs, nothing to validate here.
 
         is_gemini_flash = (
-            self.generation_model == GenerationModelEnum.GEMINI_2_5_FLASH_IMAGE_PREVIEW
+            self.generation_model
+            == GenerationModelEnum.GEMINI_2_5_FLASH_IMAGE_PREVIEW
         )
 
         if is_gemini_flash:

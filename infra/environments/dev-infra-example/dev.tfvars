@@ -1,4 +1,4 @@
-gcp_project_id = "creative-studio"
+gcp_project_id = "YOUR_GCP_PROJECT_ID"
 gcp_region     = "us-central1"
 environment    = "development"
 
@@ -13,8 +13,8 @@ github_repo_name   = "repo-owner-vertex-ai-creative-studio"
 github_branch_name = "develop"
 
 # --- Custom Audiences ---
-backend_custom_audiences  = ["your-custom-audience.apps.googleusercontent.com", "creative-studio"]
-frontend_custom_audiences = ["your-custom-audience.apps.googleusercontent.com", "creative-studio"]
+backend_custom_audiences  = ["YOUR_OAUTH_WEB_CLIENT_ID_HERE", "YOUR_GCP_PROJECT_ID"]
+frontend_custom_audiences = ["YOUR_OAUTH_WEB_CLIENT_ID_HERE", "YOUR_GCP_PROJECT_ID"]
 
 # --- Service-Specific Environment Variables ---
 be_env_vars = {
@@ -24,13 +24,13 @@ be_env_vars = {
   development = {
     ENVIRONMENT  = "development"
     FIREBASE_DB = "cstudio-development"
-    GOOGLE_TOKEN_AUDIENCE = "your-custom-audience.apps.googleusercontent.com"
+    GOOGLE_TOKEN_AUDIENCE = "YOUR_OAUTH_WEB_CLIENT_ID_HERE"
     IDENTITY_PLATFORM_ALLOWED_ORGS = "" # If empty then any org is allowed
   }
   production = {
     ENVIRONMENT  = "production"
     FIREBASE_DB = "cstudio-development"
-    GOOGLE_TOKEN_AUDIENCE = "your-custom-audience.apps.googleusercontent.com"
+    GOOGLE_TOKEN_AUDIENCE = "YOUR_OAUTH_WEB_CLIENT_ID_HERE"
     IDENTITY_PLATFORM_ALLOWED_ORGS = "" # If empty then any org is allowed
   }
 }
@@ -40,9 +40,14 @@ fe_build_substitutions = {
 }
 
 frontend_secrets = [
-  "FIREBASE_API_KEY",
-  "FIREBASE_AUTH_DOMAIN",
-  "GOOGLE_CLIENT_ID",
+  "FIREBASE_API_KEY",          # Your Firebase Web API Key
+  "FIREBASE_AUTH_DOMAIN",      # Your Firebase Auth Domain (e.g., project-id.firebaseapp.com)
+  "FIREBASE_PROJECT_ID",       # Your Firebase Project ID
+  "FIREBASE_STORAGE_BUCKET",   # Your Firebase Storage Bucket (e.g., project-id.appspot.com)
+  "FIREBASE_MESSAGING_SENDER_ID", # Your Firebase Cloud Messaging Sender ID
+  "FIREBASE_APP_ID",           # Your Firebase Web App ID
+  "FIREBASE_MEASUREMENT_ID",   # Your Google Analytics Measurement ID
+  "GOOGLE_CLIENT_ID",          # Your Google OAuth 2.0 Client ID for web
 ]
 
 backend_secrets = [

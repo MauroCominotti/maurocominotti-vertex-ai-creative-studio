@@ -40,6 +40,7 @@ router = APIRouter(
     ],
 )
 
+
 @router.post("/transcribe")
 async def audio_chat(audio_file: UploadFile = File(...)):
     client = speech.SpeechClient()

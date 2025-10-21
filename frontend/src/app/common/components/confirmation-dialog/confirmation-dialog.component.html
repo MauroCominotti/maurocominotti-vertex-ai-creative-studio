@@ -15,12 +15,19 @@
 -->
 
 <div style="padding: 3rem">
-    <h1 mat-dialog-title>{{ data.title }}</h1>
-    <div mat-dialog-content>
+  <h1 mat-dialog-title>{{ data.title }}</h1>
+  <div mat-dialog-content>
     <p>{{ data.message }}</p>
-    </div>
-    <div mat-dialog-actions align="end">
+  </div>
+  <div mat-dialog-actions align="end">
     <button mat-button (click)="onDismiss()">Cancel</button>
-    <button mat-raised-button color="warn" (click)="onConfirm()" cdkFocusInitial>Delete</button>
-    </div>
+    <button
+      mat-raised-button
+      color="warn"
+      (click)="onConfirm()"
+      cdkFocusInitial
+    >
+      Delete
+    </button>
+  </div>
 </div>

@@ -28,7 +28,12 @@
       </div>
     </ng-container>
     <ng-template #videoOrGallery>
-      <ng-container *ngIf="(imagenDocuments?.presignedUrls?.length || 0) === 0; else imageGallery">
+      <ng-container
+        *ngIf="
+          (imagenDocuments?.presignedUrls?.length || 0) === 0;
+          else imageGallery
+        "
+      >
         <div class="video-container">
           <!-- Text for Tablet and beyond -->
           <div
@@ -104,7 +109,7 @@
             (editClicked)="editResultImage($event)"
             (generateVideoClicked)="generateVideoWithImage($event)"
             (sendToVtoClicked)="sendToVto($event)"
-            style="max-height: 60vh;"
+            style="max-height: 60vh"
           ></app-media-lightbox>
         </div>
       </ng-template>
@@ -133,7 +138,9 @@
             *ngFor="let ratio of aspectRatioOptions"
             [disabled]="ratio.disabled"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.aspectRatio=== ratio.value}"
+            [ngClass]="{
+              'menu-item-selected': searchRequest.aspectRatio === ratio.value,
+            }"
             (click)="selectAspectRatio(ratio)"
           >
             <mat-icon>{{ ratio.icon }}</mat-icon>
@@ -170,7 +177,10 @@
           <button
             *ngFor="let model of generationModels"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.generationModel === model.value}"
+            [ngClass]="{
+              'menu-item-selected':
+                searchRequest.generationModel === model.value,
+            }"
             (click)="selectModel(model)"
           >
             <img
@@ -229,13 +239,19 @@
           <mat-icon>palette</mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
-          {{ searchRequest.colorAndTone ? searchRequest.colorAndTone : 'Color & Tone' }}
+          {{
+            searchRequest.colorAndTone
+              ? searchRequest.colorAndTone
+              : 'Color & Tone'
+          }}
         </div>
         <mat-menu #colorMenu="matMenu">
           <button
             *ngFor="let color of colorsAndTones"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.colorAndTone === color}"
+            [ngClass]="{
+              'menu-item-selected': searchRequest.colorAndTone === color,
+            }"
             (click)="selectColor(color)"
           >
             <span>{{ color }}</span>
@@ -288,7 +304,9 @@
           <button
             *ngFor="let num of numberOfImagesOptions"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.numberOfMedia === num}"
+            [ngClass]="{
+              'menu-item-selected': searchRequest.numberOfMedia === num,
+            }"
             (click)="selectNumberOfImages(num)"
           >
             <span>{{ num }}</span>
@@ -308,13 +326,19 @@
           <mat-icon>movie_edit</mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
-          {{ searchRequest.composition ? searchRequest.composition : 'Composition' }}
+          {{
+            searchRequest.composition
+              ? searchRequest.composition
+              : 'Composition'
+          }}
         </div>
         <mat-menu #compositionMenu="matMenu">
           <button
             *ngFor="let comp of compositions"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.composition === comp}"
+            [ngClass]="{
+              'menu-item-selected': searchRequest.composition === comp,
+            }"
             (click)="selectComposition(comp)"
           >
             <span>{{ comp }}</span>
@@ -381,7 +405,9 @@
           <button
             *ngFor="let option of watermarkOptions"
             mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.addWatermark === option.value}"
+            [ngClass]="{
+              'menu-item-selected': searchRequest.addWatermark === option.value,
+            }"
             (click)="selectWatermark(option)"
           >
             <span>{{ option.viewValue }}</span>
@@ -415,8 +441,12 @@
       </div> -->
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-8"
-        [ngClass]="(imagenDocuments?.presignedUrls?.length || 0) > 0 ? 'mb-8' : ''">
+    <div
+      class="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-8"
+      [ngClass]="
+        (imagenDocuments?.presignedUrls?.length || 0) > 0 ? 'mb-8' : ''
+      "
+    >
       <div class="lg:col-span-3 flex flex-col justify-start items-start gap-4">
         <div
           class="justify-center text-neutral-200 text-base font-bold leading-7"
@@ -437,11 +467,21 @@
               <mat-icon>shuffle</mat-icon>
               Random
             </button> -->
-            <button mat-raised-button color="primary" (click)="rewritePrompt()" [disabled]="isLoading">
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="rewritePrompt()"
+              [disabled]="isLoading"
+            >
               <mat-icon>drive_file_rename_outline</mat-icon>
               Rewrite
             </button>
-            <button mat-raised-button class="!bg-white" (click)="searchTerm()" [disabled]="isLoading">
+            <button
+              mat-raised-button
+              class="!bg-white"
+              (click)="searchTerm()"
+              [disabled]="isLoading"
+            >
               <mat-icon svgIcon="gemini-spark-icon"></mat-icon>
               <span
                 class="font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-red-400 bg-clip-text text-transparent"
@@ -450,7 +490,14 @@
               </span>
             </button>
           </div>
-          <button mat-stroked-button class="!text-white" (click)="resetAllFilters()" [disabled]="isLoading">Clear All</button>
+          <button
+            mat-stroked-button
+            class="!text-white"
+            (click)="resetAllFilters()"
+            [disabled]="isLoading"
+          >
+            Clear All
+          </button>
         </div>
       </div>
       <div class="lg:col-span-1 grid grid-cols-2 gap-4 text-center">
@@ -466,8 +513,12 @@
           </div>
           <div *ngIf="image1Preview" class="image-preview-container">
             <img [src]="image1Preview" alt="Dropped Image 1" />
-            <button (click)="clearImage(1, $event)" class="clear-button" mat-icon-button>
-                <mat-icon>close</mat-icon>
+            <button
+              (click)="clearImage(1, $event)"
+              class="clear-button"
+              mat-icon-button
+            >
+              <mat-icon>close</mat-icon>
             </button>
           </div>
         </div>
@@ -483,14 +534,17 @@
           </div>
           <div *ngIf="image2Preview" class="image-preview-container">
             <img [src]="image2Preview" alt="Dropped Image 2" />
-            <button (click)="clearImage(2, $event)" class="clear-button" mat-icon-button>
-                <mat-icon>close</mat-icon>
+            <button
+              (click)="clearImage(2, $event)"
+              class="clear-button"
+              mat-icon-button
+            >
+              <mat-icon>close</mat-icon>
             </button>
           </div>
         </div>
       </div>
     </div>
   </div>
-
 </div>
 >

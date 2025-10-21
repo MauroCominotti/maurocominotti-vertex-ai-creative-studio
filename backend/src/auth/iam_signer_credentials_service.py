@@ -21,6 +21,7 @@ from google.cloud import storage
 
 logger = logging.getLogger(__name__)
 
+
 class IamSignerCredentials(credentials.Signing):
     """
     A custom credentials class that uses the IAM Credentials API to sign bytes.
@@ -34,9 +35,13 @@ class IamSignerCredentials(credentials.Signing):
         # 1. Create the custom credentials object for signing.
         self.service_account_email = getenv("SIGNING_SA_EMAIL", "")
         self.iam_client = iam_credentials_v1.IAMCredentialsClient()
-        self._sa_path = f"projects/-/serviceAccounts/{self.service_account_email}"
+        self._sa_path = (
+            f"projects/-/serviceAccounts/{self.service_account_email}"
+        )
 
-    def generate_presigned_url(self, gcs_uri: str | None, expiration_hours: int = 1) -> str:
+    def generate_presigned_url(
+        self, gcs_uri: str | None, expiration_hours: int = 1
+    ) -> str:
         """Generates a v4 presigned URL for a GCS object.
 
         The user or service account running this code needs 'roles/storage.objectViewer'

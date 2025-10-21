@@ -63,7 +63,7 @@ def configure_cors(app):
                 "FRONTEND_URL environment variable not set in production"
             )
         allowed_origins.append(frontend_url)
-    elif environment in ["development", "test"]:
+    elif environment in ["development", "test", "local"]:
         allowed_origins.append("*")  # Allow all origins in development
     else:
         raise ValueError(
@@ -96,9 +96,6 @@ async def lifespan(app: FastAPI):
     logger.info("Creating ProcessPoolExecutor...")
     # Create the pool and attach it to the app's state
     app.state.process_pool = ProcessPoolExecutor(max_workers=4)
-
-    # Ensure the default public workspace exists on startup.
-    firebase_client_service.firebase_client._ensure_default_workspace_exists()
 
     yield
 

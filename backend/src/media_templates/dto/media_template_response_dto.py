@@ -23,5 +23,6 @@ class MediaTemplateResponse(MediaTemplateModel):
     It includes all fields from the original MediaItem plus a list of
     temporary, presigned URLs for frontend display.
     """
+
     presigned_urls: List[str] = []
     presigned_thumbnail_urls: List[str] = []

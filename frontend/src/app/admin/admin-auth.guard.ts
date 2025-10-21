@@ -1,23 +1,39 @@
-import { inject, Injectable, PLATFORM_ID } from "@angular/core";
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {inject, Injectable, PLATFORM_ID} from '@angular/core';
 import {
   CanActivate,
   ActivatedRouteSnapshot,
   RouterStateSnapshot,
   UrlTree,
   Router,
-} from "@angular/router";
-import { isPlatformBrowser } from '@angular/common';
-import { Observable } from "rxjs";
-import { UserService } from "../common/services/user.service";
-import { MatSnackBar } from "@angular/material/snack-bar";
-import { AuthService } from "../common/services/auth.service";
-import { environment } from "../../environments/environment";
-import { ToastMessageComponent } from '../common/components/toast-message/toast-message.component';
+} from '@angular/router';
+import {isPlatformBrowser} from '@angular/common';
+import {Observable} from 'rxjs';
+import {UserService} from '../common/services/user.service';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import {AuthService} from '../common/services/auth.service';
+import {environment} from '../../environments/environment';
+import {ToastMessageComponent} from '../common/components/toast-message/toast-message.component';
 
-const LOGIN_ROUTE = '/login'
+const LOGIN_ROUTE = '/login';
 
 @Injectable({
-  providedIn: "root",
+  providedIn: 'root',
 })
 export class AdminAuthGuard implements CanActivate {
   private platformId = inject(PLATFORM_ID);
@@ -26,12 +42,12 @@ export class AdminAuthGuard implements CanActivate {
     private authService: AuthService,
     private router: Router,
     private userService: UserService,
-    private _snackBar: MatSnackBar
+    private _snackBar: MatSnackBar,
   ) {}
 
   canActivate(
     route: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot
+    state: RouterStateSnapshot,
   ):
     | Observable<boolean | UrlTree>
     | Promise<boolean | UrlTree>
@@ -42,7 +58,7 @@ export class AdminAuthGuard implements CanActivate {
       // Allow navigation to render the basic app shell.
       // The client will verify localStorage and redirect if necessary.
       console.log(
-        "AuthGuard (SSR): Allowing shell render. Client will verify auth."
+        'AuthGuard (SSR): Allowing shell render. Client will verify auth.',
       );
       return true;
     }
@@ -60,19 +76,22 @@ export class AdminAuthGuard implements CanActivate {
       return true; // User is authenticated and email is in the allowed list
     } else {
       // User is not authenticated or not an allowed admin
-      console.warn("Access denied to admin area.");
+      console.warn('Access denied to admin area.');
 
       this._snackBar.openFromComponent(ToastMessageComponent, {
-        panelClass: ["red-toast"],
-        verticalPosition: "top",
-        horizontalPosition: "right",
+        panelClass: ['red-toast'],
+        verticalPosition: 'top',
+        horizontalPosition: 'right',
         duration: 10000,
-        data: { text: `Access Denied: Your email (${userEmail}) is not authorized or login session expired.`, icon: "cross-in-circle-white" },
+        data: {
+          text: `Access Denied: Your email (${userEmail}) is not authorized or login session expired.`,
+          icon: 'cross-in-circle-white',
+        },
       });
 
       // Use async logout and navigate *after* logout completes
       this.authService.logout().then(() => {
-        console.log("Forced logout due to DEV email restriction complete.");
+        console.log('Forced logout due to DEV email restriction complete.');
         // Navigation is handled by the logout method itself
       });
       return false; // Prevent navigation

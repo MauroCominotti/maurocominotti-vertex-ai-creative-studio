@@ -1,3 +1,17 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
 from typing import List
 
@@ -35,15 +49,22 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> UserModel:
     5. Returns a Pydantic model with the user's data.
     """
     try:
-        # Verify the Google-issued OIDC ID token from the Authorization header.
-        # The audience (aud) must be the OAuth 2.0 client ID of the Identity Platform-protected resource.
-        # This client ID must be configured as the GOOGLE_TOKEN_AUDIENCE environment variable.
-        GOOGLE_TOKEN_AUDIENCE = config_service.GOOGLE_TOKEN_AUDIENCE
-        decoded_token = id_token.verify_oauth2_token(
-            token,
-            google_auth_requests.Request(),  # Use google.auth.transport.requests for fetching public keys
-            audience=GOOGLE_TOKEN_AUDIENCE,
-        )
+        decoded_token = {}
+        if config_service.ENVIRONMENT == "local":
+            # --- Local: Use Firebase Auth ---
+            # Verifies the token using the standard Firebase Admin SDK method.
+            logger.info("Verifying token using Firebase Admin SDK...")
+            decoded_token = auth.verify_id_token(token)
+        else:
+            # --- Development/Production: Use Google Identity Platform (OIDC) ---
+            # Verifies the Google-issued OIDC ID token. The audience must be the
+            # OAuth 2.0 client ID of the Identity Platform-protected resource.
+            GOOGLE_TOKEN_AUDIENCE = config_service.GOOGLE_TOKEN_AUDIENCE
+            decoded_token = id_token.verify_oauth2_token(
+                token,
+                google_auth_requests.Request(),
+                audience=GOOGLE_TOKEN_AUDIENCE,
+            )
 
         email = decoded_token.get("email")
         name = decoded_token.get("name")

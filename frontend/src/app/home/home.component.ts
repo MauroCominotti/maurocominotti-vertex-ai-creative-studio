@@ -320,6 +320,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     // As this should be browser code we check first if window exists
     if (typeof window !== 'undefined')
       window.addEventListener('mousemove', this.onMouseMove);
+
+    // Since we start with Nano Banana, apply its restrictions by default.
+    this.selectModel(this.selectedGenerationModelObject);
   }
 
   private applyTemplateParameters(): void {
@@ -405,6 +408,23 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.searchRequest.generationModel = model.value;
     this.selectedGenerationModel = model.viewValue;
     this.selectedGenerationModelObject = model;
+
+    // Nano Banana only supports 1:1 aspect ratio for now.
+    if (model.value === 'gemini-2.5-flash-image-preview') {
+      const oneToOneRatio = this.aspectRatioOptions.find(
+        r => r.value === '1:1',
+      );
+      if (oneToOneRatio) {
+        this.selectAspectRatio(oneToOneRatio);
+      }
+      // Disable other aspect ratios
+      this.aspectRatioOptions.forEach(r => {
+        r.disabled = r.value !== '1:1';
+      });
+    } else {
+      // Re-enable all aspect ratios for other models
+      this.aspectRatioOptions.forEach(r => (r.disabled = false));
+    }
   }
 
   selectAspectRatio(ratio: {value: string; viewValue: string}): void {

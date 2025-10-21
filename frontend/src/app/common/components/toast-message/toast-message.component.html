@@ -15,11 +15,19 @@
 -->
 
 <div>
-    <img class='close-toast' src="assets/images/cancel-toast.svg" alt="cross icon inside toast message"
-        (click)="closeToast()">
-    <div class="toast-container">
-        <img *ngIf="icon" src="assets/images/{{icon}}.svg" alt="icon inside toast message">
-        <mat-icon *ngIf="matIcon">{{matIcon}}</mat-icon>
-        <span class="toast-content" style="margin: 0 1.5rem;">{{text}}</span>
-    </div>
+  <img
+    class="close-toast"
+    src="assets/images/cancel-toast.svg"
+    alt="cross icon inside toast message"
+    (click)="closeToast()"
+  />
+  <div class="toast-container">
+    <img
+      *ngIf="icon"
+      src="assets/images/{{ icon }}.svg"
+      alt="icon inside toast message"
+    />
+    <mat-icon *ngIf="matIcon">{{ matIcon }}</mat-icon>
+    <span class="toast-content" style="margin: 0 1.5rem">{{ text }}</span>
+  </div>
 </div>

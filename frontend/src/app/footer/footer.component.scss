@@ -15,63 +15,68 @@
  */
 
 .container {
-    padding-right: 4rem;
-    padding-top: 1em;
-    padding-bottom: 1em;
+  padding-right: 4rem;
+  padding-top: 1em;
+  padding-bottom: 1em;
 }
 
 .footer {
-    position: fixed;
-    bottom: 0;
+  position: fixed;
+  bottom: 0;
 }
 
-
 .genAI {
-	background: linear-gradient(86.95deg, #34A853 -65.34%, #FBBC05 -12.75%, #EA4335 25.15%, #1A73E8 103.88%);
-	-webkit-background-clip: text;
-	-moz-background-clip: text;
-	background-clip: text;
-	color: transparent;
+  background: linear-gradient(
+    86.95deg,
+    #34a853 -65.34%,
+    #fbbc05 -12.75%,
+    #ea4335 25.15%,
+    #1a73e8 103.88%
+  );
+  -webkit-background-clip: text;
+  -moz-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 :host ::ng-deep .mat-toolbar.mat-primary {
-	background-color: transparent;
-    color: #504747;
-    box-shadow: none;
-    justify-content: start;
+  background-color: transparent;
+  color: #504747;
+  box-shadow: none;
+  justify-content: start;
 }
 
 .line-spacer {
-    flex: 1 1 auto;
+  flex: 1 1 auto;
 }
 
 .links-weight {
-    margin-left: 10px;
-    margin-right: 10px;
-    font-style: normal;
-    font-weight: 400;
-    font-size: 16px;
-    line-height: 19px;
-    /* identical to box height */
-    letter-spacing: -0.005em;
-    color: #161A1D;
-    cursor: pointer;
+  margin-left: 10px;
+  margin-right: 10px;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 19px;
+  /* identical to box height */
+  letter-spacing: -0.005em;
+  color: #161a1d;
+  cursor: pointer;
 }
 
 .links-bold {
-    margin-right: 10px;
-    color: #5f6368;
-    font-family: 'Google Sans', sans-serif !important;
-    .blue{
-        color: #4285f4;
-    }
-    .red{
-        color: #ea4335;
-    }
-    .yellow{
-        color: #fbbc04;
-    }
-    .green{
-        color: #34a853;
-    }
+  margin-right: 10px;
+  color: #5f6368;
+  font-family: 'Google Sans', sans-serif !important;
+  .blue {
+    color: #4285f4;
+  }
+  .red {
+    color: #ea4335;
+  }
+  .yellow {
+    color: #fbbc04;
+  }
+  .green {
+    color: #34a853;
+  }
 }

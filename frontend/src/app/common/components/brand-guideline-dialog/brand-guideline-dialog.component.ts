@@ -15,29 +15,15 @@
  */
 
 import {Component, Inject} from '@angular/core';
-import {
-  FormBuilder,
-  FormGroup,
-  FormsModule,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import {
-  MAT_DIALOG_DATA,
-  MatDialogModule,
-  MatDialogRef,
-} from '@angular/material/dialog';
-import {MatFormFieldModule} from '@angular/material/form-field';
-import {MatInputModule} from '@angular/material/input';
-import {MatButtonModule} from '@angular/material/button';
-import {MatIconModule} from '@angular/material/icon';
-import {CommonModule} from '@angular/common';
-import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import {FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
+import {MatSnackBar} from '@angular/material/snack-bar';
 import {BrandGuidelineModel} from '../../models/brand-guideline.model';
 
 export interface BrandGuidelineDialogData {
   workspaceId: string;
   guideline: BrandGuidelineModel | null;
+  canEdit: boolean;
 }
 
 @Component({
@@ -57,6 +43,7 @@ export class BrandGuidelineDialogComponent {
     public dialogRef: MatDialogRef<BrandGuidelineDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: BrandGuidelineDialogData,
     private fb: FormBuilder,
+    private snackBar: MatSnackBar,
   ) {
     this.isEditing = !!this.data.guideline;
     this.form = this.fb.group({
@@ -69,6 +56,18 @@ export class BrandGuidelineDialogComponent {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
+      const maxSize = 50 * 1024 * 1024; // 50MB
+
+      if (file.size > maxSize) {
+        this.snackBar.open('File size cannot exceed 50MB.', 'OK', {
+          duration: 5000,
+        });
+        this.form.get('file')?.setValue(null);
+        this.fileName = null;
+        input.value = ''; // Reset file input to allow re-selection of the same file
+        return;
+      }
+
       this.form.patchValue({file: file});
       this.fileName = file.name;
     }
@@ -79,8 +78,7 @@ export class BrandGuidelineDialogComponent {
   }
 
   onUpload(): void {
-    if (this.form.valid && !this.isUploading) {
-      this.isUploading = true;
+    if (this.form.valid) {
       this.dialogRef.close(this.form.value);
     }
   }

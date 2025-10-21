@@ -24,11 +24,14 @@
   }
 
   // Make the active tab label fully white and bold for emphasis.
-  ::ng-deep .mat-mdc-tab-group .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
-    color: #2D7CEF;
+  ::ng-deep
+    .mat-mdc-tab-group
+    .mat-mdc-tab.mdc-tab--active
+    .mdc-tab__text-label {
+    color: #2d7cef;
   }
 
   ::ng-deep .mat-mdc-chip-action-label {
-      color: white !important;
+    color: white !important;
   }
 }

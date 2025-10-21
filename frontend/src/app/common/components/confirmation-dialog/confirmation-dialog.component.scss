@@ -33,11 +33,12 @@ div[mat-dialog-actions] {
   }
 }
 
-button[color="warn"] {
-    font-weight: bold;
+button[color='warn'] {
+  font-weight: bold;
 
-    &:hover, &:focus {
-      background-color: #d32f2f;
-      color: white;
-    }
+  &:hover,
+  &:focus {
+    background-color: #d32f2f;
+    color: white;
+  }
 }

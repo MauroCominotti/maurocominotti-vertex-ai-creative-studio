@@ -1,5 +1,24 @@
+<!--
+ Copyright 2025 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
 <div *ngIf="isLoading" class="loading-container">
-  <mat-progress-spinner color="primary" mode="indeterminate"></mat-progress-spinner>
+  <mat-progress-spinner
+    color="primary"
+    mode="indeterminate"
+  ></mat-progress-spinner>
   <p class="!mt-5">Loading your assets...</p>
 </div>
 
@@ -18,7 +37,9 @@
       (click)="selectAsset(asset)"
       [class.deleting]="deletingAssetId === asset.id"
     >
-      <div [style.aspect-ratio]="(asset.aspectRatio || '1:1').replace(':', ' / ')"></div>
+      <div
+        [style.aspect-ratio]="(asset.aspectRatio || '1:1').replace(':', ' / ')"
+      ></div>
 
       <img
         class="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
@@ -27,7 +48,10 @@
       />
 
       <div *ngIf="deletingAssetId === asset.id" class="delete-loading-overlay">
-        <mat-progress-spinner mode="indeterminate" [diameter]="40"></mat-progress-spinner>
+        <mat-progress-spinner
+          mode="indeterminate"
+          [diameter]="40"
+        ></mat-progress-spinner>
       </div>
 
       <button
@@ -39,7 +63,10 @@
         <mat-icon>close</mat-icon>
       </button>
 
-      <div *ngIf="asset.mimeType?.startsWith('video/')" class="play-indicator-overlay opacity-50 group-hover:opacity-0 transition-opacity">
+      <div
+        *ngIf="asset.mimeType?.startsWith('video/')"
+        class="play-indicator-overlay opacity-50 group-hover:opacity-0 transition-opacity"
+      >
         <svg
           class="play-indicator-icon"
           fill="currentColor"
@@ -54,7 +81,11 @@
         </svg>
       </div>
 
-      <mat-icon *ngIf="asset.mimeType?.startsWith('video/')" class="video-indicator">videocam</mat-icon>
+      <mat-icon
+        *ngIf="asset.mimeType?.startsWith('video/')"
+        class="video-indicator"
+        >videocam</mat-icon
+      >
     </div>
   </div>
 </div>

@@ -14,30 +14,41 @@
  limitations under the License.
 -->
 
-<mat-progress-bar class="!fixed top-0 left-0 !z-[50]" *ngIf="loadingService.isLoading$ | async"
-  mode="indeterminate"></mat-progress-bar>
+<mat-progress-bar
+  class="!fixed top-0 left-0 !z-[50]"
+  *ngIf="loadingService.isLoading$ | async"
+  mode="indeterminate"
+></mat-progress-bar>
 <app-header *ngIf="showHeader"></app-header>
-  <div [ngClass]="showHeader?'content':'login'" [@routeAnimations]="outlet.isActivated ? outlet.activatedRoute : ''">
-    <router-outlet #outlet="outlet"></router-outlet>
+<div
+  [ngClass]="showHeader ? 'content' : 'login'"
+  [@routeAnimations]="outlet.isActivated ? outlet.activatedRoute : ''"
+>
+  <router-outlet #outlet="outlet"></router-outlet>
 
-    <!-- Background for mobile -->
-    <div class="gradient-bg md:hidden">
-      <svg class="md:hidden" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <filter id="goo">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo" />
-            <feBlend in="SourceGraphic" in2="goo" />
-          </filter>
-        </defs>
-      </svg>
-      <div class="gradients-container md:hidden">
-        <div class="g1"></div>
-        <div class="g2"></div>
-        <div class="g3"></div>
-        <div class="g4"></div>
-        <div class="g5"></div>
-        <div #interactiveBubble class="interactive"></div>
-      </div>
+  <!-- Background for mobile -->
+  <div class="gradient-bg md:hidden">
+    <svg class="md:hidden" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+          <feColorMatrix
+            in="blur"
+            mode="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8"
+            result="goo"
+          />
+          <feBlend in="SourceGraphic" in2="goo" />
+        </filter>
+      </defs>
+    </svg>
+    <div class="gradients-container md:hidden">
+      <div class="g1"></div>
+      <div class="g2"></div>
+      <div class="g3"></div>
+      <div class="g4"></div>
+      <div class="g5"></div>
+      <div #interactiveBubble class="interactive"></div>
     </div>
+  </div>
 </div>

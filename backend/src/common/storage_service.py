@@ -83,6 +83,12 @@ class GcsService:
             FileNotFoundError: If the file at local_path does not exist.
         """
         try:
+            if not self.bucket_name:
+                logger.error(
+                    "GCS bucket name is not configured. Aborting upload."
+                )
+                return None
+
             if not pathlib.Path(local_path).is_file():
                 raise FileNotFoundError(
                     f"Cannot upload file, not found at: {local_path}"
@@ -92,7 +98,10 @@ class GcsService:
             blob.upload_from_filename(local_path, content_type=mime_type)
             return f"gs://{self.bucket_name}/{destination_blob_name}"
         except exceptions.NotFound:
-            logger.error(f"Blob '{destination_blob_name}' not found.")
+            # This specific error usually means the BUCKET itself does not exist.
+            logger.error(
+                f"Upload failed: The bucket 'gs://{self.bucket_name}' was not found."
+            )
             return None
         except exceptions.GoogleAPICallError as e:
             logger.error(f"Failed to upload '{destination_blob_name}': {e}")

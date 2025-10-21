@@ -1,3 +1,17 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from typing import List, Optional
 
 from fastapi import HTTPException, status
@@ -81,7 +95,9 @@ class WorkspaceService:
 
         # 3. Add the new member to the workspace document
         new_member = WorkspaceMember(
-            user_id=invited_user.id, email=invited_user.email, role=invite_dto.role
+            user_id=invited_user.id,
+            email=invited_user.email,
+            role=invite_dto.role,
         )
         updated_workspace = self.workspace_repo.add_member_to_workspace(
             workspace_id, new_member, invited_user.id

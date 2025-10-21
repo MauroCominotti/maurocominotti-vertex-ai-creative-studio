@@ -1,3 +1,17 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from typing import List, Optional
 
 from google.cloud import firestore
@@ -18,9 +32,13 @@ class SourceAssetRepository(BaseRepository[SourceAssetModel]):
     """Handles database operations for UserAsset objects in Firestore."""
 
     def __init__(self):
-        super().__init__(collection_name="source_assets", model=SourceAssetModel)
+        super().__init__(
+            collection_name="source_assets", model=SourceAssetModel
+        )
 
-    def find_by_hash(self, user_id: str, file_hash: str) -> Optional[SourceAssetModel]:
+    def find_by_hash(
+        self, user_id: str, file_hash: str
+    ) -> Optional[SourceAssetModel]:
         """Finds a user asset by its file hash to prevent duplicates."""
         query = (
             self.collection_ref.where("user_id", "==", user_id)
@@ -33,7 +51,9 @@ class SourceAssetRepository(BaseRepository[SourceAssetModel]):
         return self.model.model_validate(docs[0].to_dict())
 
     def query(
-        self, search_dto: SourceAssetSearchDto, target_user_id: Optional[str] = None
+        self,
+        search_dto: SourceAssetSearchDto,
+        target_user_id: Optional[str] = None,
     ) -> PaginationResponseDto[SourceAssetModel]:
         """
         Performs a paginated query for assets. If target_user_id is provided,
@@ -62,7 +82,13 @@ class SourceAssetRepository(BaseRepository[SourceAssetModel]):
             )
         if search_dto.original_filename:
             # This enables prefix searching (e.g., 'file' matches 'file.txt')
-            base_query = base_query.where("original_filename", ">=", search_dto.original_filename).where("original_filename", "<=", search_dto.original_filename + "\uf8ff")
+            base_query = base_query.where(
+                "original_filename", ">=", search_dto.original_filename
+            ).where(
+                "original_filename",
+                "<=",
+                search_dto.original_filename + "\uf8ff",
+            )
 
         count_query = base_query.count(alias="total")
         aggregation_result = count_query.get()
@@ -80,7 +106,9 @@ class SourceAssetRepository(BaseRepository[SourceAssetModel]):
         )
 
         if search_dto.start_after:
-            last_doc_snapshot = self.collection_ref.document(search_dto.start_after).get()
+            last_doc_snapshot = self.collection_ref.document(
+                search_dto.start_after
+            ).get()
             if last_doc_snapshot.exists:
                 data_query = data_query.start_after(last_doc_snapshot)
 

@@ -1,3 +1,19 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import {
   Component,
   HostListener,
@@ -236,8 +252,7 @@ export class VideoComponent implements AfterViewInit {
     this.selectedGenerationModel = model.viewValue;
 
     const isVeo2 =
-      model.value.includes('veo-2.0') &&
-      model.value !== 'veo-2.0-generate-exp';
+      model.value.includes('veo-2.0') && model.value !== 'veo-2.0-generate-exp';
     const isVeo2Exp = model.value === 'veo-2.0-generate-exp';
 
     if (isVeo2) {
@@ -401,7 +416,7 @@ export class VideoComponent implements AfterViewInit {
       !this.isConcatenateMode
     ) {
       const veo2Model = this.generationModels.find(
-        m => m.value === 'veo-2.0-fast-generate-001',
+        m => m.value === 'veo-2.0-generate-001',
       );
       if (veo2Model) {
         this.selectModel(veo2Model);
@@ -409,7 +424,7 @@ export class VideoComponent implements AfterViewInit {
           panelClass: ['green-toast'],
           duration: 8000,
           data: {
-            text: "Veo 3 Fast doesn't support images as input, so we've switched to Veo 2 Fast for you.",
+            text: "Veo 3 Fast doesn't support images as input, so we've switched to Veo 2 for you.",
             matIcon: 'info_outline',
           },
         });
@@ -657,7 +672,7 @@ export class VideoComponent implements AfterViewInit {
 
       if (isVeo3) {
         const veo2Model = this.generationModels.find(
-          m => m.value === 'veo-2.0-fast-generate-001',
+          m => m.value === 'veo-2.0-generate-001',
         );
         if (veo2Model) {
           this.selectModel(veo2Model);
@@ -665,7 +680,7 @@ export class VideoComponent implements AfterViewInit {
             panelClass: ['green-toast'],
             duration: 8000,
             data: {
-              text: "Veo 3 doesn't support video as input, so we've switched to Veo 2 Fast for you.",
+              text: "Veo 3 doesn't support video as input, so we've switched to Veo 2 for you.",
               matIcon: 'info_outline',
             },
           });

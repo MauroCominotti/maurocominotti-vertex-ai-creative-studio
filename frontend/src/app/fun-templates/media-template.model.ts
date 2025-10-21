@@ -107,7 +107,6 @@ export enum GenerationModelEnum {
   VEO_2_QUALITY = 'veo-2.0-generate-001',
 }
 
-
 // The parameters that can be passed to the generator
 export interface GenerationParameters {
   prompt?: string;

@@ -27,7 +27,11 @@ from google.genai import Client, types
 from PIL import Image as PILImage
 
 from src.auth.iam_signer_credentials_service import IamSignerCredentials
-from src.common.base_dto import AspectRatioEnum, GenerationModelEnum, MimeTypeEnum
+from src.common.base_dto import (
+    AspectRatioEnum,
+    GenerationModelEnum,
+    MimeTypeEnum,
+)
 from src.common.schema.genai_model_setup import GenAIModelSetup
 from src.common.schema.media_item_model import (
     AssetRoleEnum,
@@ -49,7 +53,9 @@ from src.images.schema.imagen_result_model import (
     ImageGenerationResult,
 )
 from src.multimodal.gemini_service import GeminiService, PromptTargetEnum
-from src.source_assets.repository.source_asset_repository import SourceAssetRepository
+from src.source_assets.repository.source_asset_repository import (
+    SourceAssetRepository,
+)
 from src.users.user_model import UserModel
 
 logger = logging.getLogger(__name__)

@@ -55,6 +55,7 @@ class GenerationModelEnum(str, Enum):
     VEO_2_QUALITY = "veo-2.0-fast-generate-001"
     VEO_2_GENERATE_EXP = "veo-2.0-generate-exp"
 
+
 class AspectRatioEnum(str, Enum):
     """Enum representing the supported aspect ratios."""
 
@@ -126,9 +127,11 @@ class CompositionEnum(str, Enum):
     SURFACE_DETAIL = "Surface detail"
     WIDE_ANGLE = "Wide angle"
 
+
 class ReferenceImageTypeEnum(str, Enum):
     ASSET = "ASSET"
     STYLE = "STYLE"
+
 
 class BaseDto(BaseModel):
     model_config = ConfigDict(

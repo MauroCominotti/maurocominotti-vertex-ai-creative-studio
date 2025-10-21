@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 export enum UserRolesEnum {
   ADMIN = 'admin',
   USER = 'user',

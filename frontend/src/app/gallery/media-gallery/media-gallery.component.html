@@ -165,7 +165,10 @@
       </div>
     </ng-container>
 
-    <div class="flex flex-row gap-4" *ngIf="images.length > 0 && (columns?.length || 0) > 0">
+    <div
+      class="flex flex-row gap-4"
+      *ngIf="images.length > 0 && (columns?.length || 0) > 0"
+    >
       <div *ngFor="let column of columns" class="flex flex-1 flex-col gap-4">
         <div
           *ngFor="let media of column; trackBy: trackByImage"
@@ -194,7 +197,9 @@
               <!-- A "spacer" div that defines the aspect ratio of the container -->
               <div
                 class="w-full"
-                [style.aspect-ratio]="(media.aspectRatio || '1:1').replace(':', ' / ')"
+                [style.aspect-ratio]="
+                  (media.aspectRatio || '1:1').replace(':', ' / ')
+                "
               ></div>
             </ng-container>
             <ng-container *ngIf="media.mimeType === 'video/mp4'">
@@ -221,19 +226,33 @@
               <!-- Show thumbnail by default -->
               <ng-container *ngIf="hoveredVideoId !== media.id">
                 <img
-                  *ngFor="let url of media.presignedThumbnailUrls; let i = index"
+                  *ngFor="
+                    let url of media.presignedThumbnailUrls;
+                    let i = index
+                  "
                   class="absolute top-0 left-0 h-full w-full cursor-pointer object-cover transition-opacity duration-500"
                   [src]="url"
                   [alt]="getShortPrompt(media.originalPrompt)"
                   [class.active]="(currentImageIndices[media.id] || 0) === i"
-                  [style.opacity]="(currentImageIndices[media.id] || 0) === i ? 1 : 0"
+                  [style.opacity]="
+                    (currentImageIndices[media.id] || 0) === i ? 1 : 0
+                  "
                 />
                 <!-- Play Button Overlay -->
                 <div
                   class="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 opacity-50 transition-opacity duration-300 group-hover:opacity-0"
                 >
-                  <svg class="h-16 w-16 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
+                  <svg
+                    class="h-16 w-16 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                      clip-rule="evenodd"
+                    ></path>
                   </svg>
                 </div>
               </ng-container>
@@ -241,11 +260,12 @@
               <!-- A "spacer" div that defines the aspect ratio of the container -->
               <div
                 class="w-full"
-                [style.aspect-ratio]="(media.aspectRatio || '16:9').replace(':', ' / ')"
+                [style.aspect-ratio]="
+                  (media.aspectRatio || '16:9').replace(':', ' / ')
+                "
               ></div>
             </ng-container>
             <ng-container *ngIf="media.mimeType === 'audio/mpeg'">
-
             </ng-container>
           </a>
 

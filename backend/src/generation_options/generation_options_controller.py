@@ -19,13 +19,16 @@ from src.common.base_dto import (
     GenerationModelEnum,
     StyleEnum,
 )
-from src.generation_options.dto.generation_options_dto import GenerationOptionsResponse
+from src.generation_options.dto.generation_options_dto import (
+    GenerationOptionsResponse,
+)
 from src.images.dto.create_imagen_dto import LightingEnum, ColorAndToneEnum
 
 router = APIRouter(
     prefix="/api/options",
     tags=["Generation Options"],
 )
+
 
 @router.get("/image-generation", response_model=GenerationOptionsResponse)
 async def get_image_generation_options():

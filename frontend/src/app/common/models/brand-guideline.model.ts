@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import {JobStatus} from './media-item.model';
+
 export interface BrandGuidelineModel {
   id: string;
   name: string;
@@ -24,4 +26,6 @@ export interface BrandGuidelineModel {
   toneOfVoiceSummary?: string;
   visualStyleSummary?: string;
   presignedSourcePdfUrls?: string[];
+  status: JobStatus;
+  errorMessage?: string;
 }

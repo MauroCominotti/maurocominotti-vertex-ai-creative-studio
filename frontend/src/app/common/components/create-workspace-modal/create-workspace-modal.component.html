@@ -19,9 +19,7 @@
   <mat-form-field appearance="fill">
     <mat-label>Workspace Name</mat-label>
     <input matInput [formControl]="workspaceName" cdkFocusInitial />
-    <mat-error *ngIf="workspaceName.invalid">{{
-      getErrorMessage()
-    }}</mat-error>
+    <mat-error *ngIf="workspaceName.invalid">{{ getErrorMessage() }}</mat-error>
   </mat-form-field>
 </div>
 <div mat-dialog-actions>
@@ -30,4 +28,3 @@
     Create
   </button>
 </div>
-

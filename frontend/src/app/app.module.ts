@@ -73,7 +73,7 @@ import {MediaGalleryComponent} from './gallery/media-gallery/media-gallery.compo
 import {MediaDetailComponent} from './gallery/media-detail/media-detail.component';
 import {ScrollingModule} from '@angular/cdk/scrolling';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
-import { MediaLightboxComponent } from './common/components/media-lightbox/media-lightbox.component';
+import {MediaLightboxComponent} from './common/components/media-lightbox/media-lightbox.component';
 import {VtoComponent} from './vto/vto.component';
 import {ImageSelectorComponent} from './common/components/image-selector/image-selector.component';
 import {MatDialogModule} from '@angular/material/dialog';

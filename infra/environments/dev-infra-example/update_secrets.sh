@@ -57,6 +57,34 @@ command -v terraform >/dev/null || fail "Terraform not found. Please install it.
 command -v firebase >/dev/null || fail "Firebase CLI not found. Please install it (npm install -g firebase-tools)."
 info "All tools found."
 
+# --- Pre-flight Checks & Auto-configuration ---
+
+# Function to automatically determine and set the Firebase Site ID in the .tfvars file
+configure_firebase_site_id() {
+  info "Checking Firebase Hosting Site configuration..."
+  local tfvars_file=$1
+  local project_id=$2
+
+  # Check if the site ID is still the placeholder value
+  if grep -q "YOUR_FIREBASE_SITE_ID" "$tfvars_file"; then
+    warn "Placeholder 'YOUR_FIREBASE_SITE_ID' found in ${tfvars_file}."
+    info "Querying Firebase for an existing default hosting site..."
+
+    # Query Firebase for sites and find the one marked as default (or the first one if none are default)
+    local default_site_name
+    # The `jq` filter first looks for a site with type "DEFAULT_SITE". If not found, it takes the first site in the list.
+    # The result is the full resource name, e.g., "projects/my-proj/sites/my-site-id".
+    default_site_name=$(firebase hosting:sites:list --project "$project_id" --json | jq -r 'first(.result.sites[] | select(.type == "DEFAULT_SITE") | .name) // first(.result.sites[].name) // ""')
+
+    # If a site was found, extract the site ID from the name. Otherwise, fall back to the project ID.
+    local site_id_to_use=$project_id
+    [ -n "$default_site_name" ] && site_id_to_use=$(basename "$default_site_name")
+
+    info "Setting 'firebase_site_id' to '${C_YELLOW}${site_id_to_use}${C_RESET}' in ${tfvars_file}."
+    sed -i.bak "s/YOUR_FIREBASE_SITE_ID/${site_id_to_use}/" "$tfvars_file" && rm "${tfvars_file}.bak"
+  fi
+}
+
 # --- Main Script ---
 
 # 1. Find the .tfvars file in the current directory
@@ -80,6 +108,9 @@ if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" == "null" ]; then
   fail "Could not find 'gcp_project_id' in Terraform outputs. Did you run 'terraform apply'?"
 fi
 
+# Run the pre-flight check to configure the Firebase Site ID
+configure_firebase_site_id "$TFVARS_FILE" "$PROJECT_ID"
+
 # Combine, de-duplicate, and sort the secret lists
 ALL_SECRETS=$(echo "${FRONTEND_SECRETS} ${BACKEND_SECRETS}" | tr ' ' '\n' | sort -u | grep .)
 
@@ -101,7 +132,8 @@ fi
 
 # 4. Attempt to auto-discover Firebase config
 info "Checking for Firebase Web App configuration..."
-WEB_APP_ID=$(firebase apps:list --project="$PROJECT_ID" --json | jq -r --arg name "cstudio-fe" '.result[] | select(.displayName == $name) | .appId')
+FIREBASE_SITE_ID=$(grep 'firebase_site_id' "$TFVARS_FILE" | awk -F'"' '{print $2}')
+WEB_APP_ID=$(firebase apps:list --project="$PROJECT_ID" --json | jq -r --arg name "$FIREBASE_SITE_ID" '.result[] | select(.displayName == $name) | .appId')
 
 if [ -n "$WEB_APP_ID" ]; then
   WEB_APP_CONFIG_RAW=$(firebase apps:sdkconfig WEB "$WEB_APP_ID" --project="$PROJECT_ID" --json 2>/dev/null)

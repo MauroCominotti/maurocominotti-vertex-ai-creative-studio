@@ -40,7 +40,7 @@ locals {
   region_code  = join("", [for s in split("-", var.gcp_region) : substr(s, 0, 1)])
   backend_url = "https://${var.backend_service_name}-${data.google_project.project.number}.${var.gcp_region}.run.app"
 
-  frontend_url = "https://${var.gcp_project_id}.web.app" # Predictable Firebase URL
+  frontend_url = "https://${var.firebase_site_id}.web.app" # Predictable Firebase URL
 
   backend_env_vars = merge(
     lookup(var.be_env_vars, "common", {}),
@@ -595,7 +595,8 @@ module "frontend_service" {
   resource_prefix      = "cs-fe"
   github_branch_name   = var.github_branch_name
   cloudbuild_yaml_path = "examples/creative-studio/frontend/cloudbuild-deploy.yaml"
-  included_files_glob  = ["**/creative-studio/backend/**"]
+  included_files_glob  = ["**/creative-studio/frontend/**"]
+  firebase_site_id     = var.firebase_site_id != "" ? var.firebase_site_id : var.gcp_project_id
 
   build_substitutions = merge(
     var.fe_build_substitutions,
@@ -605,6 +606,7 @@ module "frontend_service" {
       _FE_SERVICE_NAME     = var.frontend_service_name
       _BACKEND_SERVICE_ID  = var.backend_service_name
       _FIREBASE_PROJECT_ID = var.gcp_project_id
+      _FIREBASE_SITE_ID    = var.firebase_site_id != "" ? var.firebase_site_id : var.gcp_project_id
     }
   )
 }

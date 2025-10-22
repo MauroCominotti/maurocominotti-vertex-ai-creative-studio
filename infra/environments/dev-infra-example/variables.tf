@@ -19,7 +19,8 @@ variable "gcp_project_id" {
 
 variable "gcp_region" {
   type        = string
-  description = "The GCP region for the development environment."
+  description = "The GCP region for the development environment. Defaults to us-central1."
+  default     = "us-central1"
 }
 
 variable "environment" {
@@ -36,6 +37,12 @@ variable "backend_service_name" {
 variable "frontend_service_name" {
   type        = string
   description = "The full name of the frontend Cloud Run service for this environment."
+}
+
+variable "firebase_site_id" {
+  type        = string
+  description = "The site ID for the Firebase Hosting site. Must be unique across all Firebase projects."
+  default     = ""
 }
 
 # --- GitHub Repo Details ---

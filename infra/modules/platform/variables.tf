@@ -21,6 +21,12 @@ variable "firebase_db_name" {
   default = "cstudio"
 }
 
+variable "firebase_site_id" {
+  type        = string
+  description = "The site ID for the Firebase Hosting site. Must be unique across all Firebase projects."
+  default     = ""
+}
+
 # Backend specific variables
 variable "backend_service_name" { type = string }
 variable "backend_custom_audiences" { type = list(string) }

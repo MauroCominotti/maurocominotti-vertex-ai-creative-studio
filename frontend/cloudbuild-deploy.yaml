@@ -40,13 +40,14 @@ steps:
         sed -i "s|FIREBASE_MEASUREMENT_ID_PLACEHOLDER|$${FIREBASE_MEASUREMENT_ID}|g" src/environments/environment.prod.ts
 
         # Inject into Firebase config (firebase.json)
-        sed -i "s|SITE_ID_PLACEHOLDER|${PROJECT_ID}|g" firebase.json
+        sed -i "s|SITE_ID_PLACEHOLDER|${_FIREBASE_SITE_ID}|g" firebase.json
         sed -i "s|BACKEND_SERVICE_ID_PLACEHOLDER|$${_BACKEND_SERVICE_ID}|g" firebase.json
     dir: examples/creative-studio/frontend
     env:
       - '_BACKEND_URL=${_BACKEND_URL}'
       - '_FE_SERVICE_NAME=${_FE_SERVICE_NAME}'
       - '_BACKEND_SERVICE_ID=${_BACKEND_SERVICE_ID}'
+      - '_FIREBASE_SITE_ID=${_FIREBASE_SITE_ID}'
     secretEnv:
       - FIREBASE_API_KEY
       - FIREBASE_AUTH_DOMAIN
@@ -75,10 +76,12 @@ steps:
       - 'firebase'
       - 'deploy'
       - '--project=${PROJECT_ID}'
-      - '--only=hosting:${PROJECT_ID}'
+      - '--only=hosting:${_FIREBASE_SITE_ID}'
       - '--non-interactive'
     waitFor: ['Build Angular App']
     dir: examples/creative-studio/frontend
+    env:
+      - '_FIREBASE_SITE_ID=${_FIREBASE_SITE_ID}'
 
 # This section makes the secrets available as environment variables during the build
 availableSecrets:

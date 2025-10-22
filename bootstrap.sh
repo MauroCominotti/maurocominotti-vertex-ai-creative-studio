@@ -30,6 +30,7 @@ AUTO_FIREBASE_MESSAGING_SENDER_ID="" # Your Firebase Cloud Messaging Sender ID
 AUTO_FIREBASE_APP_ID=""            # Your Firebase Web App ID
 AUTO_FIREBASE_MEASUREMENT_ID=""    # Your Google Analytics Measurement ID
 AUTO_OAUTH_CLIENT_ID=""
+AUTO_FIREBASE_SITE_ID=""           # The discovered Firebase Hosting Site ID
 
 STATE_FILE=""
 REPO_ROOT=""
@@ -49,6 +50,35 @@ warn() { echo -e "${C_YELLOW}⚠️  $1${C_RESET}"; }
 fail() { echo -e "${C_RED}❌  $1${C_RESET}" >&2; exit 1; }
 success() { echo -e "${C_GREEN}✅  $1${C_RESET}"; }
 step() { echo -e "\n${C_BLUE}--- Step $1: $2 ---${C_RESET}"; }
+
+# --- Pre-flight Checks & Auto-configuration ---
+
+# Function to automatically determine and set the Firebase Site ID in the .tfvars file
+configure_firebase_site_id() {
+  info "Checking Firebase Hosting Site configuration..."
+  local tfvars_file=$1
+  local project_id=$2
+
+  # Check if the site ID is still the placeholder value
+  if grep -q "YOUR_FIREBASE_SITE_ID" "$tfvars_file"; then
+    warn "Placeholder 'YOUR_FIREBASE_SITE_ID' found in ${tfvars_file}."
+    info "Querying Firebase for an existing default hosting site..."
+
+    # Query Firebase for sites and find the one marked as default (or the first one if none are default)
+    local default_site_name
+    # The `jq` filter first looks for a site with type "DEFAULT_SITE". If not found, it takes the first site in the list.
+    # The result is the full resource name, e.g., "projects/my-proj/sites/my-site-id".
+    default_site_name=$(firebase hosting:sites:list --project "$project_id" --json | jq -r 'first(.result.sites[] | select(.type == "DEFAULT_SITE") | .name) // first(.result.sites[].name) // ""')
+
+    # If a site was found, extract the site ID from the name. Otherwise, fall back to the project ID.
+    local site_id_to_use=$project_id
+    [ -n "$default_site_name" ] && site_id_to_use=$(basename "$default_site_name")
+
+    info "Setting 'firebase_site_id' to '${C_YELLOW}${site_id_to_use}${C_RESET}' in ${tfvars_file}."
+    sed -i.bak "s/YOUR_FIREBASE_SITE_ID/${site_id_to_use}/" "$tfvars_file" && rm "${tfvars_file}.bak"
+  fi
+}
+
 
 # A reusable function to prompt for a value and update the .tfvars file
 prompt_and_update_tfvar() {
@@ -287,6 +317,11 @@ setup_repo() {
 
 configure_environment() {
     step 5 "Configuring Terraform Environment";
+
+    # Enable necessary APIs
+    info "Enabling required Google Cloud APIs...";
+    gcloud services enable cloudbuild.googleapis.com secretmanager.googleapis.com firebase.googleapis.com iap.googleapis.com identitytoolkit.googleapis.com --project="$GCP_PROJECT_ID"
+
     cd "$REPO_ROOT/infra"
     if [ -z "$ENV_NAME" ]; then
         prompt "What would you like to call this deployment environment?"; read -p "   Environment Name [default value: $DEFAULT_ENV_NAME]: " ENV_NAME < /dev/tty
@@ -296,6 +331,7 @@ configure_environment() {
     TFVARS_FILE_PATH="$REPO_ROOT/infra/$ENV_DIR/$ENV_NAME.tfvars"
     STATE_FILE="$REPO_ROOT/infra/$ENV_DIR/.bootstrap_state";
     read_state
+
     if [ ! -d "$ENV_DIR" ]; then
         info "Creating new environment directory from template: $TEMPLATE_ENV_DIR"; cp -r "$TEMPLATE_ENV_DIR" "$ENV_DIR"
         prompt "Do you have an existing GCS bucket for Terraform state? (y/n)"; read -r REPLY < /dev/tty
@@ -307,11 +343,11 @@ configure_environment() {
         fi
         BUCKET_PREFIX=$(printf "$GCS_BUCKET_PREFIX_FORMAT" "$ENV_NAME")
         info "Updating backend.tf with default prefix: $BUCKET_PREFIX"; echo "terraform {
-  backend \"gcs\" {
-    bucket = \"$BUCKET_NAME\"
-    prefix = \"$BUCKET_PREFIX\"
-  }
-}" > "$ENV_DIR/backend.tf"
+          backend \"gcs\" {
+            bucket = \"$BUCKET_NAME\"
+            prefix = \"$BUCKET_PREFIX\"
+          }
+        }" > "$ENV_DIR/backend.tf"
         info "Updating $TFVARS_FILE_PATH...";
         mv "$ENV_DIR/dev.tfvars" "$TFVARS_FILE_PATH"
 
@@ -323,6 +359,13 @@ configure_environment() {
         info "Default service names will be '$BE_SERVICE_NAME' and '$FE_SERVICE_NAME'."
         sed -i.bak "s|^[#[:space:]]*backend_service_name[[:space:]]*=.*|backend_service_name = \"$BE_SERVICE_NAME\"|g" "$TFVARS_FILE_PATH"
         sed -i.bak "s|^[#[:space:]]*frontend_service_name[[:space:]]*=.*|frontend_service_name = \"$FE_SERVICE_NAME\"|g" "$TFVARS_FILE_PATH"
+
+        # --- Discover and Set Firebase Site ID ---
+        # This function will query Firebase for the default site and update the
+        # 'YOUR_FIREBASE_SITE_ID' placeholder in the .tfvars file.
+        configure_firebase_site_id "$TFVARS_FILE_PATH" "$GCP_PROJECT_ID"
+        # After discovery, read the final value into a global variable for later use
+        AUTO_FIREBASE_SITE_ID=$(grep 'firebase_site_id' "$TFVARS_FILE_PATH" | awk -F'"' '{print $2}')
 
         # Prompt only for the branch name
         export TFVARS_FILE=$TFVARS_FILE_PATH # Set context for helper function
@@ -336,15 +379,15 @@ configure_environment() {
 
 handle_manual_steps() {
     step 6 "Manual Steps Required"; cd "$REPO_ROOT/infra"; TFVARS_FILE_PATH="$ENV_DIR/$ENV_NAME.tfvars"
-    info "Enabling required Google Cloud APIs..."; gcloud services enable cloudbuild.googleapis.com secretmanager.googleapis.com firebase.googleapis.com iap.googleapis.com identitytoolkit.googleapis.com --project="$GCP_PROJECT_ID"
     if [ -z "$GITHUB_CONN_NAME" ]; then
         prompt "\nDo you already have a Cloud Build Host Connection for GitHub in this project? (y/n)"; read -r REPLY < /dev/tty
         if [[ $REPLY =~ ^[Yy]$ ]]; then prompt "Please enter the existing connection name:"; read -p "   Connection Name: " GITHUB_CONN_NAME < /dev/tty
         else
             warn "You will now be guided to create a new GitHub connection."; info "Please perform the following manual steps:"
             echo "1. Open this URL in your browser:"; echo -e "   ${C_YELLOW}https://console.cloud.google.com/cloud-build/connections/create?project=${GCP_PROJECT_ID}${C_RESET}"
-            echo "2. Select 'GitHub (Cloud Build GitHub App)' and click 'CONTINUE'."
-            echo "3. Follow the prompts to authorize the app on your GitHub account."; echo "4. Grant access to your forked repository: '${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}'."
+            echo "2. Select 'GitHub (Cloud Build GitHub App)' and select the region 'us-central1' then click 'CONTINUE'."
+            echo "3. Follow the prompts to authorize the app on your GitHub account.";
+            echo "4. Grant access to your forked repository: '${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}'."
             echo "5. After creating the connection, copy its name (e.g., 'gh-yourname-con')."
             prompt "Paste the new Cloud Build Connection Name here:"; read -p "   Connection Name: " GITHUB_CONN_NAME < /dev/tty
         fi
@@ -645,8 +688,12 @@ main() {
     FRONTEND_URL=$(terraform output -raw frontend_service_url 2>/dev/null || echo "")
     if [ -z "$FRONTEND_URL" ]; then
         warn "Could not find 'frontend_service_url' in Terraform outputs. Deducing from project ID."
-        # Construct the default Firebase Hosting URL
-        FRONTEND_URL="https://$(echo "$GCP_PROJECT_ID" | tr '[:upper:]' '[:lower:]').web.app"
+        # Construct the default Firebase Hosting URL using the discovered site ID
+        if [ -n "$AUTO_FIREBASE_SITE_ID" ]; then
+            FRONTEND_URL="https://${AUTO_FIREBASE_SITE_ID}.web.app"
+        else
+            FRONTEND_URL="https://$(echo "$GCP_PROJECT_ID" | tr '[:upper:]' '[:lower:]').web.app"
+        fi
     fi
 
     # Get the backend URL

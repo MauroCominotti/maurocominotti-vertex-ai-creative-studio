@@ -48,7 +48,9 @@ curl https://raw.githubusercontent.com/GoogleCloudPlatform/professional-services
 ```
 
 For better guidance, we recorded a video to showcase how to deploy Creative Studio in a completely new and fresh GCP Account:
-https://the-deploy-example-video
+
+<video src="./screenshots/how_to_deploy_creative_studio.mp4"></video>
+
 
 > **IMPORTANT:** In order to run this app, you will have to enable the [Vertex AI API](https://console.developers.google.com/apis/api/aiplatform.googleapis.com/overview) and the [IAM Service Account Credentials API](https://console.developers.google.com/apis/api/iamcredentials.googleapis.com/overview).
 

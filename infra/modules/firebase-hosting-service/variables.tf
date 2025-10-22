@@ -23,3 +23,7 @@ variable "github_branch_name" { type = string }
 variable "cloudbuild_yaml_path" { type = string }
 variable "included_files_glob" { type = list(string) }
 variable "build_substitutions" { type = map(string) }
+variable "firebase_site_id" {
+  description = "The unique identifier for the Firebase Hosting site."
+  type        = string
+}

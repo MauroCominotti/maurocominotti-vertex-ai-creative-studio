@@ -1,0 +1,75 @@
+<div class="step-card user-input" [formGroup]="stepForm">
+  <div class="step-header">
+    <div class="step-title">
+      <mat-icon>input</mat-icon>
+      <span>User Input</span>
+    </div>
+    <div class="step-id">
+      ID: {{ stepForm.get('step_id')?.value }}
+    </div>
+  </div>
+
+  <div class="step-body">
+    <div class="section">
+      <h3>Define Workflow Inputs</h3>
+      <p class="description">
+        These are the fields that will be available as inputs for all other
+        steps in your workflow.
+      </p>
+
+      <div formGroupName="settings">
+        <div formArrayName="definitions" class="definitions-list">
+          <div class="definition-row header-row">
+            <div class="name-col">Output Name</div>
+            <div class="type-col">Data Type</div>
+            <div class="action-col"></div>
+          </div>
+
+          <div
+            *ngFor="let def of outputDefinitionsArray.controls; let i = index"
+            [formGroupName]="i"
+            class="definition-row"
+          >
+            <mat-form-field appearance="outline" class="name-col">
+              <mat-label>Output Name</mat-label>
+              <input
+                matInput
+                formControlName="name"
+                placeholder="e.g., main_prompt"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="type-col">
+              <mat-label>Type</mat-label>
+              <mat-select formControlName="type">
+                <mat-option value="text">Text</mat-option>
+                <mat-option value="image">Image</mat-option>
+                <mat-option value="number">Number</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <button
+              mat-icon-button
+              color="warn"
+              (click)="removeOutput(i)"
+              class="action-col"
+              aria-label="Delete output"
+            >
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button
+        mat-stroked-button
+        color="primary"
+        (click)="addOutput()"
+        class="add-output-btn"
+      >
+        <!-- <mat-icon>add</mat-icon> -->
+        Add Input Field
+      </button>
+    </div>
+  </div>
+</div>

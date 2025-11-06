@@ -1,0 +1,57 @@
+<div class="editor-container">
+  <div class="header">
+    <h2>Workflow Editor</h2>
+    <div class="actions">
+      <button mat-stroked-button color="warn" routerLink="/workflows">Cancel</button>
+      <button mat-raised-button color="primary" (click)="save()">
+        Save Workflow
+      </button>
+    </div>
+  </div>
+
+  <div class="canvas-area" [formGroup]="workflowForm">
+    <div formGroupName="workflow">
+      <div formArrayName="steps" class="steps-list">
+        <div
+          *ngFor="let step of stepsArray.controls; let i = index"
+          [formGroupName]="i"
+          class="step-wrapper"
+        >
+          <ng-container [ngSwitch]="step.get('type')?.value">
+            <app-user-input-step
+              *ngSwitchCase="'user_input'"
+              [stepForm]="asFormGroup(step)"
+              [stepIndex]="i"
+              (delete)="deleteStep(i)"
+            >
+            </app-user-input-step>
+
+            <app-generate-text-step
+              *ngSwitchCase="'generate_text'"
+              [stepForm]="asFormGroup(step)"
+              [stepIndex]="i"
+              [availableOutputs]="getAvailableOutputs(i)"
+              (delete)="deleteStep(i)"
+            >
+            </app-generate-text-step>
+
+            <app-virtual-try-on-step
+              *ngSwitchCase="'virtual_try_on'"
+              [stepForm]="asFormGroup(step)"
+              [stepIndex]="i"
+              [availableOutputs]="getAvailableOutputs(i)"
+              (delete)="deleteStep(i)"
+            >
+            </app-virtual-try-on-step>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <div class="add-btn-container">
+      <button mat-fab color="accent" (click)="openAddStepModal()">
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+  </div>
+</div>

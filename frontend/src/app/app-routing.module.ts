@@ -26,6 +26,8 @@ import {MediaGalleryComponent} from './gallery/media-gallery/media-gallery.compo
 import {MediaDetailComponent} from './gallery/media-detail/media-detail.component';
 import {AdminAuthGuard} from './admin/admin-auth.guard';
 import {VtoComponent} from './vto/vto.component';
+import {WorkflowListComponent} from './workflows/workflow-list/workflow-list.component';
+import {WorkflowEditorComponent} from './workflows/workflow-editor/workflow-editor.component';
 
 const routes: Routes = [
   {path: 'login', component: LoginComponent},
@@ -59,6 +61,16 @@ const routes: Routes = [
     path: 'admin',
     loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
     canActivate: [AdminAuthGuard],
+  },
+  {
+    path: 'workflows',
+    canActivate: [AuthGuardService],
+    children: [
+      {path: '', component: WorkflowListComponent, pathMatch: 'full'},
+      {path: 'new', component: WorkflowEditorComponent},
+      // Match the parameter names used in your WorkflowEditorComponent
+      {path: 'edit/:workflowId', component: WorkflowEditorComponent},
+    ],
   },
 ];
 

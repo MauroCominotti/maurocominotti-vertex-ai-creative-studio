@@ -82,6 +82,16 @@ import {SharedModule} from './common/shared.module';
 import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 import {ImageCropperComponent} from 'ngx-image-cropper';
 import {ImageCropperDialogComponent} from './common/components/image-cropper-dialog/image-cropper-dialog.component';
+import {WorkflowListComponent} from './workflows/workflow-list/workflow-list.component';
+import {WorkflowEditorComponent} from './workflows/workflow-editor/workflow-editor.component';
+import {AddStepModalComponent} from './workflows/workflow-editor/add-step-modal/add-step-modal.component';
+import {UserInputStepComponent} from './workflows/workflow-editor/step-components/user-input-step/user-input-step.component';
+import {GenerateTextStepComponent} from './workflows/workflow-editor/step-components/generate-text-step/generate-text-step.component';
+import {GenerateImageStepComponent} from './workflows/workflow-editor/step-components/generate-image-step/generate-image-step.component';
+import {EditImageStepComponent} from './workflows/workflow-editor/step-components/edit-image-step/edit-image-step.component';
+import {CropImageStepComponent} from './workflows/workflow-editor/step-components/crop-image-step/crop-image-step.component';
+import {GenerateVideoStepComponent} from './workflows/workflow-editor/step-components/generate-video-step/generate-video-step.component';
+import {VirtualTryOnStepComponent} from './workflows/workflow-editor/step-components/virtual-try-on-step/virtual-try-on-step.component';
 
 @NgModule({
   declarations: [
@@ -102,6 +112,16 @@ import {ImageCropperDialogComponent} from './common/components/image-cropper-dia
     ImageSelectorComponent,
     SourceAssetGalleryComponent,
     ImageCropperDialogComponent,
+    WorkflowListComponent,
+    WorkflowEditorComponent,
+    AddStepModalComponent,
+    UserInputStepComponent,
+    GenerateTextStepComponent,
+    GenerateImageStepComponent,
+    EditImageStepComponent,
+    CropImageStepComponent,
+    GenerateVideoStepComponent,
+    VirtualTryOnStepComponent,
   ],
   imports: [
     BrowserModule,

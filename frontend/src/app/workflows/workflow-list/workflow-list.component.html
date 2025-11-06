@@ -1,0 +1,44 @@
+<div class="workflow-list-container">
+  <div class="header">
+    <h1 class="text-3xl font-semibold">My Workflows</h1>
+    <button mat-raised-button color="primary" (click)="createNewWorkflow()">
+      <mat-icon>add</mat-icon>
+      Create New Workflow
+    </button>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-banner">
+    <mat-icon>error</mat-icon>
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="isLoading" class="loading-state">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading your workflows...</p>
+  </div>
+
+  <div *ngIf="!isLoading && !errorMessage && workflows.length === 0" class="empty-state">
+    <mat-icon class="empty-icon">hub</mat-icon>
+    <h3>No workflows yet</h3>
+    <p>Create your first workflow to get started with Creative Studio.</p>
+    <button mat-stroked-button color="primary" (click)="createNewWorkflow()">Create Workflow</button>
+  </div>
+
+  <div *ngIf="!isLoading && workflows.length > 0" class="workflow-grid">
+    <div *ngFor="let wf of workflows" class="workflow-card" [routerLink]="['/workflows/edit', wf.workflow_id]">
+      <div class="card-icon">
+        <mat-icon>schema</mat-icon> </div>
+      <div class="card-content">
+        <h3 class="workflow-name">{{ wf.workflow_id }}</h3>
+        <div class="workflow-meta">
+          <span class="step-count">{{ wf.workflow?.steps?.length || 0 }} Steps</span>
+        </div>
+      </div>
+      <div class="card-actions">
+         <button mat-icon-button color="accent">
+           <mat-icon>edit</mat-icon>
+         </button>
+      </div>
+    </div>
+  </div>
+</div>

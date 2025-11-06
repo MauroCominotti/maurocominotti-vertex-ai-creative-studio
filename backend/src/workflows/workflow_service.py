@@ -15,7 +15,12 @@
 import logging
 from typing import Any, Dict, List
 
-from src.common.schema.media_item_model import SourceMediaItemLink
+from pydantic import ValidationError
+
+from src.common.schema.media_item_model import (
+    AssetRoleEnum,
+    SourceMediaItemLink,
+)
 from src.galleries.dto.gallery_response_dto import MediaItemResponse
 from src.images.dto.create_imagen_dto import CreateImagenDto
 from src.images.dto.vto_dto import VtoDto, VtoInputLink
@@ -23,6 +28,8 @@ from src.images.imagen_service import ImagenService
 from src.users.user_model import UserModel
 from src.workflows.dto.create_workflow_dto import CreateWorkflowDto
 from src.workflows.dto.workflow_step_dto import WorkflowOperationEnum
+from src.workflows.repository.workflow_repository import WorkflowRepository
+from src.workflows.schema.workflow_model import WorkflowModel
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +39,7 @@ class WorkflowService:
 
     def __init__(self):
         self.imagen_service = ImagenService()
+        self.workflow_repository = WorkflowRepository()
         # In the future, you can add other services like VeoService here.
 
     async def execute_workflow(
@@ -75,14 +83,17 @@ class WorkflowService:
                             SourceMediaItemLink(
                                 media_item_id=source_media_item_id,
                                 media_index=step_input.media_index,
+                                role=AssetRoleEnum.INPUT,  # TODO: Infer the role from each case
                             ).model_dump()
                         )
                     else:
                         # If no index, use all outputs from the source step.
-                        for i in range(source_result.num_media):
+                        for i in range(source_result.num_media or 0):
                             step.params["source_media_items"].append(
                                 SourceMediaItemLink(
-                                    media_item_id=source_media_item_id, media_index=i
+                                    media_item_id=source_media_item_id,
+                                    media_index=i,
+                                    role=AssetRoleEnum.INPUT,  # TODO: Infer the role from each case
                                 ).model_dump()
                             )
 
@@ -113,3 +124,30 @@ class WorkflowService:
 
         return step_results
 
+    def create_workflow(self, workflow_model):
+        try:
+            validated_workflow = WorkflowModel(**workflow_model.model_dump())
+            return self.workflow_repository.create_workflow(validated_workflow)
+        except ValidationError as e:
+            raise ValueError(str(e))
+
+    def get_workflow(self, user_id: str, workspace_id: str, workflow_id: str):
+        #  Add logic here if needed before fetching from repository
+        return self.workflow_repository.get_workflow(
+            user_id, workspace_id, workflow_id
+        )
+
+    def get_workflows_by_user_and_workspace(
+        self, user_id: str, workspace_id: str
+    ):
+        return self.workflow_repository.get_workflows_by_user_and_workspace(
+            user_id, workspace_id
+        )
+
+    def update_workflow(self, workflow_model: WorkflowModel):
+        """Validates and updates a workflow."""
+        try:
+            validated_workflow = WorkflowModel(**workflow_model.model_dump())
+            return self.workflow_repository.update_workflow(validated_workflow)
+        except ValidationError as e:
+            raise ValueError(str(e))

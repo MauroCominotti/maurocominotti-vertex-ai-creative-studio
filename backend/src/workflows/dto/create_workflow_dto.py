@@ -24,4 +24,6 @@ class CreateWorkflowDto(BaseDto):
     """Request model for creating and executing a multi-step generative workflow."""
 
     steps: List[WorkflowStepDto] = Field(description="An ordered list of steps that define the workflow.")
-
+    workspace_id: str = Field(
+        min_length=1, description="The ID of the workspace to search within."
+    )

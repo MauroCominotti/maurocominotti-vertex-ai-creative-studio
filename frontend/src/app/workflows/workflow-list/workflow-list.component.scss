@@ -1,0 +1,124 @@
+.workflow-list-container {
+  padding: 30px;
+  background-color: #1a1a1a;
+  min-height: 100vh;
+  color: #f0f0f0;
+  margin: 0 10rem;
+  background-color: transparent;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  margin-top: 5rem;
+}
+
+.loading-state, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  color: #999;
+
+  mat-spinner {
+    margin-bottom: 20px;
+  }
+
+  .empty-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 20px;
+    opacity: 0.5;
+  }
+
+  h3 {
+    color: #fff;
+    margin-bottom: 10px;
+  }
+}
+
+.error-banner {
+  background-color: #3f1a1a;
+  border: 1px solid #ff5252;
+  color: #ff8a80;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.workflow-card {
+  background-color: #2d2d2d;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+
+  &:hover {
+    background-color: #383838;
+    border-color: #555;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .card-icon {
+    width: 50px;
+    height: 50px;
+    background-color: #444;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      color: #bbb;
+    }
+  }
+
+  .card-content {
+    flex: 1;
+    overflow: hidden;
+
+    .workflow-name {
+      margin: 0 0 5px 0;
+      font-size: 16px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #eee;
+    }
+
+    .workflow-meta {
+      display: flex;
+      gap: 10px;
+      font-size: 13px;
+      color: #999;
+    }
+  }
+
+  .card-actions {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover .card-actions {
+    opacity: 1;
+  }
+}

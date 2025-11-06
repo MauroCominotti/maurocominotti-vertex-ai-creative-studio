@@ -1,0 +1,91 @@
+<div class="step-card virtual-try-on" [formGroup]="stepForm">
+  <div class="step-header">
+    <div class="step-title">
+      <mat-icon>accessibility_new</mat-icon>
+      <span>Virtual Try-On</span>
+    </div>
+    <div class="step-id">ID: {{ stepForm.get('step_id')?.value }}</div>
+    <button mat-icon-button color="warn" (click)="delete.emit()">
+      <mat-icon>delete</mat-icon>
+    </button>
+  </div>
+
+  <div class="step-body">
+    <div class="section inputs" formGroupName="inputs">
+      <h3>Inputs</h3>
+
+      <div class="input-group">
+        <label>Model Image</label>
+        <div class="controls-row">
+          <mat-form-field appearance="outline" class="mode-select">
+            <mat-select [value]="inputModes['model_image']"
+                        (selectionChange)="toggleInputMode('model_image', $event.value)">
+              <mat-option value="fixed">Fixed Value</mat-option>
+              <mat-option value="linked">Workflow Output</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field *ngIf="inputModes['model_image'] === 'fixed'" appearance="outline" class="value-input">
+            <input matInput formControlName="model_image" placeholder="https://example.com/model.jpg">
+          </mat-form-field>
+
+          <mat-form-field *ngIf="inputModes['model_image'] === 'linked'" appearance="outline" class="value-input">
+            <mat-select formControlName="model_image"> <mat-option *ngFor="let out of availableOutputs" [value]="{ step: out.step_id, output: out.output_key }">
+                 {{ out.label }}
+               </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+
+       <div class="input-group">
+        <label>Garment Image</label>
+        <div class="controls-row">
+           <mat-form-field appearance="outline" class="mode-select">
+            <mat-select [value]="inputModes['garment_image']"
+                        (selectionChange)="toggleInputMode('garment_image', $event.value)">
+              <mat-option value="fixed">Fixed Value</mat-option>
+              <mat-option value="linked">Workflow Output</mat-option>
+            </mat-select>
+          </mat-form-field>
+           <mat-form-field *ngIf="inputModes['garment_image'] === 'fixed'" appearance="outline" class="value-input">
+            <input matInput formControlName="garment_image" placeholder="Image URL...">
+          </mat-form-field>
+           <mat-form-field *ngIf="inputModes['garment_image'] === 'linked'" appearance="outline" class="value-input">
+            <mat-select formControlName="garment_image">
+               <mat-option *ngFor="let out of availableOutputs" [value]="{ step: out.step_id, output: out.output_key }">
+                 {{ out.label }}
+               </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+
+    <div class="section settings" formGroupName="settings">
+      <h3>Settings</h3>
+      <div class="settings-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Seed</mat-label>
+          <input matInput type="number" formControlName="seed">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Aspect Ratio</mat-label>
+          <mat-select formControlName="aspect_ratio">
+            <mat-option value="1:1">1:1 (Square)</mat-option>
+            <mat-option value="16:9">16:9 (Landscape)</mat-option>
+            <mat-option value="9:16">9:16 (Portrait)</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="section outputs">
+      <h3>Outputs</h3>
+      <div class="output-pill">
+        <mat-icon>image</mat-icon> generated_image
+      </div>
+    </div>
+  </div>
+</div>

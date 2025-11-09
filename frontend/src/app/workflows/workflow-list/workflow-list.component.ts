@@ -93,7 +93,7 @@ export class WorkflowListComponent implements OnInit, OnDestroy, AfterViewInit {
 
   applyFilter(event: Event): void {
     const filterValue = (event.target as HTMLInputElement).value;
-    this.filterSubject.next(filterValue.trim().toLowerCase());
+    this.filterSubject.next(filterValue.trim());
   }
 
   createNewWorkflow(): void {

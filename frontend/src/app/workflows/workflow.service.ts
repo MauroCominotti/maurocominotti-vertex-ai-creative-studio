@@ -153,19 +153,25 @@ export class WorkflowService implements OnDestroy {
   }
 
   createWorkflow(
-    workflowData: WorkflowCreateDto,
+    workflowData: Omit<WorkflowCreateDto, 'workspaceId'>,
   ): Observable<{message: string}> {
-    return this.http.post<{message: string}>(
-      `${this.API_BASE_URL}/workflows`,
-      workflowData,
-    );
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (!workspaceId) {
+      return throwError(() => new Error('Cannot create workflow without an active workspace.'));
+    }
+    const payload = {...workflowData, workspaceId};
+    return this.http
+      .post<{message: string}>(`${this.API_BASE_URL}/workflows`, payload)
+      .pipe(tap(() => this.loadWorkflows(true)));
   }
 
   updateWorkflow(workflowData: WorkflowModel): Observable<{message: string}> {
-    const {workspaceId: workspace_id, id: workflow_id} = workflowData;
-    // Ensure this URL matches your backend route exactly.
+    const {workspaceId, id} = workflowData;
+    if (!workspaceId) {
+      return throwError(() => new Error('Cannot update workflow without a workspaceId.'));
+    }
     return this.http.put<{message: string}>(
-      `${this.API_BASE_URL}/workflows/${workflow_id}?workspaceId=${workspace_id}`,
+      `${this.API_BASE_URL}/workflows/${id}?workspaceId=${workspaceId}`,
       workflowData,
     );
   }

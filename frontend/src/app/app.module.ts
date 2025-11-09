@@ -92,6 +92,8 @@ import {EditImageStepComponent} from './workflows/workflow-editor/step-component
 import {CropImageStepComponent} from './workflows/workflow-editor/step-components/crop-image-step/crop-image-step.component';
 import {GenerateVideoStepComponent} from './workflows/workflow-editor/step-components/generate-video-step/generate-video-step.component';
 import {VirtualTryOnStepComponent} from './workflows/workflow-editor/step-components/virtual-try-on-step/virtual-try-on-step.component';
+import {DragDropModule} from '@angular/cdk/drag-drop';
+import {MatPaginatorModule} from '@angular/material/paginator';
 
 @NgModule({
   declarations: [
@@ -154,6 +156,8 @@ import {VirtualTryOnStepComponent} from './workflows/workflow-editor/step-compon
     SharedModule,
     MatSlideToggleModule,
     ImageCropperComponent,
+    DragDropModule,
+    MatPaginatorModule
   ],
   providers: [
     provideClientHydration(),

@@ -1,41 +1,115 @@
-export interface StepInput {
-  step?: string;
-  output?: string;
+export enum NodeTypes {
+  USER_INPUT = 'user_input',
+  GENERATE_TEXT = 'generate_text',
+  GENERATE_IMAGE = 'generate_image',
+  EDIT_IMAGE = 'edit_image',
+  GENERATE_VIDEO = 'generate_video',
+  CROP_IMAGE = 'crop_image',
+  VIRTUAL_TRY_ON = 'virtual_try_on',
 }
 
-export interface StepOutput {
-  type: string; // e.g., 'image', 'text', 'video'
+export interface StepOutputReference {
+  step: string;
+  output: string;
 }
 
-export interface StepSettings {
-  // Add all possible settings across all steps here for loose typing,
-  // or create specific interfaces for strict typing if preferred.
-  model?: string;
-  temperature?: number;
-  brand_guidelines?: boolean;
-  aspect_ratio?: string;
-  seed?: number;
-  width?: number;
-  height?: number;
-  prompt?: string;
+// Base Step
+interface BaseStep<T, S> {
+  stepId: string;
+  type: NodeTypes;
+  outputs: {[key: string]: any};
+  inputs: T;
+  settings: S;
 }
 
-export interface WorkflowStep {
-  step_id: string;
-  type: string;
-  // Inputs can be a raw string (Fixed value) OR a StepInput object (Linked value)
-  inputs: { [key: string]: StepInput | string };
-  outputs: { [key: string]: StepOutput };
-  settings: { [key: string]: StepSettings | string | number | boolean };
+// --- User Input ---
+export interface UserInputInputs {}
+export interface UserInputSettings {}
+export type UserInputStep = BaseStep<UserInputInputs, UserInputSettings> & {
+  type: NodeTypes.USER_INPUT;
+};
+
+// --- Generate Text ---
+export interface GenerateTextInputs {
+  prompt: StepOutputReference | string;
+}
+export interface GenerateTextSettings {
+  model: string;
+  temperature: number;
+}
+export type GenerateTextStep = BaseStep<
+  GenerateTextInputs,
+  GenerateTextSettings
+> & {type: NodeTypes.GENERATE_TEXT};
+
+// --- Generate Image ---
+export interface GenerateImageInputs {
+  prompt: StepOutputReference | string;
+}
+export interface GenerateImageSettings {
+  model: string;
+  brandGuidelines: boolean;
+  aspectRatio: string;
+  saveOutputToGallery: boolean;
+}
+export type GenerateImageStep = BaseStep<
+  GenerateImageInputs,
+  GenerateImageSettings
+> & {type: NodeTypes.GENERATE_IMAGE};
+
+// --- Edit Image ---
+export interface EditImageInputs {
+  input_images: StepOutputReference | string[] | string;
+  prompt: StepOutputReference | string;
+}
+export interface EditImageSettings {
+  brandGuidelines: boolean;
+  aspectRatio: string;
+  saveOutputToGallery: boolean;
+}
+export type EditImageStep = BaseStep<EditImageInputs, EditImageSettings> & {
+  type: NodeTypes.EDIT_IMAGE;
+};
+
+// --- Union of all step types ---
+export type WorkflowStep =
+  | UserInputStep
+  | GenerateTextStep
+  | GenerateImageStep
+  | EditImageStep;
+
+export enum WorkflowStatusEnum {
+  DRAFT = 'draft',
+  ACTIVE = 'active',
+  PAUSED = 'paused',
+  RUNNING = 'running',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  CANCELED = 'canceled',
+  SCHEDULED = 'scheduled',
 }
 
-export interface Workflow {
+export interface WorkflowBase {
+  name: string;
+  description: string;
+  workspaceId: string;
   steps: WorkflowStep[];
 }
 
-export interface WorkflowModel {
-  user_id: string;
-  workspace_id: string;
-  workflow_id: string;
-  workflow: Workflow;
+export interface WorkflowModel extends WorkflowBase {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  status: WorkflowStatusEnum;
+  userId: string;
+}
+
+export interface WorkflowCreateDto extends WorkflowBase {}
+
+export interface WorkflowSearchDto {
+  workspaceId: string;
+  limit?: number;
+  startAfter?: string;
+  name?: string;
+  status?: WorkflowStatusEnum;
 }

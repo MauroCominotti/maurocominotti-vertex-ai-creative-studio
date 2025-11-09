@@ -1,20 +1,25 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { AbstractControl, FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { MatDialog } from '@angular/material/dialog';
-import { WorkflowService } from '../workflow.service';
-import { WorkflowModel } from '../workflow.models';
-import { AddStepModalComponent } from './add-step-modal/add-step-modal.component';
-// NEW IMPORT:
-import { WorkspaceStateService } from '../../services/workspace/workspace-state.service';
-import { Subscription, combineLatest, of } from 'rxjs';
-import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
-import { filter, switchMap, tap } from 'rxjs/operators';
+import {Component, OnDestroy, OnInit} from '@angular/core';
+import {ActivatedRoute, Router} from '@angular/router';
+import {
+  AbstractControl,
+  FormArray,
+  FormBuilder,
+  FormGroup,
+  Validators,
+} from '@angular/forms';
+import {MatDialog} from '@angular/material/dialog';
+import {WorkflowService} from '../workflow.service';
+import {WorkflowCreateDto, WorkflowModel} from '../workflow.models';
+import {AddStepModalComponent} from './add-step-modal/add-step-modal.component';
+import {WorkspaceStateService} from '../../services/workspace/workspace-state.service';
+import {Subscription, combineLatest, of} from 'rxjs';
+import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
+import {filter, switchMap, tap} from 'rxjs/operators';
 
 @Component({
   selector: 'app-workflow-editor',
   templateUrl: './workflow-editor.component.html',
-  styleUrls: ['./workflow-editor.component.scss']
+  styleUrls: ['./workflow-editor.component.scss'],
 })
 export class WorkflowEditorComponent implements OnInit, OnDestroy {
   workflowForm!: FormGroup;
@@ -31,7 +36,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     private router: Router,
     private workflowService: WorkflowService,
     private dialog: MatDialog,
-    private workspaceStateService: WorkspaceStateService
+    private workspaceStateService: WorkspaceStateService,
   ) {
     this.initForm();
   }
@@ -44,40 +49,42 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     this.mainSubscription = combineLatest([
       // Use the service directly to fix the "Property does not exist" error
       this.workspaceStateService.activeWorkspaceId$,
-      this.route.paramMap
-    ]).pipe(
-      // Fix for "params is never read": don't destructure it if you don't need it here
-      filter(([workspaceId]) => !!workspaceId),
-      tap(() => this.isLoading = true),
-      switchMap(([workspaceId, params]) => {
-        this.currentWorkspaceId = workspaceId;
-        const workflowId = params.get('workflowId');
+      this.route.paramMap,
+    ])
+      .pipe(
+        // Fix for "params is never read": don't destructure it if you don't need it here
+        filter(([workspaceId]) => !!workspaceId),
+        tap(() => (this.isLoading = true)),
+        switchMap(([workspaceId, params]) => {
+          this.currentWorkspaceId = workspaceId;
+          const workflowId = params.get('workflowId');
 
-        if (workflowId) {
-          this.isEditMode = true;
-          this.workflowService.setCurrentWorkflowId(workflowId);
-          return this.workflowService.getWorkflowById(workflowId);
-        } else {
-          this.isEditMode = false;
-          this.workflowService.setCurrentWorkflowId(null);
-          return of(null);
-        }
-      })
-    ).subscribe({
-      next: (workflowData) => {
-        if (workflowData) {
-          this.populateForm(workflowData);
-        } else {
-          this.resetFormForNew();
-        }
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error('Failed to load workflow', err);
-        this.errorMessage = 'Failed to load workflow.';
-        this.isLoading = false;
-      }
-    });
+          if (workflowId) {
+            this.isEditMode = true;
+            this.workflowService.setCurrentWorkflowId(workflowId);
+            return this.workflowService.getWorkflowById(workflowId);
+          } else {
+            this.isEditMode = false;
+            this.workflowService.setCurrentWorkflowId(null);
+            return of(null);
+          }
+        }),
+      )
+      .subscribe({
+        next: workflowData => {
+          if (workflowData) {
+            this.populateForm(workflowData);
+          } else {
+            this.resetFormForNew();
+          }
+          this.isLoading = false;
+        },
+        error: err => {
+          console.error('Failed to load workflow', err);
+          this.errorMessage = 'Failed to load workflow.';
+          this.isLoading = false;
+        },
+      });
   }
 
   // ... (rest of the component: ngOnDestroy, initForm, addStepToForm, etc. remains the same)
@@ -90,23 +97,23 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
   initForm() {
     this.workflowForm = this.fb.group({
+      id: [''],
+      name: ['', Validators.required],
+      description: [''],
       workspace_id: ['', Validators.required],
       user_id: ['user123'],
-      workflow_id: [''],
-      workflow: this.fb.group({
-        steps: this.fb.array([])
-      })
+      steps: this.fb.array([]),
     });
   }
 
   get stepsArray(): FormArray {
-    return this.workflowForm.get('workflow.steps') as FormArray;
+    return this.workflowForm.get('steps') as FormArray;
   }
 
   openAddStepModal() {
     const dialogRef = this.dialog.open(AddStepModalComponent, {
       width: '600px',
-      panelClass: 'node-palette-dialog'
+      panelClass: 'node-palette-dialog',
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -120,7 +127,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       type: type,
       inputs: {},
       outputs: {},
-      settings: {}
+      settings: {},
     };
 
     const stepGroup = this.fb.group({
@@ -128,7 +135,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       type: [stepData.type],
       inputs: this.fb.group(stepData.inputs || {}),
       outputs: this.fb.group(stepData.outputs || {}),
-      settings: this.fb.group(stepData.settings || {})
+      settings: this.fb.group(stepData.settings || {}),
     });
 
     this.stepsArray.push(stepGroup);
@@ -139,7 +146,11 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   }
 
   dropStep(event: CdkDragDrop<string[]>) {
-    moveItemInArray(this.stepsArray.controls, event.previousIndex, event.currentIndex);
+    moveItemInArray(
+      this.stepsArray.controls,
+      event.previousIndex,
+      event.currentIndex,
+    );
   }
 
   save() {
@@ -148,32 +159,36 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = null;
 
-    const formValue: WorkflowModel = this.workflowForm.value;
-
-    if (this.currentWorkspaceId) {
-        formValue.workspace_id = this.currentWorkspaceId;
-    }
-
     let request$;
+    const formValue: WorkflowModel = this.workflowForm.getRawValue();
     if (this.isEditMode) {
+
+      if (this.currentWorkspaceId) {
+        formValue.workspaceId = this.currentWorkspaceId;
+      }
       request$ = this.workflowService.updateWorkflow(formValue);
     } else {
-      if (!formValue.workflow_id) {
-         formValue.workflow_id = `wf_${Date.now()}`;
-      }
-      request$ = this.workflowService.createWorkflow(formValue);
+      const rawValue = this.workflowForm.getRawValue();
+      const createDto: WorkflowCreateDto = {
+        name: rawValue.name,
+        description: rawValue.description,
+        workspaceId: this.currentWorkspaceId || '',
+        steps: rawValue.steps,
+      };
+      request$ = this.workflowService.createWorkflow(createDto);
     }
 
     request$.subscribe({
-      next: (res) => {
+      next: res => {
         this.isLoading = false;
-        this.router.navigate(['/workflows']);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        this.router.navigate(['/w', this.currentWorkspaceId!, 'workflows']);
       },
-      error: (err) => {
+      error: err => {
         console.error('Failed to save workflow', err);
         this.errorMessage = err.error?.message || 'Failed to save workflow.';
         this.isLoading = false;
-      }
+      },
     });
   }
 
@@ -186,7 +201,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
           step_id: step.step_id,
           output_key: key,
           type: step.outputs[key].type,
-          label: `${step.type} (${step.step_id.substr(0, 5)}...) - ${key}`
+          label: `${step.type} (${step.step_id.substr(0, 5)}...) - ${key}`,
         });
       }
     }
@@ -195,14 +210,16 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
   private populateForm(data: WorkflowModel) {
     this.workflowForm.patchValue({
-      workspace_id: data.workspace_id,
-      workflow_id: data.workflow_id,
-      user_id: data.user_id
+      id: data.id,
+      name: data.name,
+      description: data.description,
+      workspace_id: data.workspaceId,
+      user_id: data.userId,
     });
 
     this.stepsArray.clear();
-    if (data.workflow && data.workflow.steps) {
-      data.workflow.steps.forEach(step => {
+    if (data.steps) {
+      data.steps.forEach(step => {
         this.addStepToForm(step.type, step);
       });
     }
@@ -211,9 +228,8 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   private resetFormForNew() {
     this.workflowForm.reset();
     this.workflowForm.patchValue({
-        workspace_id: this.currentWorkspaceId,
-        user_id: 'user123',
-        workflow_id: ''
+      workspace_id: this.currentWorkspaceId,
+      user_id: '',
     });
     this.stepsArray.clear();
     this.addStepToForm('user_input');

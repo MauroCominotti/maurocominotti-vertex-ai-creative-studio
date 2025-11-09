@@ -1,57 +1,69 @@
 <div class="editor-container">
   <div class="header">
-    <h2>Workflow Editor</h2>
+    <h2>{{ isEditMode ? 'Edit Workflow' : 'Create New Workflow' }}</h2>
     <div class="actions">
-      <button mat-stroked-button color="warn" routerLink="/workflows">Cancel</button>
-      <button mat-raised-button color="primary" (click)="save()">
-        Save Workflow
+      <button mat-stroked-button routerLink="/workflows">Cancel</button>
+      <button mat-flat-button color="primary" (click)="save()" [disabled]="isLoading">
+        {{ isEditMode ? 'Save Changes' : 'Create Workflow' }}
       </button>
     </div>
   </div>
 
-  <div class="canvas-area" [formGroup]="workflowForm">
-    <div formGroupName="workflow">
-      <div formArrayName="steps" class="steps-list">
-        <div
-          *ngFor="let step of stepsArray.controls; let i = index"
-          [formGroupName]="i"
-          class="step-wrapper"
-        >
-          <ng-container [ngSwitch]="step.get('type')?.value">
-            <app-user-input-step
-              *ngSwitchCase="'user_input'"
-              [stepForm]="asFormGroup(step)"
-              [stepIndex]="i"
-              (delete)="deleteStep(i)"
-            >
+  <div *ngIf="isLoading" class="loading-indicator">
+    <mat-spinner diameter="50"></mat-spinner>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <form [formGroup]="workflowForm" *ngIf="!isLoading">
+    <div class="workflow-details">
+      <mat-form-field appearance="outline" class="workflow-name-field">
+        <mat-label>Workflow Name</mat-label>
+        <input matInput formControlName="name" required>
+        <mat-error *ngIf="workflowForm.get('name')?.hasError('required')">
+          Workflow name is required.
+        </mat-error>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="workflow-description-field">
+        <mat-label>Description</mat-label>
+        <textarea matInput formControlName="description" cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5"></textarea>
+      </mat-form-field>
+    </div>
+
+    <div class="canvas-area">
+      <div class="steps-list">
+        <div class="step-wrapper" *ngFor="let step of stepsArray.controls; let i = index">
+          <ng-container [formGroupName]="i" [ngSwitch]="step.get('type')?.value">
+            <app-user-input-step *ngSwitchCase="'user_input'" [stepForm]="asFormGroup(step)" [stepIndex]="i"
+              (delete)="deleteStep(i)">
             </app-user-input-step>
-
-            <app-generate-text-step
-              *ngSwitchCase="'generate_text'"
-              [stepForm]="asFormGroup(step)"
-              [stepIndex]="i"
-              [availableOutputs]="getAvailableOutputs(i)"
-              (delete)="deleteStep(i)"
-            >
+            <app-generate-text-step *ngSwitchCase="'generate_text'" [stepForm]="asFormGroup(step)" [stepIndex]="i"
+              (delete)="deleteStep(i)">
             </app-generate-text-step>
-
-            <app-virtual-try-on-step
-              *ngSwitchCase="'virtual_try_on'"
-              [stepForm]="asFormGroup(step)"
-              [stepIndex]="i"
-              [availableOutputs]="getAvailableOutputs(i)"
-              (delete)="deleteStep(i)"
-            >
+            <app-virtual-try-on-step *ngSwitchCase="'virtual_try_on'" [stepForm]="asFormGroup(step)" [stepIndex]="i"
+              (delete)="deleteStep(i)">
             </app-virtual-try-on-step>
+            <div *ngSwitchDefault class="unknown-step">
+              Unknown step type: {{ step.get('type')?.value }}
+            </div>
           </ng-container>
         </div>
       </div>
     </div>
+  </form>
 
-    <div class="add-btn-container">
-      <button mat-fab color="accent" (click)="openAddStepModal()">
+  <div class="add-btn-container">
+    <button mat-fab extended color="accent" (click)="openAddStepModal()">
+      <mat-icon>add</mat-icon>
+      Add Step
+    </button>
+  </div>
+</div>
+<!-- <div class="add-btn-container">
+      <button mat-fab extended color="accent" (click)="openAddStepModal()">
         <mat-icon>add</mat-icon>
       </button>
     </div>
-  </div>
-</div>
+  </div> -->

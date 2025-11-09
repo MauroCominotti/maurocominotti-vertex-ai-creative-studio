@@ -3,7 +3,7 @@
 /* Base Card Container */
 .step-card {
   background-color: var(--card-bg);
-  border-radius: 16px;
+  border-radius: 0.5rem;
   border: 1px solid var(--border-color);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   overflow: hidden; /* Ensures header children don't spill out rounded corners */
@@ -28,6 +28,7 @@
   padding: 16px 24px;
   background: rgba(255, 255, 255, 0.03);
   border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
 
   .step-title {
     display: flex;
@@ -49,6 +50,12 @@
     background: rgba(0,0,0,0.2);
     padding: 4px 8px;
     border-radius: 4px;
+  }
+}
+
+.step-content {
+  .section {
+    padding: 16px 24px;
   }
 }
 

@@ -1,67 +1,65 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, of, Subscription } from 'rxjs';
-import { WorkflowModel } from './workflow.models';
-import { catchError, filter, switchMap, tap, distinctUntilChanged } from 'rxjs/operators';
-import { environment } from '../../environments/environment';
-import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
+import {BehaviorSubject, Observable, of, Subscription, throwError} from 'rxjs';
+import {
+  WorkflowCreateDto,
+  WorkflowModel,
+  WorkflowSearchDto,
+} from './workflow.models';
+import {
+  catchError,
+  filter,
+  switchMap,
+  tap,
+  distinctUntilChanged,
+} from 'rxjs/operators';
+import {environment} from '../../environments/environment';
+import {WorkspaceStateService} from '../services/workspace/workspace-state.service';
+import {PaginationResponseDto} from '../common/services/source-asset.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class WorkflowService implements OnDestroy {
   private currentWorkflowIdSubject = new BehaviorSubject<string | null>(null);
-  currentWorkflowId$: Observable<string | null> = this.currentWorkflowIdSubject.asObservable();
+  currentWorkflowId$: Observable<string | null> =
+    this.currentWorkflowIdSubject.asObservable();
 
   private _workflows = new BehaviorSubject<WorkflowModel[]>([]);
-  readonly workflows$: Observable<WorkflowModel[]> = this._workflows.asObservable();
+  readonly workflows$: Observable<WorkflowModel[]> =
+    this._workflows.asObservable();
 
   private _isLoading = new BehaviorSubject<boolean>(false);
   readonly isLoading$: Observable<boolean> = this._isLoading.asObservable();
 
   private _errorMessage = new BehaviorSubject<string | null>(null);
-  readonly errorMessage$: Observable<string | null> = this._errorMessage.asObservable();
+  readonly errorMessage$: Observable<string | null> =
+    this._errorMessage.asObservable();
 
+  private _allWorkflowsLoaded = new BehaviorSubject<boolean>(false);
+  readonly allWorkflowsLoaded$: Observable<boolean> =
+    this._allWorkflowsLoaded.asObservable();
+
+  private nextPageCursor: string | null = null;
+  private currentFilter = '';
   private dataLoadingSubscription!: Subscription;
 
   private readonly API_BASE_URL = environment.backendURL;
 
   constructor(
     private http: HttpClient,
-    private workspaceStateService: WorkspaceStateService
+    private workspaceStateService: WorkspaceStateService,
   ) {
-    console.log('WorkflowService constructor: Initializing dataLoadingSubscription');
+    console.log(
+      'WorkflowService constructor: Initializing dataLoadingSubscription',
+    );
 
     // Subscribe to the GLOBAL workspace state
-    this.dataLoadingSubscription = this.workspaceStateService.activeWorkspaceId$
-      .pipe(
-        distinctUntilChanged(), // Prevent duplicate calls if the same ID is emitted twice
-        tap(workspaceId => console.log('WorkflowService: Global workspace changed to:', workspaceId)),
-        filter(workspaceId => !!workspaceId), // Stop here if it's null
-        tap(() => {
-          this._isLoading.next(true);
-          this._errorMessage.next(null);
-          // Optional: clear previous workflows while loading new ones
-          // this._workflows.next([]);
-        }),
-        switchMap(workspaceId => {
-          console.log('WorkflowService: Fetching workflows for:', workspaceId);
-          return this.getWorkflowsForWorkspace(workspaceId as string).pipe(
-            catchError(err => {
-              console.error('Failed to load workflows', err);
-              this._errorMessage.next('Could not load workflows. Please try again later.');
-              this._isLoading.next(false); // Ensure loading is turned off on error
-              return of([]);
-            })
-          );
-        }),
-        tap(workflows => {
-           console.log('WorkflowService: Fetch complete, count:', workflows.length);
-           this._isLoading.next(false);
-        })
-      )
-      .subscribe(workflows => {
-        this._workflows.next(workflows);
+    this.dataLoadingSubscription =
+      this.workspaceStateService.activeWorkspaceId$.subscribe(workspaceId => {
+        if (workspaceId) {
+          this.loadWorkflows(true); // Reset and load on workspace change
+        }
       });
   }
 
@@ -75,10 +73,6 @@ export class WorkflowService implements OnDestroy {
     this.currentWorkflowIdSubject.next(workflowId);
   }
 
-  private getWorkflowsForWorkspace(workspaceId: string): Observable<WorkflowModel[]> {
-    return this.http.get<WorkflowModel[]>(`${this.API_BASE_URL}/workflows/${workspaceId}`);
-  }
-
   getWorkflows(): Observable<WorkflowModel[]> {
     return this.workflows$;
   }
@@ -90,8 +84,8 @@ export class WorkflowService implements OnDestroy {
     const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
 
     if (!workspaceId) {
-        console.error("Cannot fetch workflow: No active workspace");
-        throw new Error("No active workspace");
+      console.error('Cannot fetch workflow: No active workspace');
+      throw new Error('No active workspace');
     }
 
     return this.http.get<WorkflowModel>(
@@ -99,7 +93,68 @@ export class WorkflowService implements OnDestroy {
     );
   }
 
-  createWorkflow(workflowData: WorkflowModel): Observable<{message: string}> {
+  searchWorkflows(
+    searchDto: Omit<WorkflowSearchDto, 'workspaceId'>,
+  ): Observable<PaginationResponseDto<WorkflowModel>> {
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (!workspaceId) {
+      return throwError(() => new Error('No active workspace ID found.'));
+    }
+    const body: WorkflowSearchDto = {...searchDto, workspaceId};
+    return this.http.post<PaginationResponseDto<WorkflowModel>>(
+      `${this.API_BASE_URL}/workflows/search`,
+      body,
+    );
+  }
+
+  loadWorkflows(reset = false): void {
+    if (this._isLoading.value || (!reset && this._allWorkflowsLoaded.value)) {
+      return;
+    }
+
+    if (reset) {
+      this.nextPageCursor = null;
+      this._workflows.next([]);
+      this._allWorkflowsLoaded.next(false);
+    }
+
+    this._isLoading.next(true);
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (!workspaceId) {
+      this._errorMessage.next(
+        'Cannot load workflows without an active workspace.',
+      );
+      this._isLoading.next(false);
+      return;
+    }
+    this.searchWorkflows({
+      name: this.currentFilter,
+      startAfter: this.nextPageCursor ?? undefined,
+    }).subscribe(
+      response => {
+        this.nextPageCursor = response.nextPageCursor ?? null;
+        const currentWorkflows = reset ? [] : this._workflows.getValue();
+        this._workflows.next([...currentWorkflows, ...response.data]);
+        if (!this.nextPageCursor) {
+          this._allWorkflowsLoaded.next(true);
+        }
+        this._isLoading.next(false);
+      },
+      error => {
+        this._errorMessage.next('Failed to load workflows.');
+        this._isLoading.next(false);
+      },
+    );
+  }
+
+  setFilter(filter: string) {
+    this.currentFilter = filter;
+    this.loadWorkflows(true);
+  }
+
+  createWorkflow(
+    workflowData: WorkflowCreateDto,
+  ): Observable<{message: string}> {
     return this.http.post<{message: string}>(
       `${this.API_BASE_URL}/workflows`,
       workflowData,
@@ -107,11 +162,29 @@ export class WorkflowService implements OnDestroy {
   }
 
   updateWorkflow(workflowData: WorkflowModel): Observable<{message: string}> {
-    const {workspace_id, workflow_id} = workflowData;
-     // Ensure this URL matches your backend route exactly.
+    const {workspaceId: workspace_id, id: workflow_id} = workflowData;
+    // Ensure this URL matches your backend route exactly.
     return this.http.put<{message: string}>(
       `${this.API_BASE_URL}/workflows/${workflow_id}?workspaceId=${workspace_id}`,
       workflowData,
     );
+  }
+
+  deleteWorkflow(workflowId: string): Observable<any> {
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (!workspaceId) {
+      return throwError(() => new Error('No active workspace ID found.'));
+    }
+    return this.http
+      .delete(`${this.API_BASE_URL}/workflows/${workspaceId}/${workflowId}`)
+      .pipe(
+        tap(() => {
+          const currentWorkflows = this._workflows.getValue();
+          const updatedWorkflows = currentWorkflows.filter(
+            wf => wf.id !== workflowId,
+          );
+          this._workflows.next(updatedWorkflows);
+        }),
+      );
   }
 }

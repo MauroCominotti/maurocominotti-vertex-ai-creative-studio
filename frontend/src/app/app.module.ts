@@ -34,6 +34,7 @@ import { environment } from '../environments/environment';
 import { setAppInjector } from './app-injector';
 import { NotificationContainerComponent } from './common/components/notification-container/notification-container.component';
 
+import { DragDropModule } from '@angular/cdk/drag-drop';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { NgOptimizedImage } from '@angular/common';
 import {
@@ -58,6 +59,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -164,7 +166,9 @@ import { WorkflowListComponent } from './workflows/workflow-list/workflow-list.c
     MatButtonToggleModule,
     MatSliderModule,
     NotificationContainerComponent,
-    FlowPromptBoxComponent
+    FlowPromptBoxComponent,
+    DragDropModule,
+    MatPaginatorModule
   ],
   providers: [
     provideClientHydration(),

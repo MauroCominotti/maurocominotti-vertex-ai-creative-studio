@@ -539,6 +539,30 @@ resource "google_firestore_index" "brand_guidelines_wrkid_created_name" {
   }
 }
 
+# WORKFLOWS INDEXES
+resource "google_firestore_index" "workflows_userid_wrkid_created_name" {
+  project    = var.gcp_project_id
+  database   = google_firestore_database.default.name
+  collection = "workflows"
+
+  fields {
+    field_path = "user_id"
+    order      = "ASCENDING"
+  }
+  fields {
+    field_path = "workspace_id"
+    order      = "ASCENDING"
+  }
+  fields {
+    field_path = "created_at"
+    order      = "DESCENDING"
+  }
+  fields {
+    field_path = "__name__"
+    order      = "DESCENDING"
+  }
+}
+
 # --- Cloud Build Repository Connection ---
 resource "google_cloudbuildv2_repository" "source_repo" {
   provider          = google-beta

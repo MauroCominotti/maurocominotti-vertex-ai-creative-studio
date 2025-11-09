@@ -12,7 +12,7 @@ export class UserInputStepComponent implements OnInit, OnDestroy {
   @Input() stepIndex!: number;
   @Output() delete = new EventEmitter<void>();
 
-  isCollapsed = false;
+  isCollapsed = true; // Start collapsed by default
 
   private valueChangesSub!: Subscription;
 

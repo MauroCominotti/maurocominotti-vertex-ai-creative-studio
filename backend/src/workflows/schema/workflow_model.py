@@ -1,50 +1,268 @@
-from typing import Any, Dict, List, Optional
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from pydantic import BaseModel
+from enum import Enum
+from typing import (
+    Annotated,
+    Any,
+    Dict,
+    Generic,
+    List,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+)
 
+from pydantic import BaseModel, Field
+
+from src.common.base_dto import BaseDto
 from src.common.base_repository import BaseDocument
 
 
-class StepInput(BaseModel):
-    step: Optional[str] = None
-    output: Optional[str] = None
+class NodeTypes(str, Enum):
+    """Defines the types of steps available in the workflow."""
+
+    USER_INPUT = "user_input"
+    GENERATE_TEXT = "generate_text"
+    GENERATE_IMAGE = "generate_image"
+    EDIT_IMAGE = "edit_image"
+    GENERATE_VIDEO = "generate_video"
+    CROP_IMAGE = "crop_image"
+    VIRTUAL_TRY_ON = "virtual_try_on"
 
 
-class StepOutput(BaseModel):
-    type: str
-    source: Optional[str] = None
-    value: Optional[str] = None
+# =========================================
+# Step Components & References
+# =========================================
 
 
-class StepSettings(BaseModel):
-    model: Optional[str] = None
-    temperature: Optional[float] = None
-    brand_guidelines: Optional[bool] = None
-    aspect_ratio: Optional[str] = None
-    save_output_to_gallery: Optional[bool] = None
+class StepOutputReference(BaseModel):
+    """Reference to an output from a previous step."""
+
+    step: str
+    output: str
 
 
-class WorkflowStep(BaseModel):
+# =========================================
+# 1. Define Type Variables for Generics
+# =========================================
+# These act as placeholders that must be filled with types that inherit from BaseModel
+InputT = TypeVar("InputT", bound=BaseModel)
+SettingsT = TypeVar("SettingsT", bound=BaseModel)
+
+
+# =========================================
+# 2. Generic Base Step
+# =========================================
+class BaseStep(BaseModel, Generic[InputT, SettingsT]):
+    """
+    Abstract-like base step.
+    It defines that every step MUST have 'inputs' and 'settings',
+    but their exact types (InputT, SettingsT) are determined by the subclass.
+    """
+
     step_id: str
-    type: str
-    inputs: Dict[str, StepInput]
-    outputs: Dict[str, StepOutput]
-    settings: Dict[str, Any]
+    outputs: Dict[str, Any] = Field(default_factory=dict)
+
+    # These are now "virtual" slots to be concretely defined by subclasses
+    inputs: InputT
+    settings: SettingsT
 
 
-class Workflow(BaseModel):
+# =========================================
+# Specific Steps (filling in the generics)
+# =========================================
+
+
+# --- User Input ---
+class UserInputInputs(BaseModel):
+    pass
+
+
+class UserInputSettings(BaseModel):
+    pass
+
+
+# We inherit from BaseStep and pass in the concrete types for [InputT, SettingsT]
+class UserInputStep(BaseStep[UserInputInputs, UserInputSettings]):
+    type: Literal[NodeTypes.USER_INPUT]
+    inputs: UserInputInputs = Field(default_factory=UserInputInputs)
+    settings: UserInputSettings = Field(default_factory=UserInputSettings)
+
+
+# --- Generate Text ---
+class GenerateTextInputs(BaseModel):
+    prompt: Union[StepOutputReference, str]
+
+
+class GenerateTextSettings(BaseModel):
+    model: str
+    temperature: float
+
+
+class GenerateTextStep(BaseStep[GenerateTextInputs, GenerateTextSettings]):
+    type: Literal[NodeTypes.GENERATE_TEXT]
+    # We must redeclare them here for Pydantic to know *exactly* which model to use for validation at runtime
+    inputs: GenerateTextInputs
+    settings: GenerateTextSettings
+
+
+# --- Generate Image ---
+class GenerateImageInputs(BaseModel):
+    prompt: Union[StepOutputReference, str]
+
+
+class GenerateImageSettings(BaseModel):
+    model: str
+    brand_guidelines: bool
+    aspect_ratio: str
+    save_output_to_gallery: bool
+
+
+class GenerateImageStep(BaseStep[GenerateImageInputs, GenerateImageSettings]):
+    type: Literal[NodeTypes.GENERATE_IMAGE]
+    inputs: GenerateImageInputs
+    settings: GenerateImageSettings
+
+
+# --- Edit Image ---
+class EditImageInputs(BaseModel):
+    input_images: Union[StepOutputReference, List[str], str]
+    prompt: Union[StepOutputReference, str]
+
+
+class EditImageSettings(BaseModel):
+    brand_guidelines: bool
+    aspect_ratio: str
+    save_output_to_gallery: bool
+
+
+class EditImageStep(BaseStep[EditImageInputs, EditImageSettings]):
+    type: Literal[NodeTypes.EDIT_IMAGE]
+    inputs: EditImageInputs
+    settings: EditImageSettings
+
+
+# --- Generate Video ---
+class GenerateVideoInputs(BaseModel):
+    prompt: Union[StepOutputReference, str]
+    input_image: Optional[Union[StepOutputReference, str]] = None
+
+
+class GenerateVideoSettings(BaseModel):
+    model: str
+    brand_guidelines: bool
+    save_output_to_gallery: bool
+
+
+class GenerateVideoStep(BaseStep[GenerateVideoInputs, GenerateVideoSettings]):
+    type: Literal[NodeTypes.GENERATE_VIDEO]
+    inputs: GenerateVideoInputs
+    settings: GenerateVideoSettings
+
+
+# --- Crop Image ---
+class CropImageInputs(BaseModel):
+    input_image: Union[StepOutputReference, str]
+
+
+class CropImageSettings(BaseModel):
+    crop_aspect_ratio: str
+    fill_aspect_ratio: bool
+    background_color: str
+    save_output_to_gallery: bool
+
+
+class CropImageStep(BaseStep[CropImageInputs, CropImageSettings]):
+    type: Literal[NodeTypes.CROP_IMAGE]
+    inputs: CropImageInputs
+    settings: CropImageSettings
+
+
+# --- Virtual Try-On ---
+class VirtualTryOnInputs(BaseModel):
+    model_image: Union[StepOutputReference, str]
+    top_image: Optional[Union[StepOutputReference, str]] = None
+    bottom_image: Optional[Union[StepOutputReference, str]] = None
+    dress_image: Optional[Union[StepOutputReference, str]] = None
+    shoes_image: Optional[Union[StepOutputReference, str]] = None
+
+
+class VirtualTryOnSettings(BaseModel):
+    save_output_to_gallery: bool
+
+
+class VirtualTryOnStep(BaseStep[VirtualTryOnInputs, VirtualTryOnSettings]):
+    type: Literal[NodeTypes.VIRTUAL_TRY_ON]
+    inputs: VirtualTryOnInputs
+    settings: VirtualTryOnSettings
+
+
+# =========================================
+# Workflow Step Union
+# =========================================
+
+WorkflowStepUnion = Union[
+    UserInputStep,
+    GenerateTextStep,
+    GenerateImageStep,
+    EditImageStep,
+    GenerateVideoStep,
+    CropImageStep,
+    VirtualTryOnStep,
+]
+
+# Discriminated union based on the 'type' field in each step
+WorkflowStep = Annotated[WorkflowStepUnion, Field(discriminator="type")]
+
+
+# =========================================
+# Workflow Models
+# =========================================
+
+
+class WorkflowStatusEnum(str, Enum):
+    """Defines the states for a long-running generation Workflow job."""
+
+    DRAFT = "draft"
+    ACTIVE = "active"
+    PAUSED = "paused"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELED = "canceled"
+    SCHEDULED = "scheduled"
+
+
+class WorkflowBase(BaseDto):
+    """Base model with fields common to both creating and representing a workflow."""
+
+    name: str
+    description: str
+    workspace_id: str
     steps: List[WorkflowStep]
 
 
-class WorkflowModel(BaseDocument):
+class WorkflowModel(BaseDocument, WorkflowBase):
+    """The full workflow model, including server-managed fields."""
+
+    status: WorkflowStatusEnum = Field(default=WorkflowStatusEnum.DRAFT)
     user_id: str
-    workspace_id: str
-    workflow_id: str
-    workflow: Workflow
 
 
-class WorkflowCreate(BaseModel):
-    user_id: str
-    workspace_id: str
-    workflow_id: str
-    workflow: Dict[str, Any]
+class WorkflowCreateDto(WorkflowBase):
+    """DTO for creating a new workflow. Inherits fields from WorkflowBase."""
+
+    pass

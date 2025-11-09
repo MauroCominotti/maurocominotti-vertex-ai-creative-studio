@@ -12,20 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import Optional
 
-from pydantic import Field
-
-from src.common.base_dto import BaseDto
-from src.workflows.dto.workflow_step_dto import WorkflowStepDto
+from src.common.dto.base_search_dto import BaseSearchDto
+from src.workflows.schema.workflow_model import WorkflowStatusEnum
 
 
-class CreateWorkflowDto(BaseDto):
-    """Request model for creating and executing a multi-step generative workflow."""
+class WorkflowSearchDto(BaseSearchDto):
+    """Data Transfer Object for searching and filtering workflows."""
 
-    name: str
-    description: str
-    steps: List[WorkflowStepDto] = Field(description="An ordered list of steps that define the workflow.")
-    workspace_id: str = Field(
-        min_length=1, description="The ID of the workspace to search within."
-    )
+    workspace_id: str
+    name: Optional[str] = None
+    status: Optional[WorkflowStatusEnum] = None
+

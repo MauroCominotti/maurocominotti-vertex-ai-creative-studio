@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from src.auth.auth_guard import RoleChecker, get_current_user
+from src.common.dto.pagination_response_dto import PaginationResponseDto
 from src.users.user_model import UserModel, UserRoleEnum
 from src.workflows.dto.create_workflow_dto import CreateWorkflowDto
-from src.workflows.schema.workflow_model import WorkflowCreate, WorkflowModel
+from src.workflows.dto.workflow_search_dto import WorkflowSearchDto
+from src.workflows.schema.workflow_model import WorkflowCreateDto, WorkflowModel
 from src.workflows.workflow_service import WorkflowService
 from src.workspaces.workspace_auth_guard import workspace_auth_service
 
@@ -38,31 +40,48 @@ router = APIRouter(
 )
 
 
-@router.post("/")
-async def execute_workflow(
-    workflow_dto: CreateWorkflowDto,
+# @router.post("/execute")
+# async def execute_workflow(
+#     workflow_dto: CreateWorkflowDto,
+#     current_user: UserModel = Depends(get_current_user),
+#     workflow_service: WorkflowService = Depends(),
+# ):
+#     """
+#     Executes a multi-step generative workflow.
+
+#     Each step in the workflow is processed sequentially, with the output of one
+#     step potentially being used as the input for the next. The final output
+#     is a dictionary containing the results of each step.
+#     """
+#     # This dependency call acts as a gatekeeper. If the user is not authorized
+#     # for the workspace_id inside workflow_dto, it will raise an exception.
+#     workspace_auth_service.authorize(
+#         workspace_id=workflow_dto.workspace_id, user=current_user
+#     )
+
+#     return await workflow_service.execute_workflow(workflow_dto, current_user)
+
+
+@router.post("/search", response_model=PaginationResponseDto[WorkflowModel])
+def search_workflows(
+    search_params: WorkflowSearchDto,
     current_user: UserModel = Depends(get_current_user),
     workflow_service: WorkflowService = Depends(),
 ):
-    """
-    Executes a multi-step generative workflow.
-
-    Each step in the workflow is processed sequentially, with the output of one
-    step potentially being used as the input for the next. The final output
-    is a dictionary containing the results of each step.
-    """
-    # This dependency call acts as a gatekeeper. If the user is not authorized
-    # for the workspace_id inside workflow_dto, it will raise an exception.
+    """Lists all workflows for the current user within a specific workspace."""
     workspace_auth_service.authorize(
-        workspace_id=workflow_dto.workspace_id, user=current_user
+        workspace_id=search_params.workspace_id, user=current_user
     )
-
-    return await workflow_service.execute_workflow(workflow_dto, current_user)
+    return workflow_service.query_workflows(
+        user_id=current_user.id,
+        workspace_id=search_params.workspace_id,
+        search_dto=search_params,
+    )
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_workflow(
-    workflow_data: WorkflowCreate,
+    workflow_data: WorkflowCreateDto,
     current_user: UserModel = Depends(get_current_user),
     workflow_service: WorkflowService = Depends(),
 ):
@@ -71,12 +90,9 @@ def create_workflow(
         workspace_id=workflow_data.workspace_id, user=current_user
     )
 
-    # Ensure the user_id in the payload matches the authenticated user
-    if workflow_data.user_id != current_user.id:
-        workflow_data.user_id = current_user.id  # type: ignore
-
-    workflow_model = WorkflowModel(**workflow_data.model_dump())
-    created_workflow = workflow_service.create_workflow(workflow_model)
+    created_workflow = workflow_service.create_workflow(
+        workflow_data, current_user
+    )
 
     return created_workflow
 
@@ -85,7 +101,7 @@ def create_workflow(
 def update_workflow(
     workspace_id: str,
     workflow_id: str,
-    workflow_data: WorkflowCreate,
+    workflow_data: WorkflowCreateDto,
     current_user: UserModel = Depends(get_current_user),
     workflow_service: WorkflowService = Depends(),
 ):
@@ -96,9 +112,8 @@ def update_workflow(
 
     # Ensure the path parameters and user ID are correctly set on the object
     workflow_data.workspace_id = workspace_id
-    workflow_data.workflow_id = workflow_id
-    if workflow_data.user_id != current_user.id:
-        workflow_data.user_id = current_user.id  # type: ignore
+
+    # TODO: Check that the Workflow ID is correct and exists
 
     workflow_model = WorkflowModel(**workflow_data.model_dump())
     updated_workflow = workflow_service.update_workflow(workflow_model)
@@ -130,18 +145,25 @@ def get_workflow(
         )
 
 
-@router.get("/{workspace_id}", response_model=list[WorkflowModel])
-def get_workflows_by_workspace(
+@router.delete(
+    "/{workspace_id}/{workflow_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a Workflow",
+)
+async def delete_user(
+    workflow_id: str,
     workspace_id: str,
     current_user: UserModel = Depends(get_current_user),
     workflow_service: WorkflowService = Depends(),
 ):
-    """Lists all workflows for the current user within a specific workspace."""
+    """
+    Permanently deletes a workflow from the database.
+    This functionality is restricted to owners of the workflow.
+    """
     workspace_auth_service.authorize(
         workspace_id=workspace_id, user=current_user
     )
 
-    workflows = workflow_service.get_workflows_by_user_and_workspace(
-        user_id=current_user.id, workspace_id=workspace_id  # type: ignore
-    )
-    return workflows
+    if not workflow_service.delete_by_id(workflow_id):
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    return

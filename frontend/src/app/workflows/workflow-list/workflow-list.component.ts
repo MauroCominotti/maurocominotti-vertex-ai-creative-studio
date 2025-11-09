@@ -1,49 +1,153 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ViewChild,
+  AfterViewInit,
+} from '@angular/core';
 import {WorkflowService} from '../workflow.service';
-import { Subscription } from 'rxjs';
-import {Workflow, WorkflowModel} from '../workflow.models';
-import { Router } from '@angular/router';
-
+import {
+  debounceTime,
+  distinctUntilChanged,
+  Subject,
+  Subscription,
+  takeUntil,
+} from 'rxjs';
+import {WorkflowModel, WorkflowStatusEnum} from '../workflow.models';
+import {Router} from '@angular/router';
+import {MatTableDataSource} from '@angular/material/table';
+import {MatPaginator, PageEvent} from '@angular/material/paginator';
+import {MatSort} from '@angular/material/sort';
+import {MatDialog} from '@angular/material/dialog';
+import {ConfirmationDialogComponent} from '../../common/components/confirmation-dialog/confirmation-dialog.component';
 
 @Component({
   selector: 'app-workflow-list',
   templateUrl: './workflow-list.component.html',
   styleUrls: ['./workflow-list.component.scss'],
 })
-export class WorkflowListComponent implements OnInit, OnDestroy {
-  workflows: WorkflowModel[] = [];
-  displayedColumns: string[] = ['name', 'status', 'updatedAt', 'actions'];
-  private subscriptions: Subscription = new Subscription();
+export class WorkflowListComponent implements OnInit, OnDestroy, AfterViewInit {
+  dataSource = new MatTableDataSource<WorkflowModel>([]);
+  displayedColumns: string[] = [
+    'name',
+    'description',
+    'status',
+    'createdAt',
+    'updatedAt',
+    'actions',
+  ];
+
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatSort) sort!: MatSort;
+
+  // --- Pagination State ---
+  totalWorkflows = 0;
+  limit = 10;
+  currentPageIndex = 0;
+  private pageCursors: Array<string | null | undefined> = [null];
+
+  // --- Filtering & Destroy State ---
+  private filterSubject = new Subject<string>();
+  private destroy$ = new Subject<void>();
+  currentFilter = '';
+  private subscriptions = new Subscription();
   public isLoading = false;
   public errorMessage: string | null = null;
 
   constructor(
     private workflowService: WorkflowService,
     private router: Router,
+    public dialog: MatDialog,
   ) {}
 
   ngOnInit(): void {
-    console.log('WorkflowListComponent: ngOnInit');
-    this.subscriptions.add(this.workflowService.workflows$.subscribe(workflows => {
-      console.log('WorkflowListComponent: workflows$ updated:', workflows);
-      this.workflows = workflows;
-    }));
-    this.subscriptions.add(this.workflowService.isLoading$.subscribe(isLoading => {
-      console.log('WorkflowListComponent: isLoading$ updated:', isLoading);
-      this.isLoading = isLoading;
-    }));
-    this.subscriptions.add(this.workflowService.errorMessage$.subscribe(errorMessage => {
-      console.log('WorkflowListComponent: errorMessage$ updated:', errorMessage);
-      this.errorMessage = errorMessage;
-    }));
+    this.subscriptions.add(
+      this.workflowService.workflows$.subscribe(
+        w => (this.dataSource.data = w),
+      ),
+    );
+    this.subscriptions.add(
+      this.workflowService.isLoading$.subscribe(l => (this.isLoading = l)),
+    );
+    this.subscriptions.add(
+      this.workflowService.errorMessage$.subscribe(
+        e => (this.errorMessage = e),
+      ),
+    );
+    this.filterSubject
+      .pipe(debounceTime(500), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(filter => {
+        this.workflowService.setFilter(filter);
+      });
+  }
+
+  ngAfterViewInit() {
+    this.dataSource.sort = this.sort;
+    // The paginator should not be assigned to the datasource directly
+    // as we are handling pagination manually.
+  }
+
+  handlePageEvent(event: PageEvent) {
+    // This will be implemented once pagination is handled in the component
+  }
+
+  applyFilter(event: Event): void {
+    const filterValue = (event.target as HTMLInputElement).value;
+    this.filterSubject.next(filterValue.trim().toLowerCase());
   }
 
   createNewWorkflow(): void {
     this.router.navigate(['/workflows/new']);
   }
 
+  deleteWorkflow(workflow: WorkflowModel, event: MouseEvent): void {
+    event.stopPropagation();
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      width: '350px',
+      data: {
+        title: 'Confirm Deletion',
+        message: `Are you sure you want to delete the workflow "${workflow.name}"? This action cannot be undone.`,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.workflowService.deleteWorkflow(workflow.id).subscribe({
+          // The service handles list updates automatically
+          error: err => {
+            console.error('Failed to delete workflow', err);
+            this.errorMessage = 'Failed to delete workflow. Please try again.';
+          },
+        });
+      }
+    });
+  }
+
   ngOnDestroy(): void {
-    console.log('WorkflowListComponent: ngOnDestroy - Unsubscribing all subscriptions');
+    this.destroy$.next();
+    this.destroy$.complete();
     this.subscriptions.unsubscribe();
+  }
+
+  public getStatusChipClass(status: string): string {
+    const statusLower = status.toLowerCase();
+
+    switch (statusLower) {
+      case WorkflowStatusEnum.ACTIVE.toLowerCase():
+      case WorkflowStatusEnum.RUNNING.toLowerCase():
+        return '!bg-blue-500/20 !text-blue-300';
+      case WorkflowStatusEnum.COMPLETED.toLowerCase():
+        return '!bg-green-500/20 !text-green-300';
+      case WorkflowStatusEnum.DRAFT.toLowerCase():
+        return '!bg-gray-500/20 !text-gray-300';
+      case WorkflowStatusEnum.PAUSED.toLowerCase():
+      case WorkflowStatusEnum.SCHEDULED.toLowerCase():
+        return '!bg-amber-500/20 !text-amber-300';
+      case WorkflowStatusEnum.FAILED.toLowerCase():
+      case WorkflowStatusEnum.CANCELED.toLowerCase():
+        return '!bg-red-500/20 !text-red-300';
+      default:
+        return '!bg-gray-500/20 !text-gray-300';
+    }
   }
 }

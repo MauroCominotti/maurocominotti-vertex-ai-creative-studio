@@ -25,7 +25,6 @@ from src.images.dto.vto_dto import VtoDto, VtoInputLink
 from src.images.imagen_service import ImagenService
 from src.users.user_model import UserModel
 from src.workflows.dto.workflow_search_dto import WorkflowSearchDto
-from src.workflows.dto.workflow_step_dto import WorkflowOperationEnum
 from src.workflows.repository.workflow_repository import WorkflowRepository
 from src.workflows.schema.workflow_model import (
     WorkflowBase,

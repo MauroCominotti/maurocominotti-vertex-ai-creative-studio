@@ -1,69 +1,107 @@
-<div class="editor-container">
-  <div class="header">
-    <h2>{{ isEditMode ? 'Edit Workflow' : 'Create New Workflow' }}</h2>
-    <div class="actions">
-      <button mat-stroked-button routerLink="/workflows">Cancel</button>
-      <button mat-flat-button color="primary" (click)="save()" [disabled]="isLoading">
-        {{ isEditMode ? 'Save Changes' : 'Create Workflow' }}
+<div class="editor-container h-full flex flex-col bg-neutral-800 text-white">
+  <!-- A. Global Header -->
+  <header class="flex items-center p-4 pb-10 border-b border-neutral-700">
+    <!-- Breadcrumbs/Title Area -->
+    <div class="flex-grow">
+      <div *ngIf="isReadOnly; else editableHeader">
+        <h1 class="text-2xl font-semibold">{{ displayedWorkflow?.name }}</h1>
+        <p class="text-sm text-neutral-400">{{ displayedWorkflow?.description }}</p>
+      </div>
+      <ng-template #editableHeader>
+        <div [formGroup]="workflowForm">
+          <input formControlName="name" placeholder="Untitled Workflow"
+            class="text-5xl font-semibold bg-transparent outline-none border-none p-0 w-full">
+          <input formControlName="description" placeholder="Add a description..."
+            class="text-sm text-neutral-400 bg-transparent outline-none border-none p-0 w-full mt-1">
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Status Badge -->
+    <div class="mx-6">
+      <ng-container [ngSwitch]="mode">
+        <mat-chip *ngSwitchCase="EditorMode.Create" class="!bg-gray-500/20 !text-gray-300">DRAFT</mat-chip>
+        <mat-chip *ngSwitchCase="EditorMode.Edit" class="!bg-gray-500/20 !text-gray-300">
+          {{ (workflow?.status || 'DRAFT') | uppercase }}
+        </mat-chip>
+        <mat-chip *ngSwitchCase="EditorMode.Run" class="!bg-blue-500/20 !text-blue-300">
+          <!-- TODO: Add dynamic run status -->
+          RUNNING
+        </mat-chip>
+      </ng-container>
+    </div>
+
+    <!-- Primary Actions -->
+    <div class="flex items-center gap-2">
+      <button *ngIf="!isReadOnly" mat-flat-button color="primary" (click)="save()">
+        <mat-icon>play_arrow</mat-icon>
+        Run Workflow
       </button>
+      <button *ngIf="!isReadOnly" mat-stroked-button (click)="save()">Save</button>
+      <button mat-stroked-button routerLink="/workflows">Go Back</button>
     </div>
-  </div>
+  </header>
 
-  <div *ngIf="isLoading" class="loading-indicator">
-    <mat-spinner diameter="50"></mat-spinner>
-  </div>
+  <!-- Main Content Area -->
+  <div class="flex-grow flex overflow-hidden" [ngSwitch]="selectedView">
+    <!-- Workflow Editor/Viewer -->
+    <div *ngSwitchCase="'workflow'" class="flex flex-grow overflow-hidden">
+      <!-- Left Panel (Workflow Graph) -->
+      <div class="w-2/3 flex flex-col">
+        <div class="p-4 border-b border-neutral-700 flex justify-between items-center">
+          <h5 class="text-lg font-semibold">Workflow Graph</h5>
+          <div class="flex items-center gap-2">
+            <button *ngIf="!isReadOnly" mat-stroked-button color="accent" (click)="openAddStepModal()">
+              <mat-icon>add</mat-icon>
+              Add Step
+            </button>
 
-  <div *ngIf="errorMessage" class="error-message">
-    {{ errorMessage }}
-  </div>
+            <!-- B. Global Navigation ("The Switch") -->
+            <mat-button-toggle-group [(ngModel)]="selectedView" class="!h-10">
+              <mat-button-toggle value="workflow">
+                <mat-icon>schema</mat-icon>Workflow
+              </mat-button-toggle>
+              <mat-button-toggle value="history" [disabled]="mode === EditorMode.Create">
+                <mat-icon>history</mat-icon>Past Runs
+              </mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+        </div>
+        <div class="flex-grow p-4 overflow-auto">
+          <!-- Placeholder for Graph/List View -->
+          <p class="text-neutral-500">Workflow steps will appear here.</p>
+        </div>
+      </div>
 
-  <form [formGroup]="workflowForm" *ngIf="!isLoading">
-    <div class="workflow-details">
-      <mat-form-field appearance="outline" class="workflow-name-field">
-        <mat-label>Workflow Name</mat-label>
-        <input matInput formControlName="name" required>
-        <mat-error *ngIf="workflowForm.get('name')?.hasError('required')">
-          Workflow name is required.
-        </mat-error>
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="workflow-description-field">
-        <mat-label>Description</mat-label>
-        <textarea matInput formControlName="description" cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5"></textarea>
-      </mat-form-field>
-    </div>
+      <!-- Separator -->
+      <div class="w-px bg-neutral-700"></div>
 
-    <div class="canvas-area">
-      <div class="steps-list">
-        <div class="step-wrapper" *ngFor="let step of stepsArray.controls; let i = index">
-          <ng-container [formGroupName]="i" [ngSwitch]="step.get('type')?.value">
-            <app-user-input-step *ngSwitchCase="'user_input'" [stepForm]="asFormGroup(step)" [stepIndex]="i"
-              (delete)="deleteStep(i)">
-            </app-user-input-step>
-            <app-generate-text-step *ngSwitchCase="'generate_text'" [stepForm]="asFormGroup(step)" [stepIndex]="i"
-              (delete)="deleteStep(i)">
-            </app-generate-text-step>
-            <app-virtual-try-on-step *ngSwitchCase="'virtual_try_on'" [stepForm]="asFormGroup(step)" [stepIndex]="i"
-              (delete)="deleteStep(i)">
-            </app-virtual-try-on-step>
-            <div *ngSwitchDefault class="unknown-step">
-              Unknown step type: {{ step.get('type')?.value }}
-            </div>
-          </ng-container>
+      <!-- Right Panel (Outputs) -->
+      <div class="w-1/3 flex flex-col">
+        <div class="p-4 border-b border-neutral-700 flex items-center justify-between">
+          <h5 class="text-lg font-semibold">Outputs</h5>
+          <!-- TODO: Add tabs if a step has multiple output types -->
+        </div>
+        <div class="flex-grow p-4 overflow-auto">
+          <!-- Zero State -->
+          <div *ngIf="!selectedStep || !isReadOnly"
+            class="flex flex-col items-center justify-center h-full text-center text-neutral-500">
+            <mat-icon class="!w-24 !h-24 text-neutral-600">science</mat-icon>
+            <p class="mt-4 font-medium">Run the workflow to generate results</p>
+            <p class="text-sm text-neutral-600">Select a step on the left to see its outputs here</p>
+            <p class="text-sm text-neutral-600">once a run is complete.</p>
+          </div>
+
+          <!-- TODO: Add Running and Completed states for when a step is selected in Run mode -->
         </div>
       </div>
     </div>
-  </form>
 
-  <div class="add-btn-container">
-    <button mat-fab extended color="accent" (click)="openAddStepModal()">
-      <mat-icon>add</mat-icon>
-      Add Step
-    </button>
+    <!-- History View -->
+    <div *ngSwitchCase="'history'" class="flex-grow p-4 overflow-auto">
+      <h5 class="text-lg font-semibold mb-4">Past Runs</h5>
+      <!-- Placeholder for History List -->
+      <p class="text-neutral-500">A list of past workflow runs will appear here.</p>
+    </div>
   </div>
 </div>
-<!-- <div class="add-btn-container">
-      <button mat-fab extended color="accent" (click)="openAddStepModal()">
-        <mat-icon>add</mat-icon>
-      </button>
-    </div>
-  </div> -->

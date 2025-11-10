@@ -28,6 +28,7 @@ from src.workflows.dto.workflow_search_dto import WorkflowSearchDto
 from src.workflows.dto.workflow_step_dto import WorkflowOperationEnum
 from src.workflows.repository.workflow_repository import WorkflowRepository
 from src.workflows.schema.workflow_model import (
+    WorkflowBase,
     WorkflowCreateDto,
     WorkflowDefinitionStatusEnum,
     WorkflowModel,
@@ -66,6 +67,10 @@ class WorkflowService:
             user_id, workspace_id, workflow_id
         )
 
+    def get_by_id(self, workflow_id: str) -> WorkflowModel | None:
+        """Retrieves a workflow by its ID without any authorization checks."""
+        return self.workflow_repository.get_by_id(workflow_id)
+
     def query_workflows(
         self, user_id: str, workspace_id: str, search_dto: WorkflowSearchDto
     ) -> PaginationResponseDto[WorkflowModel]:
@@ -73,11 +78,21 @@ class WorkflowService:
             user_id, workspace_id, search_dto
         )
 
-    def update_workflow(self, workflow_model: WorkflowModel):
+    def update_workflow(
+        self, workflow_id: str, workflow_dto: WorkflowCreateDto, user: UserModel
+    ) -> WorkflowModel:
         """Validates and updates a workflow."""
         try:
-            validated_workflow = WorkflowModel(**workflow_model.model_dump())
-            return self.workflow_repository.update_workflow(validated_workflow)
+            # Create the full model from the DTO, preserving the existing ID and user.
+            updated_model = WorkflowModel(
+                id=workflow_id,
+                user_id=user.id,
+                name=workflow_dto.name,
+                description=workflow_dto.description,
+                workspace_id=workflow_dto.workspace_id,
+                steps=workflow_dto.steps,
+            )
+            return self.workflow_repository.update_workflow(updated_model)
         except ValidationError as e:
             raise ValueError(str(e))
 

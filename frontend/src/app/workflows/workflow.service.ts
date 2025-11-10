@@ -6,6 +6,7 @@ import {
   WorkflowModel,
   WorkflowRunModel,
   WorkflowSearchDto,
+  WorkflowUpdateDto,
 } from './workflow.models';
 import {
   catchError,
@@ -171,17 +172,21 @@ export class WorkflowService implements OnDestroy {
       .pipe(tap(() => this.loadWorkflows(true)));
   }
 
-  updateWorkflow(workflowData: WorkflowModel): Observable<{message: string}> {
-    const {workspaceId, id} = workflowData;
+  updateWorkflow(
+    workflow_id: string,
+    workflowData: WorkflowUpdateDto,
+  ): Observable<{message: string}> {
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (!workspaceId) {
       return throwError(
         () => new Error('Cannot update workflow without a workspaceId.'),
       );
     }
-    return this.http.put<{message: string}>(
-      `${this.API_BASE_URL}/workflows/${id}?workspaceId=${workspaceId}`,
-      workflowData,
-    );
+    return this.http
+      .put<{
+        message: string;
+      }>(`${this.API_BASE_URL}/workflows/${workflow_id}`, workflowData)
+      .pipe(tap(() => this.loadWorkflows(true)));
   }
 
   deleteWorkflow(workflowId: string): Observable<any> {

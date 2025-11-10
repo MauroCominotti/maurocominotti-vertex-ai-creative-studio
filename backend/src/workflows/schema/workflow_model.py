@@ -67,6 +67,17 @@ SettingsT = TypeVar("SettingsT", bound=BaseModel)
 # =========================================
 # 2. Generic Base Step
 # =========================================
+class StepStatusEnum(str, Enum):
+    """Defines the execution state of an individual step."""
+
+    IDLE = "idle"  # Default state in template / before run starts
+    PENDING = "pending"  # Run started, but this step hasn't started yet
+    RUNNING = "running"  # Currently executing
+    COMPLETED = "completed"
+    FAILED = "failed"
+    SKIPPED = "skipped"  # Useful for conditional workflows later on
+
+
 class BaseStep(BaseModel, Generic[InputT, SettingsT]):
     """
     Abstract-like base step.
@@ -75,9 +86,17 @@ class BaseStep(BaseModel, Generic[InputT, SettingsT]):
     """
 
     step_id: str
+
+    # --- Execution State ---
+    # These fields are populated during a Workflow Run.
+    status: StepStatusEnum = Field(default=StepStatusEnum.IDLE)
+    error: Optional[str] = None  # To store error messages if status == FAILED
+    started_at: Optional[datetime.datetime] = None
+    completed_at: Optional[datetime.datetime] = None
+
     outputs: Dict[str, Any] = Field(default_factory=dict)
 
-    # These are now "virtual" slots to be concretely defined by subclasses
+    # --- Definition ---
     inputs: InputT
     settings: SettingsT
 

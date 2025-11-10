@@ -4,6 +4,7 @@ import {BehaviorSubject, Observable, of, Subscription, throwError} from 'rxjs';
 import {
   WorkflowCreateDto,
   WorkflowModel,
+  WorkflowRunModel,
   WorkflowSearchDto,
 } from './workflow.models';
 import {
@@ -77,7 +78,10 @@ export class WorkflowService implements OnDestroy {
     return this.workflows$;
   }
 
-  getWorkflowById(workflowId: string): Observable<WorkflowModel> {
+  // TODO: If we are selecting a workflow run we should query another endpoint
+  getWorkflowById(
+    workflowId: string,
+  ): Observable<WorkflowModel | WorkflowRunModel> {
     // We get the current ID synchronously from the service if needed,
     // or we could rely on the component to pass it.
     // Using the service's getter is safest if available, otherwise we might need to take(1) from the observable.
@@ -88,7 +92,7 @@ export class WorkflowService implements OnDestroy {
       throw new Error('No active workspace');
     }
 
-    return this.http.get<WorkflowModel>(
+    return this.http.get<WorkflowModel | WorkflowRunModel>(
       `${this.API_BASE_URL}/workflows/${workspaceId}/${workflowId}`,
     );
   }
@@ -157,7 +161,9 @@ export class WorkflowService implements OnDestroy {
   ): Observable<{message: string}> {
     const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (!workspaceId) {
-      return throwError(() => new Error('Cannot create workflow without an active workspace.'));
+      return throwError(
+        () => new Error('Cannot create workflow without an active workspace.'),
+      );
     }
     const payload = {...workflowData, workspaceId};
     return this.http
@@ -168,7 +174,9 @@ export class WorkflowService implements OnDestroy {
   updateWorkflow(workflowData: WorkflowModel): Observable<{message: string}> {
     const {workspaceId, id} = workflowData;
     if (!workspaceId) {
-      return throwError(() => new Error('Cannot update workflow without a workspaceId.'));
+      return throwError(
+        () => new Error('Cannot update workflow without a workspaceId.'),
+      );
     }
     return this.http.put<{message: string}>(
       `${this.API_BASE_URL}/workflows/${id}?workspaceId=${workspaceId}`,

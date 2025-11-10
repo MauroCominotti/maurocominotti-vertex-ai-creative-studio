@@ -68,40 +68,56 @@
       <div class="flex-grow p-4 overflow-auto" [formGroup]="workflowForm" [ngSwitch]="selectedView">
         <!-- Workflow Graph Content -->
         <div *ngSwitchCase="'workflow'" cdkDropList formArrayName="steps" (cdkDropListDropped)="dropStep($event)" class="space-y-4">
-          <!-- Step Node -->
-          <div *ngFor="let step of stepsArray.controls; let i = index" [formGroupName]="i"
-            (click)="selectedStep = step.value" [class.ring-2]="selectedStep?.stepId === step.value.stepId"
-            [class.ring-blue-500]="selectedStep?.stepId === step.value.stepId"
-            class="step-card bg-neutral-700/50 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:bg-neutral-700"
-            cdkDrag [cdkDragDisabled]="isReadOnly">
-
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div cdkDragHandle class="cursor-move text-neutral-500 hover:text-white" [class.hidden]="isReadOnly">
-                  <mat-icon>drag_indicator</mat-icon>
-                </div>
-                <mat-icon>{{ getStepIcon(step.value.type) }}</mat-icon>
-                <div>
-                  <h4 class="font-semibold text-lg">{{ step.value.type | titlecase }}</h4>
-                  <p class="text-xs text-neutral-400">Step {{ i + 1 }}</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <mat-chip [class]="getStepStatusChipClass(step.value.status)" class="!flex !items-center">
-                  <mat-icon *ngIf="getStepStatusIcon(step.value.status)" class="!text-base !h-4 !w-4 mr-1.5">{{ getStepStatusIcon(step.value.status) }}</mat-icon>
-                  {{ step.value.status | titlecase }}
-                </mat-chip>
-                <div *ngIf="!isReadOnly">
-                  <button mat-icon-button (click)="deleteStep(i)" matTooltip="Delete Step">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                </div>
-              </div>
-            </div>
-            <ng-container [ngSwitch]="step.value.type">
-              <app-user-input-step *ngSwitchCase="'user_input'" [stepForm]="asFormGroup(step)"></app-user-input-step>
-            </ng-container>
-          </div>
+          <ng-container *ngFor="let step of stepsArray.controls; let i = index" [formGroupName]="i" [ngSwitch]="step.value.type">
+            <app-user-input-step *ngSwitchCase="'user_input'"
+              class="step-card block bg-neutral-700/50 rounded-lg transition-all duration-200 hover:bg-neutral-700"
+              [class.ring-2]="selectedStep?.stepId === step.value.stepId"
+              [class.ring-blue-500]="selectedStep?.stepId === step.value.stepId"
+              (click)="selectedStep = step.value"
+              cdkDrag [cdkDragDisabled]="isReadOnly"
+              [stepForm]="asFormGroup(step)" [stepIndex]="i" (delete)="deleteStep(i)">
+            </app-user-input-step>
+            <app-generate-text-step *ngSwitchCase="'generate_text'"
+              class="step-card block bg-neutral-700/50 rounded-lg transition-all duration-200 hover:bg-neutral-700"
+              [class.ring-2]="selectedStep?.stepId === step.value.stepId"
+              [class.ring-blue-500]="selectedStep?.stepId === step.value.stepId"
+              (click)="selectedStep = step.value"
+              cdkDrag [cdkDragDisabled]="isReadOnly"
+              [stepForm]="asFormGroup(step)" [stepIndex]="i" (delete)="deleteStep(i)">
+            </app-generate-text-step>
+            <app-generate-image-step *ngSwitchCase="'generate_image'"
+              class="step-card block bg-neutral-700/50 rounded-lg transition-all duration-200 hover:bg-neutral-700"
+              [class.ring-2]="selectedStep?.stepId === step.value.stepId"
+              [class.ring-blue-500]="selectedStep?.stepId === step.value.stepId"
+              (click)="selectedStep = step.value"
+              cdkDrag [cdkDragDisabled]="isReadOnly"
+              [stepForm]="asFormGroup(step)" [stepIndex]="i" (delete)="deleteStep(i)">
+            </app-generate-image-step>
+            <app-edit-image-step *ngSwitchCase="'edit_image'"
+              class="step-card block bg-neutral-700/50 rounded-lg transition-all duration-200 hover:bg-neutral-700"
+              [class.ring-2]="selectedStep?.stepId === step.value.stepId"
+              [class.ring-blue-500]="selectedStep?.stepId === step.value.stepId"
+              (click)="selectedStep = step.value"
+              cdkDrag [cdkDragDisabled]="isReadOnly"
+              [stepForm]="asFormGroup(step)" [stepIndex]="i" (delete)="deleteStep(i)">
+            </app-edit-image-step>
+            <app-crop-image-step *ngSwitchCase="'crop_image'"
+              class="step-card block bg-neutral-700/50 rounded-lg transition-all duration-200 hover:bg-neutral-700"
+              [class.ring-2]="selectedStep?.stepId === step.value.stepId"
+              [class.ring-blue-500]="selectedStep?.stepId === step.value.stepId"
+              (click)="selectedStep = step.value"
+              cdkDrag [cdkDragDisabled]="isReadOnly"
+              [stepForm]="asFormGroup(step)" [stepIndex]="i" (delete)="deleteStep(i)">
+            </app-crop-image-step>
+            <app-virtual-try-on-step *ngSwitchCase="'virtual_try_on'"
+              class="step-card block bg-neutral-700/50 rounded-lg transition-all duration-200 hover:bg-neutral-700"
+              [class.ring-2]="selectedStep?.stepId === step.value.stepId"
+              [class.ring-blue-500]="selectedStep?.stepId === step.value.stepId"
+              (click)="selectedStep = step.value"
+              cdkDrag [cdkDragDisabled]="isReadOnly"
+              [stepForm]="asFormGroup(step)" [stepIndex]="i" (delete)="deleteStep(i)">
+            </app-virtual-try-on-step>
+          </ng-container>
         </div>
         <!-- History View Content -->
         <div *ngSwitchCase="'history'">

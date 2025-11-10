@@ -70,6 +70,7 @@ const routes: Routes = [
       {path: 'new', component: WorkflowEditorComponent},
       // Match the parameter names used in your WorkflowEditorComponent
       {path: 'edit/:workflowId', component: WorkflowEditorComponent},
+      {path: 'run/:runId', component: WorkflowEditorComponent},
     ],
   },
 ];

@@ -43,65 +43,87 @@
   </header>
 
   <!-- Main Content Area -->
-  <div class="flex-grow flex overflow-hidden" [ngSwitch]="selectedView">
-    <!-- Workflow Editor/Viewer -->
-    <div *ngSwitchCase="'workflow'" class="flex flex-grow overflow-hidden">
-      <!-- Left Panel (Workflow Graph) -->
-      <div class="w-2/3 flex flex-col">
-        <div class="p-4 border-b border-neutral-700 flex justify-between items-center">
-          <h5 class="text-lg font-semibold">Workflow Graph</h5>
-          <div class="flex items-center gap-2">
-            <button *ngIf="!isReadOnly" mat-stroked-button color="accent" (click)="openAddStepModal()">
-              <mat-icon>add</mat-icon>
-              Add Step
-            </button>
-
-            <!-- B. Global Navigation ("The Switch") -->
-            <mat-button-toggle-group [(ngModel)]="selectedView" class="!h-10">
-              <mat-button-toggle value="workflow">
-                <mat-icon>schema</mat-icon>Workflow
-              </mat-button-toggle>
-              <mat-button-toggle value="history" [disabled]="mode === EditorMode.Create">
-                <mat-icon>history</mat-icon>Past Runs
-              </mat-button-toggle>
-            </mat-button-toggle-group>
-          </div>
-        </div>
-        <div class="flex-grow p-4 overflow-auto">
-          <!-- Placeholder for Graph/List View -->
-          <p class="text-neutral-500">Workflow steps will appear here.</p>
+  <div class="flex-grow flex overflow-hidden">
+    <!-- Left Panel (Workflow Graph / History) -->
+    <div class="w-2/3 flex flex-col">
+      <div class="p-4 border-b border-neutral-700 flex justify-between items-center">
+        <h5 class="text-lg font-semibold">{{ selectedView === 'workflow' ? 'Workflow Graph' : 'Past Runs' }}</h5>
+        <div class="flex items-center gap-2">
+          <button *ngIf="!isReadOnly && selectedView === 'workflow'" mat-stroked-button color="accent"
+            (click)="openAddStepModal()">
+            <mat-icon>add</mat-icon>
+            Add Step
+          </button>
+          <!-- B. Global Navigation ("The Switch") -->
+          <mat-button-toggle-group [(ngModel)]="selectedView">
+            <mat-button-toggle value="workflow">
+              <mat-icon class="mr-2">schema</mat-icon>Workflow
+            </mat-button-toggle>
+            <mat-button-toggle value="history" [disabled]="mode === EditorMode.Create">
+              <mat-icon class="mr-2">history</mat-icon>Past Runs
+            </mat-button-toggle>
+          </mat-button-toggle-group>
         </div>
       </div>
-
-      <!-- Separator -->
-      <div class="w-px bg-neutral-700"></div>
-
-      <!-- Right Panel (Outputs) -->
-      <div class="w-1/3 flex flex-col">
-        <div class="p-4 border-b border-neutral-700 flex items-center justify-between">
-          <h5 class="text-lg font-semibold">Outputs</h5>
-          <!-- TODO: Add tabs if a step has multiple output types -->
-        </div>
-        <div class="flex-grow p-4 overflow-auto">
-          <!-- Zero State -->
-          <div *ngIf="!selectedStep || !isReadOnly"
-            class="flex flex-col items-center justify-center h-full text-center text-neutral-500">
-            <mat-icon class="!w-24 !h-24 text-neutral-600">science</mat-icon>
-            <p class="mt-4 font-medium">Run the workflow to generate results</p>
-            <p class="text-sm text-neutral-600">Select a step on the left to see its outputs here</p>
-            <p class="text-sm text-neutral-600">once a run is complete.</p>
+      <div class="flex-grow p-4 overflow-auto" [formGroup]="workflowForm" [ngSwitch]="selectedView">
+        <!-- Workflow Graph Content -->
+        <div *ngSwitchCase="'workflow'" cdkDropList formArrayName="steps" (cdkDropListDropped)="dropStep($event)" class="space-y-4">
+          <!-- Step Node -->
+          <div *ngFor="let step of stepsArray.controls; let i = index" [formGroupName]="i"
+            (click)="selectedStep = step.value" [class.ring-2]="selectedStep?.stepId === step.value.stepId"
+            [class.ring-blue-500]="selectedStep?.stepId === step.value.stepId"
+            class="step-card bg-neutral-700/50 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:bg-neutral-700"
+            cdkDrag>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div cdkDragHandle class="cursor-move text-neutral-500 hover:text-white">
+                  <mat-icon>drag_indicator</mat-icon>
+                </div>
+                <h4 class="font-semibold text-lg">{{ step.value.type | titlecase }}</h4>
+              </div>
+              <div *ngIf="!isReadOnly">
+                <button mat-icon-button (click)="deleteStep(i)" matTooltip="Delete Step">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+            <!-- TODO: Add form controls for step inputs and settings -->
+            <div class="p-4 mt-2">
+              <p class="text-sm text-neutral-400">
+                Step ID: {{ step.value.stepId }}
+              </p>
+            </div>
           </div>
-
-          <!-- TODO: Add Running and Completed states for when a step is selected in Run mode -->
+        </div>
+        <!-- History View Content -->
+        <div *ngSwitchCase="'history'">
+          <!-- Placeholder for History List -->
+          <p class="text-neutral-500">A list of past workflow runs will appear here.</p>
         </div>
       </div>
     </div>
 
-    <!-- History View -->
-    <div *ngSwitchCase="'history'" class="flex-grow p-4 overflow-auto">
-      <h5 class="text-lg font-semibold mb-4">Past Runs</h5>
-      <!-- Placeholder for History List -->
-      <p class="text-neutral-500">A list of past workflow runs will appear here.</p>
+    <!-- Separator -->
+    <div class="w-px bg-neutral-700"></div>
+
+    <!-- Right Panel (Outputs) -->
+    <div class="w-1/3 flex flex-col">
+      <div class="p-4 border-b border-neutral-700 flex items-center justify-between">
+        <h5 class="text-lg font-semibold">Outputs</h5>
+        <!-- TODO: Add tabs if a step has multiple output types -->
+      </div>
+      <div class="flex-grow p-4 overflow-auto">
+        <!-- Zero State -->
+        <div *ngIf="!selectedStep || !isReadOnly"
+          class="flex flex-col items-center justify-center h-full text-center text-neutral-500">
+          <mat-icon class="!w-24 !h-24 text-neutral-600">science</mat-icon>
+          <p class="mt-4 font-medium">Run the workflow to generate results</p>
+          <p class="text-sm text-neutral-600">Select a step on the left to see its outputs here once a run is
+            complete.</p>
+        </div>
+
+        <!-- TODO: Add Running and Completed states for when a step is selected in Run mode -->
+      </div>
     </div>
   </div>
 </div>

@@ -1,12 +1,10 @@
-// src/app/workflows/shared/_step-card.scss
-
 /* Base Card Container */
 .step-card {
   background-color: var(--card-bg);
   border-radius: 0.5rem;
   border: 1px solid var(--border-color);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  overflow: hidden; /* Ensures header children don't spill out rounded corners */
+  overflow: hidden;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 
   &:hover {
@@ -14,10 +12,14 @@
     box-shadow: 0 15px 40px rgba(0,0,0,0.4);
   }
 
-  &.virtual-try-on { border-top: 4px solid #ff6b6b; }
-  &.generate-image { border-top: 4px solid #51cf66; }
-  &.user-input { border-top: 4px solid var(--accent-color); }
-  /* Add other specific color codes for different step types here */
+  /* --- Step Type Specific Top Borders --- */
+  &.user-input { border-top: 4px solid #f87171; }                  /* Red */
+  &.generate-text { border-top: 4px solid #339af0; }               /* Blue */
+  &.generate-image { border-top: 4px solid #51cf66; }              /* Green */
+  &.edit-image { border-top: 4px solid #ff922b; }                  /* Orange */
+  &.generate-video { border-top: 4px solid #fcc419; }              /* Purple */
+  &.crop-image { border-top: 4px solid #22b8cf; }                  /* Cyan */
+  &.virtual-try-on { border-top: 4px solid #8b5cf6; }              /* Purple */
 }
 
 /* 1. Header Section */

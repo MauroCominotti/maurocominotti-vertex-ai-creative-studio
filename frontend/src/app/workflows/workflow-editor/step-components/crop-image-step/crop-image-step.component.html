@@ -1,1 +1,72 @@
-<p>crop-image-step works!</p>
+<div class="step-card crop-image" [formGroup]="stepForm">
+  <div class="step-header" (click)="isCollapsed = !isCollapsed">
+    <div class="step-title">
+      <mat-icon>crop</mat-icon>
+      <span>Crop Image</span>
+      <span class="step-id-subtle">#{{ stepIndex + 1 }}</span>
+    </div>
+    <div class="step-actions">
+      <button *ngIf="mode !== 'run'" mat-icon-button color="warn"
+              (click)="$event.stopPropagation(); delete.emit()" matTooltip="Delete step">
+        <mat-icon>delete</mat-icon>
+      </button>
+      <button mat-icon-button class="collapse-icon">
+        <mat-icon>{{ isCollapsed ? 'expand_more' : 'expand_less' }}</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <div class="step-body" *ngIf="!isCollapsed">
+    <div class="section inputs" formGroupName="inputs">
+      <h3>Inputs</h3>
+      <div class="input-group">
+        <label>Input Image</label>
+        <div class="controls-row">
+          <mat-form-field appearance="outline" class="mode-select">
+            <mat-select [value]="inputModes['input_image']" (selectionChange)="toggleInputMode('input_image', $event.value)">
+              <mat-option value="fixed">Fixed</mat-option>
+              <mat-option value="linked">Link</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field *ngIf="inputModes['input_image'] === 'fixed'" appearance="outline" class="value-input">
+            <input matInput formControlName="input_image" placeholder="Image URL...">
+          </mat-form-field>
+           <mat-form-field *ngIf="inputModes['input_image'] === 'linked'" appearance="outline" class="value-input">
+             <mat-select formControlName="input_image">
+              <mat-option *ngFor="let out of availableOutputs" [value]="{ step: out.step_id, output: out.output_key }">
+                {{ out.label }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+
+    <div class="section settings" formGroupName="settings">
+      <h3>Settings</h3>
+      <div class="settings-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Target Ratio</mat-label>
+          <mat-select formControlName="crop_aspect_ratio">
+            <mat-option value="1:1">1:1 (Square)</mat-option>
+            <mat-option value="16:9">16:9</mat-option>
+            <mat-option value="9:16">9:16</mat-option>
+            <mat-option value="4:3">4:3</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+           <mat-label>Fill Color</mat-label>
+           <input matInput type="color" formControlName="background_color">
+        </mat-form-field>
+        <div class="checkbox-group">
+          <mat-checkbox formControlName="fill_aspect_ratio">Fill if does not fit</mat-checkbox>
+        </div>
+      </div>
+    </div>
+
+    <div class="section outputs">
+      <h3>Outputs</h3>
+      <div class="output-pill"><mat-icon>image</mat-icon> cropped_image</div>
+    </div>
+  </div>
+</div>

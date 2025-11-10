@@ -26,6 +26,7 @@ import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import {filter, switchMap, tap} from 'rxjs/operators';
 import {AddStepModalComponent} from './add-step-modal/add-step-modal.component';
 
+
 @Component({
   selector: 'app-workflow-editor',
   templateUrl: './workflow-editor.component.html',
@@ -35,6 +36,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   // --- Component Mode & State ---
   EditorMode = EditorMode;
   mode: EditorMode = EditorMode.Create;
+  NodeTypes = NodeTypes;
   workflowId: string | null = null;
   runId: string | null = null;
 
@@ -154,16 +156,15 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
   addStepToForm(type: string, existingData?: any) {
     const stepData = existingData || {
-      step_id: `${type}_${Date.now()}`,
+      stepId: `${type}_${Date.now()}`,
       type: type,
       status: StepStatusEnum.IDLE,
       inputs: {},
       outputs: {},
       settings: {},
     };
-
     const stepGroup = this.fb.group({
-      step_id: [stepData.step_id],
+      stepId: [stepData.stepId],
       type: [stepData.type],
       status: [stepData.status],
       inputs: this.fb.group(stepData.inputs || {}),
@@ -207,10 +208,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         workspaceId: formValue.workspaceId,
       };
 
-      request$ = this.workflowService.updateWorkflow(
-        formValue.id,
-        updateDto,
-      );
+      request$ = this.workflowService.updateWorkflow(formValue.id, updateDto);
     } else {
       const createDto: Omit<WorkflowCreateDto, 'workspaceId'> = {
         name: formValue.name,
@@ -293,10 +291,14 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
   getStepStatusIcon(status: StepStatusEnum): string {
     switch (status) {
-      case StepStatusEnum.RUNNING: return 'hourglass_top';
-      case StepStatusEnum.COMPLETED: return 'check_circle';
-      case StepStatusEnum.FAILED: return 'error';
-      default: return '';
+      case StepStatusEnum.RUNNING:
+        return 'hourglass_top';
+      case StepStatusEnum.COMPLETED:
+        return 'check_circle';
+      case StepStatusEnum.FAILED:
+        return 'error';
+      default:
+        return '';
     }
   }
 }

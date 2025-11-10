@@ -123,6 +123,10 @@ export interface WorkflowModel extends WorkflowBase {
 
 export interface WorkflowCreateDto extends WorkflowBase {}
 
+export interface WorkflowUpdateDto extends WorkflowBase {
+  status: WorkflowDefinitionStatusEnum;
+}
+
 export interface WorkflowSearchDto {
   workspaceId: string;
   limit?: number;

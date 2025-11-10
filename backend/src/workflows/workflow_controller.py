@@ -97,28 +97,38 @@ def create_workflow(
     return created_workflow
 
 
-@router.put("/{workspace_id}/{workflow_id}", response_model=WorkflowModel)
+@router.put("/{workflow_id}", response_model=WorkflowModel)
 def update_workflow(
-    workspace_id: str,
     workflow_id: str,
     workflow_data: WorkflowCreateDto,
     current_user: UserModel = Depends(get_current_user),
     workflow_service: WorkflowService = Depends(),
 ):
     """Updates an existing workflow definition."""
+    # 1. Fetch the existing workflow first to ensure it exists.
+    existing_workflow = workflow_service.get_by_id(workflow_id)
+    if not existing_workflow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Workflow with ID '{workflow_id}' not found.",
+        )
+
+    # 2. Authorize the user against the workspace of the *existing* workflow.
     workspace_auth_service.authorize(
-        workspace_id=workspace_id, user=current_user
+        workspace_id=existing_workflow.workspace_id, user=current_user
     )
 
-    # Ensure the path parameters and user ID are correctly set on the object
-    workflow_data.workspace_id = workspace_id
+    # 3. Verify that the workspace ID is not being changed.
+    if workflow_data.workspace_id != existing_workflow.workspace_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The workspace ID of a workflow cannot be changed.",
+        )
 
-    # TODO: Check that the Workflow ID is correct and exists
-
-    workflow_model = WorkflowModel(**workflow_data.model_dump())
-    updated_workflow = workflow_service.update_workflow(workflow_model)
-
-    return updated_workflow
+    # 4. Pass the DTO to the service to handle the update logic.
+    return workflow_service.update_workflow(
+        workflow_id, workflow_data, current_user
+    )
 
 
 @router.get("/{workspace_id}/{workflow_id}", response_model=WorkflowModel)

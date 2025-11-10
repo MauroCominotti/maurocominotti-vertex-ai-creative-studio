@@ -10,6 +10,7 @@ import {
 import {MatDialog} from '@angular/material/dialog';
 import {WorkflowService} from '../workflow.service';
 import {
+  NodeTypes,
   StepStatusEnum,
   WorkflowBase,
   WorkflowCreateDto,
@@ -18,9 +19,9 @@ import {
   WorkflowRunModel,
   WorkflowRunStatusEnum,
   WorkflowStep,
-  WorkflowUpdateDto,
+  WorkflowUpdateDto
 } from '../workflow.models';
-import {Subscription, combineLatest, of} from 'rxjs';
+import {Observable, Subscription, of} from 'rxjs';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import {filter, switchMap, tap} from 'rxjs/operators';
 import {AddStepModalComponent} from './add-step-modal/add-step-modal.component';
@@ -191,7 +192,10 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = null;
 
-    let request$;
+    let request$: Observable<any>;
+
+    if (this.mode === EditorMode.Run) return;
+
     const formValue = this.workflowForm.getRawValue();
 
     if (this.mode === EditorMode.Edit) {
@@ -246,6 +250,54 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     });
     this.stepsArray.clear();
     this.addStepToForm('user_input');
+  }
+
+  getStepIcon(type: string): string {
+    switch (type) {
+      case NodeTypes.USER_INPUT:
+        return 'input';
+      case NodeTypes.GENERATE_TEXT:
+        return 'text_fields';
+      case NodeTypes.GENERATE_IMAGE:
+        return 'image';
+      case NodeTypes.EDIT_IMAGE:
+        return 'edit';
+      case NodeTypes.CROP_IMAGE:
+        return 'crop';
+      case NodeTypes.GENERATE_VIDEO:
+        return 'movie';
+      case NodeTypes.VIRTUAL_TRY_ON:
+        return 'styler';
+      default:
+        return 'help_outline';
+    }
+  }
+
+  getStepStatusChipClass(status: StepStatusEnum): string {
+    switch (status) {
+      case StepStatusEnum.PENDING:
+        return '!bg-gray-500/20 !text-gray-300';
+      case StepStatusEnum.RUNNING:
+        return '!bg-blue-500/20 !text-blue-300';
+      case StepStatusEnum.COMPLETED:
+        return '!bg-green-500/20 !text-green-300';
+      case StepStatusEnum.FAILED:
+        return '!bg-red-500/20 !text-red-300';
+      case StepStatusEnum.SKIPPED:
+        return '!bg-amber-500/20 !text-amber-300';
+      case StepStatusEnum.IDLE:
+      default:
+        return 'hidden';
+    }
+  }
+
+  getStepStatusIcon(status: StepStatusEnum): string {
+    switch (status) {
+      case StepStatusEnum.RUNNING: return 'hourglass_top';
+      case StepStatusEnum.COMPLETED: return 'check_circle';
+      case StepStatusEnum.FAILED: return 'error';
+      default: return '';
+    }
   }
 }
 

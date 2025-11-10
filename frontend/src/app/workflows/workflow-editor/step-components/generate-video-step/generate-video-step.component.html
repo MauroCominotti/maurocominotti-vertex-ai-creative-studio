@@ -1,1 +1,91 @@
-<p>generate-video-step works!</p>
+<div class="step-card generate-video" [formGroup]="stepForm">
+  <div class="step-header" (click)="isCollapsed = !isCollapsed">
+    <div class="step-title">
+      <mat-icon>movie</mat-icon>
+      <span>Generate Video</span>
+      <span class="step-id-subtle">#{{ stepIndex + 1 }}</span>
+    </div>
+    <div class="step-actions">
+      <button *ngIf="mode !== 'run'" mat-icon-button color="warn"
+              (click)="$event.stopPropagation(); delete.emit()" matTooltip="Delete step">
+        <mat-icon>delete</mat-icon>
+      </button>
+      <button mat-icon-button class="collapse-icon">
+        <mat-icon>{{ isCollapsed ? 'expand_more' : 'expand_less' }}</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <div class="step-body" *ngIf="!isCollapsed">
+    <div class="section inputs" formGroupName="inputs">
+      <h3>Inputs</h3>
+      <div class="input-group">
+        <label>Prompt</label>
+        <div class="controls-row">
+          <mat-form-field appearance="outline" class="mode-select">
+            <mat-select [value]="inputModes['prompt']" (selectionChange)="toggleInputMode('prompt', $event.value)">
+              <mat-option value="fixed">Fixed</mat-option>
+              <mat-option value="linked">Link</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field *ngIf="inputModes['prompt'] === 'fixed'" appearance="outline" class="value-input">
+            <textarea matInput formControlName="prompt" rows="2" placeholder="Video description..."></textarea>
+          </mat-form-field>
+           <mat-form-field *ngIf="inputModes['prompt'] === 'linked'" appearance="outline" class="value-input">
+             <mat-select formControlName="prompt">
+              <mat-option *ngFor="let out of availableOutputs" [value]="{ step: out.step_id, output: out.output_key }">
+                {{ out.label }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+       <div class="input-group">
+        <label>Input Image (Optional)</label>
+        <div class="controls-row">
+           <mat-form-field appearance="outline" class="mode-select">
+            <mat-select [value]="inputModes['input_image']" (selectionChange)="toggleInputMode('input_image', $event.value)">
+              <mat-option value="fixed">Fixed</mat-option>
+              <mat-option value="linked">Link</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field *ngIf="inputModes['input_image'] === 'fixed'" appearance="outline" class="value-input">
+            <input matInput formControlName="input_image" placeholder="Image URL for img-to-video...">
+          </mat-form-field>
+           <mat-form-field *ngIf="inputModes['input_image'] === 'linked'" appearance="outline" class="value-input">
+             <mat-select formControlName="input_image">
+               <mat-option>-- None --</mat-option>
+              <mat-option *ngFor="let out of availableOutputs" [value]="{ step: out.step_id, output: out.output_key }">
+                {{ out.label }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+
+    <div class="section settings" formGroupName="settings">
+      <h3>Settings</h3>
+      <div class="settings-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Model</mat-label>
+          <mat-select formControlName="model">
+            <mat-option value="veo-3.0-generate-001">Veo 3.0</mat-option>
+          </mat-select>
+        </mat-form-field>
+         <mat-form-field appearance="outline">
+          <mat-label>Aspect Ratio</mat-label>
+          <mat-select formControlName="aspect_ratio">
+            <mat-option value="16:9">16:9</mat-option>
+            <mat-option value="9:16">9:16</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="section outputs">
+      <h3>Outputs</h3>
+      <div class="output-pill"><mat-icon>movie</mat-icon> generated_video</div>
+    </div>
+  </div>
+</div>

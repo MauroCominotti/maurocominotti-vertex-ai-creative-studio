@@ -13,10 +13,26 @@ export interface StepOutputReference {
   output: string;
 }
 
+export enum StepStatusEnum {
+  IDLE = 'idle',
+  PENDING = 'pending',
+  RUNNING = 'running',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  SKIPPED = 'skipped',
+}
+
 // Base Step
 interface BaseStep<T, S> {
   stepId: string;
   type: NodeTypes;
+
+  // --- Execution State ---
+  status: StepStatusEnum;
+  error?: string;
+  startedAt?: string;
+  completedAt?: string;
+
   outputs: {[key: string]: any};
   inputs: T;
   settings: S;

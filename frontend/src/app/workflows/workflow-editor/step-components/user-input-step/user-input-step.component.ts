@@ -5,7 +5,7 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-user-input-step',
   templateUrl: './user-input-step.component.html',
-  styleUrls: ['./user-input-step.component.scss']
+  styleUrls: ['./user-input-step.component.scss'],
 })
 export class UserInputStepComponent implements OnInit, OnDestroy {
   @Input() stepForm!: FormGroup;
@@ -16,7 +16,7 @@ export class UserInputStepComponent implements OnInit, OnDestroy {
 
   private valueChangesSub!: Subscription;
 
-  constructor(private fb: FormBuilder) { }
+  constructor(private fb: FormBuilder) {}
 
   ngOnInit(): void {
     // 1. Robustly ensure 'settings' FormGroup exists
@@ -40,9 +40,11 @@ export class UserInputStepComponent implements OnInit, OnDestroy {
 
     // 4. Sync and Subscribe
     this.syncOutputs();
-    this.valueChangesSub = this.outputDefinitionsArray.valueChanges.subscribe(() => {
-      this.syncOutputs();
-    });
+    this.valueChangesSub = this.outputDefinitionsArray.valueChanges.subscribe(
+      () => {
+        this.syncOutputs();
+      },
+    );
   }
 
   ngOnDestroy(): void {
@@ -60,7 +62,7 @@ export class UserInputStepComponent implements OnInit, OnDestroy {
   private createOutputDefinition(name: string, type: string): FormGroup {
     return this.fb.group({
       name: [name, Validators.required],
-      type: [type, Validators.required]
+      type: [type, Validators.required],
     });
   }
 
@@ -77,8 +79,8 @@ export class UserInputStepComponent implements OnInit, OnDestroy {
 
     // Edge case: If 'outputs' doesn't exist yet for some reason, create it.
     if (!outputs) {
-       this.stepForm.addControl('outputs', this.fb.group({}));
-       return this.syncOutputs(); // Try again
+      this.stepForm.addControl('outputs', this.fb.group({}));
+      return this.syncOutputs(); // Try again
     }
 
     Object.keys(outputs.controls).forEach(key => outputs.removeControl(key));
@@ -88,7 +90,7 @@ export class UserInputStepComponent implements OnInit, OnDestroy {
       const type = control.get('type')?.value;
       // Only add if name is valid (not empty) to prevent errors
       if (name && type) {
-        outputs.addControl(name, this.fb.control({ type: type }));
+        outputs.addControl(name, this.fb.control({type: type}));
       }
     });
   }

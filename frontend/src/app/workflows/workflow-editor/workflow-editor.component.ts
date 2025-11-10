@@ -9,8 +9,16 @@ import {
 } from '@angular/forms';
 import {MatDialog} from '@angular/material/dialog';
 import {WorkflowService} from '../workflow.service';
-import {WorkflowCreateDto, WorkflowModel} from '../workflow.models';
-import {WorkspaceStateService} from '../../services/workspace/workspace-state.service';
+import {
+  StepStatusEnum,
+  WorkflowBase,
+  WorkflowCreateDto,
+  WorkflowDefinitionStatusEnum,
+  WorkflowModel,
+  WorkflowRunModel,
+  WorkflowRunStatusEnum,
+  WorkflowStep,
+} from '../workflow.models';
 import {Subscription, combineLatest, of} from 'rxjs';
 import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
 import {filter, switchMap, tap} from 'rxjs/operators';
@@ -22,10 +30,23 @@ import {AddStepModalComponent} from './add-step-modal/add-step-modal.component';
   styleUrls: ['./workflow-editor.component.scss'],
 })
 export class WorkflowEditorComponent implements OnInit, OnDestroy {
+  // --- Component Mode & State ---
+  EditorMode = EditorMode;
+  mode: EditorMode = EditorMode.Create;
+  workflowId: string | null = null;
+  runId: string | null = null;
+
+  // --- Data ---
+  workflow: WorkflowModel | null = null;
+  workflowRun: WorkflowRunModel | null = null;
+  displayedWorkflow: WorkflowModel | WorkflowBase | null = null;
+
+  // --- UI State ---
   workflowForm!: FormGroup;
   isLoading = false;
-  isEditMode = false;
   errorMessage: string | null = null;
+  selectedView: 'workflow' | 'history' = 'workflow';
+  selectedStep: WorkflowStep | null = null;
 
   private mainSubscription!: Subscription;
 
@@ -44,43 +65,58 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.mainSubscription = this.route.paramMap
-      .pipe(
-        tap(() => (this.isLoading = true)),
-        switchMap(params => {
-          const workflowId = params.get('workflowId');
+    this.mainSubscription = this.route.paramMap.pipe(
+      tap(() => this.isLoading = true),
+      switchMap(params => {
+        this.runId = params.get('runId');
+        this.workflowId = params.get('workflowId');
 
-          if (workflowId) {
-            this.isEditMode = true;
-            this.workflowService.setCurrentWorkflowId(workflowId);
-            return this.workflowService.getWorkflowById(workflowId);
-          }
-
-          this.isEditMode = false;
-          this.workflowService.setCurrentWorkflowId(null);
+        if (this.runId) {
+          this.mode = EditorMode.Run;
+          // TODO: Create and use a WorkflowRunService
+          // return this.workflowRunService.getWorkflowRun(this.runId);
+          return of(null); // Placeholder
+        } else if (this.workflowId) {
+          this.mode = EditorMode.Edit;
+          return this.workflowService.getWorkflowById(this.workflowId);
+        } else {
+          this.mode = EditorMode.Create;
           return of(null);
-        }),
-      )
-      .subscribe({
-        next: workflowData => {
-          if (workflowData) {
-            this.populateForm(workflowData);
-          } else {
-            this.resetFormForNew();
-          }
-          this.isLoading = false;
-        },
-        error: err => {
-          console.error('Failed to load workflow', err);
-          this.errorMessage = 'Failed to load workflow.';
-          this.isLoading = false;
-        },
-      });
+        }
+      })
+    ).subscribe({
+      next: (data: WorkflowModel | WorkflowRunModel | null) => {
+        if (this.mode === EditorMode.Run) {
+          this.workflowRun = data ? data as WorkflowRunModel : null;
+          this.displayedWorkflow = this.workflowRun?.workflowSnapshot ?? null;
+          this.workflowId = this.workflowRun?.workflowId ?? null;
+          this.populateFormFromData(this.displayedWorkflow);
+          this.workflowForm.disable(); // Read-only mode
+        } else if (this.mode === EditorMode.Edit) {
+          this.workflow = data as WorkflowModel;
+          this.displayedWorkflow = this.workflow;
+          this.populateFormFromData(this.displayedWorkflow);
+        } else {
+          this.resetFormForNew();
+        }
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Failed to load workflow data', err);
+        this.errorMessage = 'Failed to load workflow data.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  // ... (rest of the component logic will be updated in subsequent steps)
+
+  get isReadOnly(): boolean {
+    return this.mode === EditorMode.Run;
   }
 
   // ... (rest of the component: ngOnDestroy, initForm, addStepToForm, etc. remains the same)
   ngOnDestroy(): void {
-    this.workflowService.setCurrentWorkflowId(null);
     if (this.mainSubscription) {
       this.mainSubscription.unsubscribe();
     }
@@ -92,7 +128,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       name: ['', Validators.required],
       description: [''],
       workspaceId: [''],
-      user_id: ['user123'],
+      userId: ['user123'],
       steps: this.fb.array([]),
     });
   }
@@ -151,12 +187,12 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     this.errorMessage = null;
 
     let request$;
-    const formValue: WorkflowModel = this.workflowForm.getRawValue();
+    const formValue = this.workflowForm.getRawValue();
 
-    if (this.isEditMode) {
-      request$ = this.workflowService.updateWorkflow(formValue);
+    if (this.mode === EditorMode.Edit) {
+      request$ = this.workflowService.updateWorkflow(formValue as WorkflowModel);
     } else {
-      const rawValue = this.workflowForm.getRawValue();
+      const rawValue = formValue;
       const createDto: Omit<WorkflowCreateDto, 'workspaceId'> = {
         name: rawValue.name,
         description: rawValue.description,
@@ -178,37 +214,14 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  getAvailableOutputs(currentIndex: number) {
-    const outputs = [];
-    for (let i = 0; i < currentIndex; i++) {
-      const step = this.stepsArray.at(i).value;
-      for (const key in step.outputs) {
-        outputs.push({
-          step_id: step.step_id,
-          output_key: key,
-          type: step.outputs[key].type,
-          label: `${step.type} (${step.step_id.substr(0, 5)}...) - ${key}`,
-        });
-      }
+  private populateFormFromData(data: WorkflowModel | WorkflowBase | null) {
+    if (!data) {
+      this.resetFormForNew();
+      return;
     }
-    return outputs;
-  }
-
-  private populateForm(data: WorkflowModel) {
-    this.workflowForm.patchValue({
-      id: data.id,
-      name: data.name,
-      description: data.description,
-      workspaceId: data.workspaceId,
-      userId: data.userId,
-    });
-
+    this.workflowForm.patchValue(data);
     this.stepsArray.clear();
-    if (data.steps) {
-      data.steps.forEach(step => {
-        this.addStepToForm(step.type, step);
-      });
-    }
+    data.steps?.forEach(step => this.addStepToForm(step.type, step));
   }
 
   private resetFormForNew() {
@@ -219,4 +232,10 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     this.stepsArray.clear();
     this.addStepToForm('user_input');
   }
+}
+
+export enum EditorMode {
+  Create,
+  Edit,
+  Run,
 }

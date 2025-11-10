@@ -80,6 +80,7 @@ import {MatDialogModule} from '@angular/material/dialog';
 import {SourceAssetGalleryComponent} from './common/components/source-asset-gallery/source-asset-gallery.component';
 import {SharedModule} from './common/shared.module';
 import {MatSlideToggleModule} from '@angular/material/slide-toggle';
+import {MatButtonToggleModule} from '@angular/material/button-toggle';
 import {ImageCropperComponent} from 'ngx-image-cropper';
 import {ImageCropperDialogComponent} from './common/components/image-cropper-dialog/image-cropper-dialog.component';
 import {WorkflowListComponent} from './workflows/workflow-list/workflow-list.component';
@@ -155,6 +156,7 @@ import {MatPaginatorModule} from '@angular/material/paginator';
     MatDialogModule,
     SharedModule,
     MatSlideToggleModule,
+    MatButtonToggleModule,
     ImageCropperComponent,
     DragDropModule,
     MatPaginatorModule

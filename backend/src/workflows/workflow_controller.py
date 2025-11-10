@@ -17,7 +17,6 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from src.auth.auth_guard import RoleChecker, get_current_user
 from src.common.dto.pagination_response_dto import PaginationResponseDto
 from src.users.user_model import UserModel, UserRoleEnum
-from src.workflows.dto.create_workflow_dto import CreateWorkflowDto
 from src.workflows.dto.workflow_search_dto import WorkflowSearchDto
 from src.workflows.schema.workflow_model import WorkflowCreateDto, WorkflowModel
 from src.workflows.workflow_service import WorkflowService
@@ -38,28 +37,6 @@ router = APIRouter(
         )
     ],
 )
-
-
-# @router.post("/execute")
-# async def execute_workflow(
-#     workflow_dto: CreateWorkflowDto,
-#     current_user: UserModel = Depends(get_current_user),
-#     workflow_service: WorkflowService = Depends(),
-# ):
-#     """
-#     Executes a multi-step generative workflow.
-
-#     Each step in the workflow is processed sequentially, with the output of one
-#     step potentially being used as the input for the next. The final output
-#     is a dictionary containing the results of each step.
-#     """
-#     # This dependency call acts as a gatekeeper. If the user is not authorized
-#     # for the workspace_id inside workflow_dto, it will raise an exception.
-#     workspace_auth_service.authorize(
-#         workspace_id=workflow_dto.workspace_id, user=current_user
-#     )
-
-#     return await workflow_service.execute_workflow(workflow_dto, current_user)
 
 
 @router.post("/search", response_model=PaginationResponseDto[WorkflowModel])

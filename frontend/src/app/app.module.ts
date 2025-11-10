@@ -161,6 +161,7 @@ import { WorkflowListComponent } from './workflows/workflow-list/workflow-list.c
     MatDialogModule,
     SharedModule,
     MatSlideToggleModule,
+    MatButtonToggleModule,
     ImageCropperComponent,
     MatButtonToggleModule,
     MatSliderModule,

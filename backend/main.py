@@ -45,6 +45,9 @@ from src.source_assets.source_asset_controller import (
 )
 from src.users.user_controller import router as user_router
 from src.videos.veo_controller import router as video_router
+from src.workflow_runs.workflow_run_controller import (
+    router as workflow_run_router,
+)
 from src.workflows.workflow_controller import router as workflow_router
 from src.workspaces.workspace_controller import router as workspace_router
 
@@ -159,3 +162,4 @@ app.include_router(source_asset_router)
 app.include_router(workspace_router)
 app.include_router(brand_guideline_router)
 app.include_router(workflow_router)
+app.include_router(workflow_run_router)

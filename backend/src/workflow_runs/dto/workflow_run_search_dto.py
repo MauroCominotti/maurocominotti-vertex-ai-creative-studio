@@ -15,12 +15,11 @@
 from typing import Optional
 
 from src.common.dto.base_search_dto import BaseSearchDto
-from src.workflows.schema.workflow_model import WorkflowDefinitionStatusEnum
+from src.workflows.schema.workflow_model import WorkflowRunStatusEnum
 
 
-class WorkflowSearchDto(BaseSearchDto):
-    """Data Transfer Object for searching and filtering workflows."""
+class WorkflowRunSearchDto(BaseSearchDto):
+    """Data Transfer Object for searching and filtering workflow runs."""
 
     workspace_id: str
-    name: Optional[str] = None
-    status: Optional[WorkflowDefinitionStatusEnum] = None
+    status: Optional[WorkflowRunStatusEnum] = None

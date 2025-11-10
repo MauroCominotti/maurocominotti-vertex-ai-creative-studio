@@ -56,7 +56,8 @@
       <ng-container matColumnDef="status">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
         <td mat-cell *matCellDef="let wf">
-          <mat-chip [class]="getStatusChipClass(wf.status || 'Draft')">
+          <mat-chip [class]="getStatusChipClass(wf.status || 'Draft')" class="!flex !items-center">
+            <mat-icon class="!text-base !h-4 !w-4 mr-1.5">{{ getStatusIcon(wf.status || 'Draft') }}</mat-icon>
             {{ (wf.status || 'Draft') | titlecase }}
           </mat-chip>
         </td>
@@ -65,13 +66,13 @@
       <!-- Created At Column -->
       <ng-container matColumnDef="createdAt">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Created At</th>
-        <td mat-cell *matCellDef="let wf">{{ wf.createdAt | date:'medium' }}</td>
+        <td mat-cell *matCellDef="let wf">{{ wf.createdAt | date:'longDate' }}</td>
       </ng-container>
 
       <!-- Updated At Column -->
       <ng-container matColumnDef="updatedAt">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Updated At</th>
-        <td mat-cell *matCellDef="let wf">{{ wf.updatedAt | date:'medium' }}</td>
+        <td mat-cell *matCellDef="let wf">{{ formatTimeAgo(wf.updatedAt) }}</td>
       </ng-container>
 
       <!-- Actions Column -->

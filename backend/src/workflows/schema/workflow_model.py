@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 from enum import Enum
 from typing import (
     Annotated,
@@ -233,12 +234,16 @@ WorkflowStep = Annotated[WorkflowStepUnion, Field(discriminator="type")]
 # =========================================
 
 
-class WorkflowStatusEnum(str, Enum):
-    """Defines the states for a long-running generation Workflow job."""
+class WorkflowDefinitionStatusEnum(str, Enum):
+    """Defines the states for a workflow *definition*."""
 
     DRAFT = "draft"
-    ACTIVE = "active"
-    PAUSED = "paused"
+    PUBLISHED = "published"  # e.g., "Active"
+
+
+class WorkflowRunStatusEnum(str, Enum):
+    """Defines the states for a long-running generation Workflow *run*."""
+
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
@@ -256,9 +261,13 @@ class WorkflowBase(BaseDto):
 
 
 class WorkflowModel(BaseDocument, WorkflowBase):
-    """The full workflow model, including server-managed fields."""
-
-    status: WorkflowStatusEnum = Field(default=WorkflowStatusEnum.DRAFT)
+    """
+    The editable workflow *definition* (template).
+    This is what the user edits in the UI.
+    """
+    status: WorkflowDefinitionStatusEnum = Field(
+        default=WorkflowDefinitionStatusEnum.DRAFT
+    )
     user_id: str
 
 
@@ -266,3 +275,28 @@ class WorkflowCreateDto(WorkflowBase):
     """DTO for creating a new workflow. Inherits fields from WorkflowBase."""
 
     pass
+
+
+# Collection: "workflow_runs"
+class WorkflowRunModel(BaseDocument):
+    """
+    A record of a single, immutable workflow *execution*.
+    This is the "history" item.
+    """
+
+    # --- Contextual Info ---
+    workflow_id: str  # ID of the WorkflowModel definition this run was based on
+    user_id: str
+    workspace_id: str  # Denormalized for easier querying
+
+    # --- Execution Status ---
+    status: WorkflowRunStatusEnum = Field(default=WorkflowRunStatusEnum.RUNNING)
+    started_at: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
+    completed_at: Optional[datetime.datetime] = None
+
+    # --- THE SNAPSHOT ---
+    # A copy of the WorkflowBase at the time of the run.
+    # The 'outputs' field in each step will be populated as the run executes.
+    workflow_snapshot: WorkflowBase

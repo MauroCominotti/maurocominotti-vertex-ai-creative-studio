@@ -13,7 +13,11 @@ import {
   Subscription,
   takeUntil,
 } from 'rxjs';
-import {WorkflowModel, WorkflowStatusEnum} from '../workflow.models';
+import {
+  WorkflowDefinitionStatusEnum,
+  WorkflowModel,
+  WorkflowRunStatusEnum,
+} from '../workflow.models';
 import {Router} from '@angular/router';
 import {MatTableDataSource} from '@angular/material/table';
 import {MatPaginator, PageEvent} from '@angular/material/paginator';
@@ -133,21 +137,93 @@ export class WorkflowListComponent implements OnInit, OnDestroy, AfterViewInit {
     const statusLower = status.toLowerCase();
 
     switch (statusLower) {
-      case WorkflowStatusEnum.ACTIVE.toLowerCase():
-      case WorkflowStatusEnum.RUNNING.toLowerCase():
+      case WorkflowDefinitionStatusEnum.PUBLISHED.toLowerCase():
         return '!bg-blue-500/20 !text-blue-300';
-      case WorkflowStatusEnum.COMPLETED.toLowerCase():
-        return '!bg-green-500/20 !text-green-300';
-      case WorkflowStatusEnum.DRAFT.toLowerCase():
+      case WorkflowDefinitionStatusEnum.DRAFT.toLowerCase():
         return '!bg-gray-500/20 !text-gray-300';
-      case WorkflowStatusEnum.PAUSED.toLowerCase():
-      case WorkflowStatusEnum.SCHEDULED.toLowerCase():
+      default:
+        return '!bg-gray-500/20 !text-gray-300';
+    }
+  }
+
+  public getStatusIcon(status: string): string {
+    const statusLower = status.toLowerCase();
+
+    switch (statusLower) {
+      case WorkflowDefinitionStatusEnum.PUBLISHED.toLowerCase():
+        return 'publish';
+      case WorkflowDefinitionStatusEnum.DRAFT.toLowerCase():
+        return 'edit_note';
+      default:
+        return 'help_outline';
+    }
+  }
+
+  public getWorkflowRunStatusChipClass(status: WorkflowRunStatusEnum): string {
+    const statusLower = status.toLowerCase();
+
+    switch (statusLower) {
+      case WorkflowRunStatusEnum.RUNNING.toLowerCase():
+        return '!bg-blue-500/20 !text-blue-300';
+      case WorkflowRunStatusEnum.COMPLETED.toLowerCase():
+        return '!bg-green-500/20 !text-green-300';
+      case WorkflowRunStatusEnum.SCHEDULED.toLowerCase():
         return '!bg-amber-500/20 !text-amber-300';
-      case WorkflowStatusEnum.FAILED.toLowerCase():
-      case WorkflowStatusEnum.CANCELED.toLowerCase():
+      case WorkflowRunStatusEnum.FAILED.toLowerCase():
+      case WorkflowRunStatusEnum.CANCELED.toLowerCase():
         return '!bg-red-500/20 !text-red-300';
       default:
         return '!bg-gray-500/20 !text-gray-300';
     }
+  }
+
+  public getWorkflowRunStatusIcon(status: WorkflowRunStatusEnum): string {
+    const statusLower = status.toLowerCase();
+
+    switch (statusLower) {
+      case WorkflowRunStatusEnum.RUNNING.toLowerCase():
+        return 'directions_run';
+      case WorkflowRunStatusEnum.COMPLETED.toLowerCase():
+        return 'check_circle';
+      case WorkflowRunStatusEnum.SCHEDULED.toLowerCase():
+        return 'schedule';
+      case WorkflowRunStatusEnum.FAILED.toLowerCase():
+      case WorkflowRunStatusEnum.CANCELED.toLowerCase():
+        return 'cancel';
+      default:
+        return 'help_outline';
+    }
+  }
+
+  public formatTimeAgo(dateString: string): string {
+    if (!dateString) {
+      return '';
+    }
+
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.round(
+      Math.abs((now.getTime() - date.getTime()) / 1000),
+    );
+
+    const intervals: {[key: string]: number} = {
+      year: 31536000,
+      month: 2592000,
+      week: 604800,
+      day: 86400,
+      hour: 3600,
+      minute: 60,
+    };
+
+    if (seconds < 30) return 'Just now';
+
+    for (const intervalName in intervals) {
+      const interval = intervals[intervalName];
+      if (seconds >= interval) {
+        const count = Math.floor(seconds / interval);
+        return `${count} ${intervalName}${count > 1 ? 's' : ''} ago`;
+      }
+    }
+    return Math.floor(seconds) + ' seconds ago';
   }
 }

@@ -82,6 +82,7 @@ import {SharedModule} from './common/shared.module';
 import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 import {ImageCropperComponent} from 'ngx-image-cropper';
 import {ImageCropperDialogComponent} from './common/components/image-cropper-dialog/image-cropper-dialog.component';
+import { WorkbenchComponent } from './workbench/workbench.component';
 
 @NgModule({
   declarations: [
@@ -102,6 +103,7 @@ import {ImageCropperDialogComponent} from './common/components/image-cropper-dia
     ImageSelectorComponent,
     SourceAssetGalleryComponent,
     ImageCropperDialogComponent,
+    WorkbenchComponent,
   ],
   imports: [
     BrowserModule,

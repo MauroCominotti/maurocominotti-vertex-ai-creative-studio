@@ -26,6 +26,7 @@ import {MediaGalleryComponent} from './gallery/media-gallery/media-gallery.compo
 import {MediaDetailComponent} from './gallery/media-detail/media-detail.component';
 import {AdminAuthGuard} from './admin/admin-auth.guard';
 import {VtoComponent} from './vto/vto.component';
+import { WorkbenchComponent } from './workbench/workbench.component';
 
 const routes: Routes = [
   {path: 'login', component: LoginComponent},
@@ -59,6 +60,11 @@ const routes: Routes = [
     path: 'admin',
     loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
     canActivate: [AdminAuthGuard],
+  },
+   {
+    path: 'workbench',
+    component: WorkbenchComponent,
+    canActivate: [AuthGuardService],
   },
 ];
 

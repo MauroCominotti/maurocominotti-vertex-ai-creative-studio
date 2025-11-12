@@ -1,0 +1,372 @@
+<div class="lg:container lg:mx-auto border-none">
+    <div class="home-margin grid grid-cols-1">
+        <!-- workbench Homepage (Welcome/Loading section remains) -->
+
+        <ng-container *ngIf="isLoading">
+            <div class="workbench-container">
+                <div class="w-full h-full flex justify-center items-center">
+                    <mat-progress-spinner color="primary" mode="indeterminate"></mat-progress-spinner>
+                </div>
+            </div>
+        </ng-container>
+
+
+        <ng-container>
+            <div class="workbench-container">
+                <!-- Text for Tablet and beyond -->
+                <div class="hidden md:flex justify-center items-center w-full h-full absolute">
+                    <mat-icon svgIcon="white-gemini-spark-icon"
+                        class="!w-12 !h-12 mr-2 md:mr-[1rem] !z-[50]"></mat-icon>
+                    <h1 class="text-center justify-center text-white text-2xl font-bold !m-0 !z-[50]">
+                        Welcome to Workbench
+                    </h1>
+                </div>
+                <div class="gradient-bg hidden md:block !relative !w-full !h-full !z-[10]">
+                    <svg xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <filter id="goo">
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+                                <feColorMatrix in="blur" mode="matrix"
+                                    values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo" />
+                                <feBlend in="SourceGraphic" in2="goo" />
+                            </filter>
+                        </defs>
+                    </svg>
+                    <div class="gradients-container absolute top-0 left-0">
+                        <div class="g1"></div>
+                        <div class="g2"></div>
+                        <div class="g3"></div>
+                        <div class="g4"></div>
+                        <div class="g5"></div>
+                        <div #interactiveBubble class="interactive"></div>
+                    </div>
+                </div>
+
+                <!-- Text for mobile -->
+                <div class="flex justify-center items-center w-full h-full md:hidden">
+                    <!-- As this svg uses a gradient, it needs to have a different fill id, therefore we have one for mobile and other for larger devices -->
+                    <mat-icon svgIcon="mobile-white-gemini-spark-icon" class="!w-6 !h-6 mr-2 md:mr-[1rem]"></mat-icon>
+                    <div class="text-center justify-center text-white title-font font-bold">
+                        Welcome to Workbench
+                    </div>
+                </div>
+            </div>
+        </ng-container>
+
+    
+        <!-- Updated Top Feature Selection - Styled for better visual hierarchy -->
+        <!-- <div class="flex h-24 workbench-container p-4 gap-4 bg-gray-900 rounded-xl shadow-lg mb-8">
+            <div class="w-1/2 flex items-center justify-center bg-gray-800 hover:bg-gray-700 cursor-pointer rounded-lg transition duration-200" (click)="showImageGeneration()">
+                <p class="text-md font-semibold text-gray-300">Image Generation</p>
+            </div>
+
+            <div class="w-1/2 flex items-center justify-center bg-gray-800 hover:bg-gray-700 cursor-pointer rounded-lg transition duration-200" (click)="showAudioGeneration()">
+                <p class="text-md font-semibold text-gray-300">Audio Generation</p>
+            </div>
+        </div> -->
+        <!-- End Updated Top Feature Selection -->
+
+
+        <ng-template #videogallary1>
+                <div class="flex justify-center items-center w-full h-full">           
+                    <div class="text-center justify-center text-white title-font font-bold">
+                      video gallary 
+                    </div>
+                </div>
+        </ng-template>
+
+        <ng-template #videoeditor1>
+                <div class="flex justify-center items-center w-full h-full">
+                    <div class="text-center justify-center text-white title-font font-bold">
+                     videoeditor
+                     <!-- <video width="400" controls>
+                    <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+                    <source src="https://www.w3schools.com/html/mov_bbb.ogg" type="video/ogg">
+                    Your browser does not support HTML video.
+                    </video> -->
+                    </div>
+                </div>
+        </ng-template>
+
+        <ng-container *ngIf="videogallary;then videogallary1 else videoeditor1"></ng-container>
+ 
+<!-- MAIN VIDEO EDITOR AREA START -->
+<div class="min-h-screen bg-gray-950 text-gray-100 p-4 md:p-8 font-sans">
+ 
+
+      <!-- File Upload & Video Player -->
+      <div class="max-w-5xl mx-auto space-y-6"> <!-- Wider max width -->
+        <!-- Enhanced player container appearance -->
+        <div class="relative w-full aspect-video bg-black rounded-2xl shadow-2xl shadow-indigo-500/30 overflow-hidden flex items-center justify-center border border-indigo-500/50">
+          <input 
+            #fileInput 
+            type="file" 
+            (change)="handleFileUpload($event)" 
+            accept="video/*" 
+            class="hidden"
+          >
+          
+          <!-- Upload State -->
+          @if (!videoSrc()) {
+            <div class="text-center p-12">
+              <svg 
+                (click)="fileInput.click()"
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" height="24" 
+                viewBox="0 0 24 24" fill="none" 
+                stroke="currentColor" 
+                stroke-width="1.5" stroke-linecap="round" 
+                stroke-linejoin="round" 
+                class="w-20 h-20 text-indigo-400 mx-auto mb-6 cursor-pointer hover:text-indigo-300 transition duration-300"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" x2="12" y1="3" y2="15"></line>
+              </svg>
+
+              <button 
+                (click)="fileInput.click()" 
+                class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-8 rounded-xl transition duration-300 shadow-lg shadow-indigo-500/50"
+              >
+                Upload Video File
+              </button>
+              <p class="mt-4 text-gray-400 text-sm">Supports MP4, MOV, and WebM formats.</p>
+            </div>
+          }
+
+          <!-- Video Player -->
+          @if (videoSrc()) {
+            <video 
+              #videoPlayer
+              [src]="videoSrc()!"
+              (loadedmetadata)="onLoadedMetadata($event)"
+              (timeupdate)="updateTime($event)"
+              (ended)="onVideoEnded()"
+              class="w-full h-full object-contain cursor-pointer"
+              (click)="togglePlayPause()"
+              preload="metadata"
+              muted="false"
+            >
+              Your browser does not support the video tag.
+            </video>
+            
+            <!-- Play/Pause Overlay Icon -->
+            @if (!isPlaying()) {
+              <div (click)="togglePlayPause()" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 cursor-pointer transition duration-300 hover:bg-opacity-50">
+                <!-- Play Icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-24 h-24 text-white/90 transform hover:scale-105 transition duration-200 drop-shadow-lg">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <!-- End Play Icon -->
+              </div>
+            }
+          }
+        </div>
+
+        <!-- Controls and Timeline (Only visible if video is loaded) -->
+        @if (videoSrc() && videoDuration() > 0) {
+          <!-- Enhanced control card -->
+          <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700/50">
+            
+            <!-- Playback Controls and Audio Upload -->
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center space-x-4">
+                <button 
+                  (click)="togglePlayPause()"
+                  [disabled]="isGenerating()"
+                  class="p-4 rounded-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition duration-300 shadow-md shadow-indigo-500/50"
+                >
+                  @if (isPlaying()) {
+                    <!-- Pause Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-white">
+                      <rect width="4" height="16" x="6" y="4"></rect>
+                      <rect width="4" height="16" x="14" y="4"></rect>
+                    </svg>
+                  } @else {
+                    <!-- Play Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-white">
+                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                  }
+                </button>
+                <span class="text-xl font-mono text-indigo-400">{{ formatTime(currentTime()) }}</span>
+                <span class="text-xl font-mono text-gray-500">/ {{ formatTime(videoDuration()) }}</span>
+              </div>
+          
+              <!-- NEW: Audio File Upload UI -->
+              <div class="flex items-center space-x-4">
+                  <input 
+                      #audioFileInput 
+                      type="file" 
+                      (change)="handleAudioUpload($event)" 
+                      accept="audio/*" 
+                      class="hidden"
+                  >
+                  @if (!audioSrc()) {
+                      <button 
+                          (click)="audioFileInput.click()" 
+                          class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-xl transition duration-300 flex items-center space-x-2 shadow-md shadow-gray-900/50"
+                      >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 2v20"/><path d="M18 18a6 6 0 0 0-12 0"/><path d="M10 20h4"/></svg>
+                          <span>Add Audio Track</span>
+                      </button>
+                  } @else {
+                      <div class="text-sm text-green-400 flex items-center space-x-2 bg-gray-900/50 p-2 rounded-xl border border-green-400/30">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M9 18V5l12-2v13"/><path d="M17 18a6 6 0 0 0-12 0"/><path d="M10 18h4"/></svg>
+                          <span class="truncate max-w-[150px]">Audio Loaded ({{ formatTime(audioDuration()) }})</span>
+                          <button (click)="audioSrc.set(null); audioDuration.set(0); $event.stopPropagation();" class="text-red-400 hover:text-red-300 transition duration-150 p-1 rounded-full bg-gray-700/50">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                          </button>
+                      </div>
+                  }
+              </div>
+          
+            </div>
+
+            <!-- Video Timeline & Handles -->
+            <div 
+              #timelineContainer
+              class="relative h-20 bg-gray-900 rounded-lg shadow-inner shadow-black/50 overflow-hidden cursor-ew-resize"
+              (mousedown)="handleDragStart('timeline', $event)"
+              (touchstart)="handleTouchStart('timeline', $event)"
+            >
+              
+              <!-- Thumbnail Strip -->
+              @if (thumbnails().length > 0 && !isGenerating()) {
+                <div class="flex h-full">
+                  @for (thumb of thumbnails(); track thumb.time) {
+                    <img 
+                      [src]="thumb.src" 
+                      class="h-full object-cover flex-grow opacity-90" 
+                      [alt]="'Thumbnail at ' + formatTime(thumb.time)"
+                    >
+                  }
+                </div>
+              } @else if (isGenerating()) {
+                <div class="flex items-center justify-center h-full text-indigo-400 animate-pulse text-lg font-medium">
+                  Generating Thumbnails...
+                </div>
+              }
+
+              <!-- Highlighted Range -->
+              <div 
+                class="absolute top-0 h-full bg-indigo-500/50 border-x-4 border-indigo-400 transition-all duration-100 ease-linear pointer-events-none shadow-xl shadow-indigo-500/30"
+                [style.left]="rangeStartPercent()"
+                [style.width]="rangeWidthPercent()"
+              ></div>
+
+              <!-- Current Time Indicator -->
+              <div 
+                class="absolute top-0 h-full w-1 bg-red-500 pointer-events-none z-20 transition-all duration-100 ease-linear shadow-lg shadow-red-500/50"
+                [style.left]="currentTimePercent()"
+              ></div>
+
+              <!-- Start Handle - Enhanced Look -->
+              <div 
+                class="absolute top-0 h-full w-5 flex items-center justify-center cursor-ew-resize z-30 -ml-2.5"
+                [style.left]="rangeStartPercent()"
+                (mousedown)="handleDragStart('start', $event)"
+                (touchstart)="handleTouchStart('start', $event)"
+              >
+                <div class="h-14 w-2 bg-indigo-400 rounded-full shadow-lg shadow-indigo-400/50 hover:bg-indigo-300 transition duration-150"></div>
+              </div>
+
+              <!-- End Handle - Enhanced Look -->
+              <div 
+                class="absolute top-0 h-full w-5 flex items-center justify-center cursor-ew-resize z-30 -ml-2.5"
+                [style.left]="rangeEndPercent()"
+                (mousedown)="handleDragStart('end', $event)"
+                (touchstart)="handleTouchStart('end', $event)"
+              >
+                <div class="h-14 w-2 bg-indigo-400 rounded-full shadow-lg shadow-indigo-400/50 hover:bg-indigo-300 transition duration-150"></div>
+              </div>
+            </div>
+            
+            <!-- NEW: Audio Timeline -->
+            @if (audioSrc()) {
+                <div class="mt-4 pt-4 border-t border-gray-700/50">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Audio Track</p>
+                    <div 
+                        class="relative h-10 bg-gray-900 rounded-lg shadow-inner shadow-black/50 overflow-hidden"
+                    >
+                        <!-- Audio Waveform Placeholder -->
+                        <!-- Placeholder bar uses width based on audio duration vs video duration for visual context -->
+                        <div 
+                          class="h-full bg-green-700/30 flex items-center justify-center text-green-300 text-xs font-mono rounded-lg"
+                          [style.width]="timeToPercent(audioDuration())"
+                        >
+                            <span class="p-2">Audio Waveform (Max Duration: {{ formatTime(audioDuration()) }})</span>
+                        </div>
+
+                        <!-- Highlighted Range (Uses same start/width as video) -->
+                        <div 
+                            class="absolute top-0 h-full bg-green-500/50 border-x-4 border-green-400 transition-all duration-100 ease-linear pointer-events-none shadow-xl shadow-green-500/30"
+                            [style.left]="rangeStartPercent()"
+                            [style.width]="rangeWidthPercent()"
+                        ></div>
+
+                        <!-- Current Time Indicator (Uses same position as video) -->
+                        <div 
+                            class="absolute top-0 h-full w-1 bg-red-500 pointer-events-none z-20 transition-all duration-100 ease-linear shadow-lg shadow-red-500/50"
+                            [style.left]="currentTimePercent()"
+                        ></div>
+                    </div>
+                </div>
+            }
+
+            <!-- Time Display Below Timeline -->
+            <div class="flex justify-between mt-3 text-sm font-mono text-gray-400 px-1">
+              <span class="text-indigo-300 font-semibold">Start: {{ formatTime(startTime()) }}</span>
+              <span class="text-indigo-300 font-semibold">End: {{ formatTime(endTime()) }}</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Frame Preview Overlay (only visible when dragging) -->
+      @if (previewFrameSrc() && isDragging()) {
+        <!-- Outer container for positioning and centering -->
+        <div 
+          class="absolute z-50 top-16" 
+          [style.left.px]="previewBoxLeft()"
+          style="transform: translateX(-50%);"
+        >
+          <!-- The Preview Box (Thumbnail + Time) -->
+          <div 
+            class="shadow-2xl border-4 border-indigo-400 rounded-lg overflow-hidden"
+          >
+            <img [src]="previewFrameSrc()!" class="w-[200px] h-auto object-contain"> <!-- Increased size -->
+            <div class="bg-indigo-600 text-white text-sm font-semibold text-center p-2"> <!-- Enhanced style -->
+              {{ formatTime(previewTime()) }}
+            </div>
+          </div>
+          
+          <!-- The Triangle Pointer -->
+          <!-- The triangle is created using zero width/height and borders, pointing down (border-t) -->
+          <div class="w-full flex justify-center">
+            <div class="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent border-t-indigo-400 -mt-1 z-50"></div>
+          </div>
+        </div>
+      }
+      
+      <!-- Hidden Canvas for Frame Capture -->
+      <canvas #canvasRef class="hidden"></canvas>
+      
+      <!-- NEW: Hidden Audio Player Element -->
+      @if (audioSrc()) {
+          <audio 
+              #audioPlayer
+              [src]="audioSrc()!"
+              (loadedmetadata)="onAudioLoadedMetadata($event)"
+              preload="metadata"
+              class="hidden"
+              muted="false"
+          >
+              Your browser does not support the audio tag.
+          </audio>
+      }
+    </div>
+<!-- MAIN VIDEO EDITOR AREA END -->
+
+    </div>
+</div>

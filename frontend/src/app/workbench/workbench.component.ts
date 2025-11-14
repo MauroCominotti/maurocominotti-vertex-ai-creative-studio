@@ -112,6 +112,16 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
   @ViewChild('canvasRef') canvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('audioPlayer') audioPlayerRef!: ElementRef<HTMLAudioElement>; // NEW: Audio Player reference
 
+  // --- Multi-track state ---
+
+  // Video and Audio track lists (support multiple)
+  videoTracks = signal<Array<{ id: string; src: string; duration: number; fileName?: string }>>([]);
+  audioTracks = signal<Array<{ id: string; src: string; duration: number; fileName?: string }>>([]);
+
+  // Which video/audio track is currently selected for preview/playback
+  selectedVideoIndex = signal(0);
+  selectedAudioIndex = signal(-1);
+
   // Video State
   videoSrc = signal<string | null>(null);
   videoDuration = signal(0);
@@ -141,7 +151,7 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
   
   // --- Computed Properties for Template Positioning ---
 
-  private timeToPercent(time: number): string {
+  timeToPercent(time: number): string {
     if (this.videoDuration() === 0) return '0%';
     const percent = (time / this.videoDuration()) * 100;
     return `${Math.min(100, Math.max(0, percent))}%`;
@@ -182,24 +192,34 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
   
   handleFileUpload(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
+    if (!input.files || input.files.length === 0) return;
+    const files = Array.from(input.files);
+    const added: Array<{ id: string; src: string; duration: number; fileName?: string }> = [];
+    for (const file of files) {
       if (!file.type.startsWith('video/')) {
-        alert('Please select a video file.');
-        return;
+        // skip non-video files, but continue processing others
+        continue;
       }
-      if (this.videoSrc()) {
-        URL.revokeObjectURL(this.videoSrc()!);
-      }
-      // Create object URL from file
-      this.videoSrc.set(URL.createObjectURL(file));
-      this.isPlaying.set(false);
-      this.previewFrameSrc.set(null); 
-      this.thumbnails.set([]); // Clear old thumbnails
-      
-      // Sync audio state to the new video timeline start
-      this.syncAudioToVideoTimeline();
+      const src = URL.createObjectURL(file);
+      added.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, src, duration: 0, fileName: file.name });
     }
+    if (added.length === 0) return;
+
+    // Append to existing tracks
+    this.videoTracks.update(arr => [...arr, ...added]);
+
+    // If no video is currently selected (first time), select the first added
+    if (this.videoTracks().length > 0 && this.videoTracks().length - added.length === 0) {
+      this.selectedVideoIndex.set(0);
+    }
+
+    // Reset UI state for thumbnails/preview for the currently selected video
+    this.isPlaying.set(false);
+    this.previewFrameSrc.set(null);
+    this.thumbnails.set([]);
+
+    // Sync audio state to the new video timeline start (if applicable)
+    this.syncAudioToVideoTimeline();
   }
 
   onLoadedMetadata(event: Event): void {
@@ -211,6 +231,9 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
         return;
     }
     
+    // Update the selected video's duration and the UI timeline duration
+    const selIdx = this.selectedVideoIndex();
+    this.videoTracks.update(arr => arr.map((t, i) => i === selIdx ? { ...t, duration } : t));
     this.videoDuration.set(duration);
     this.endTime.set(duration); 
     this.startTime.set(0); 
@@ -226,37 +249,74 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
   // NEW: Audio Upload Handler
   handleAudioUpload(event: Event): void {
       const input = event.target as HTMLInputElement;
-      if (input.files && input.files[0]) {
-        const file = input.files[0];
-        if (!file.type.startsWith('audio/')) {
-          alert('Please select an audio file.');
-          return;
-        }
-        if (this.audioSrc()) {
-          URL.revokeObjectURL(this.audioSrc()!);
-        }
-        this.audioSrc.set(URL.createObjectURL(file));
-        // Reset audio duration until metadata loads
-        this.audioDuration.set(0); 
-        // Sync audio position to video start
-        this.syncAudioToVideoTimeline();
+      if (!input.files || input.files.length === 0) return;
+      const files = Array.from(input.files);
+      const added: Array<{ id: string; src: string; duration: number; fileName?: string }> = [];
+      for (const file of files) {
+        if (!file.type.startsWith('audio/')) continue;
+        const src = URL.createObjectURL(file);
+        added.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, src, duration: 0, fileName: file.name });
       }
+      if (added.length === 0) return;
+      this.audioTracks.update(arr => [...arr, ...added]);
+      // If no audio selected, choose the first one
+      if (this.selectedAudioIndex() === -1) {
+        this.selectedAudioIndex.set(0);
+      }
+      // Reset audioDuration placeholder until metadata arrives
+      this.audioDuration.set(0);
+      this.syncAudioToVideoTimeline();
   }
   
-  // NEW: Audio Metadata Handler
-  onAudioLoadedMetadata(event: Event): void {
-      const audio = event.target as HTMLAudioElement;
-      this.audioDuration.set(audio.duration);
+  // NEW: Audio Metadata Handler (receives the audio track id to update its duration)
+  onAudioLoadedMetadata(event: Event, trackId: string): void {
+    const audio = event.target as HTMLAudioElement;
+    const duration = audio.duration || 0;
+    this.audioDuration.set(duration);
+    // Update the corresponding track's duration value
+    this.audioTracks.update(arr => arr.map(t => t.id === trackId ? { ...t, duration } : t));
   }
 
   // NEW: Syncs audio position to video position
   private syncAudioToVideoTimeline(): void {
       const video = this.videoPlayerRef?.nativeElement;
-      const audio = this.audioPlayerRef?.nativeElement;
-      
-      if (video && audio) {
-          audio.currentTime = video.currentTime;  
+      if (!video) return;
+      const selectedAudioIdx = this.selectedAudioIndex();
+      if (selectedAudioIdx === -1) return;
+      const track = this.audioTracks()[selectedAudioIdx];
+      if (!track) return;
+      const audioEl = document.getElementById('audioPlayer-' + track.id) as HTMLAudioElement | null;
+      if (audioEl) {
+          audioEl.currentTime = video.currentTime;
       }
+  }
+
+  // Select which video to preview/play
+  selectVideo(index: number): void {
+    if (index < 0 || index >= this.videoTracks().length) return;
+    this.selectedVideoIndex.set(index);
+    // Reset thumbnails and preview for the newly selected video
+    this.thumbnails.set([]);
+    this.previewFrameSrc.set(null);
+    this.isPlaying.set(false);
+  }
+
+  // Select which audio track should be synced to the video playback
+  selectAudio(index: number): void {
+    if (index < 0 || index >= this.audioTracks().length) return;
+    this.selectedAudioIndex.set(index);
+    // Try to sync immediately
+    this.syncAudioToVideoTimeline();
+  }
+
+  selectVideoById(id: string): void {
+    const idx = this.videoTracks().findIndex(t => t.id === id);
+    if (idx !== -1) this.selectVideo(idx);
+  }
+
+  selectAudioById(id: string): void {
+    const idx = this.audioTracks().findIndex(t => t.id === id);
+    if (idx !== -1) this.selectAudio(idx);
   }
 
 
@@ -267,10 +327,12 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
 
     // Only sync audio if we are playing and not currently dragging the handles/timeline
     if (this.isPlaying() && !this.isDragging()) {
-       const audio = this.audioPlayerRef?.nativeElement;
-       if (audio) {
-           audio.currentTime = time;
-       }
+     const selAudioIdx = this.selectedAudioIndex();
+     if (selAudioIdx !== -1) {
+      const track = this.audioTracks()[selAudioIdx];
+      const audioEl = document.getElementById('audioPlayer-' + track.id) as HTMLAudioElement | null;
+      if (audioEl) audioEl.currentTime = time;
+     }
     }
 
 
@@ -297,7 +359,12 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
     
     if (this.isPlaying()) {
       video.pause();
-      audio?.pause(); // PAUSE AUDIO
+      // Pause selected audio track (if any)
+      if (this.selectedAudioIndex() !== -1) {
+        const track = this.audioTracks()[this.selectedAudioIndex()];
+        const audioEl = document.getElementById('audioPlayer-' + track.id) as HTMLAudioElement | null;
+        audioEl?.pause();
+      }
     } else {
       // Ensure playback starts within the selected range
       if (video.currentTime >= this.endTime() || video.currentTime < this.startTime()) {
@@ -305,9 +372,11 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
       }
       
       // Sync audio position before playing
-      if (audio) {
-          audio.currentTime = video.currentTime; 
-      }
+    if (this.selectedAudioIndex() !== -1) {
+      const track = this.audioTracks()[this.selectedAudioIndex()];
+      const audioEl = document.getElementById('audioPlayer-' + track.id) as HTMLAudioElement | null;
+      if (audioEl) audioEl.currentTime = video.currentTime;
+    }
       
       // Play video first, then audio to minimize sync issues
       video.play().catch(e => {
@@ -315,11 +384,15 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
           console.error('Error starting video playback:', e);
         }
       });
-      audio?.play().catch(e => { // PLAY AUDIO
-        if (e.name !== 'AbortError') {
-          console.error('Error starting audio playback:', e);
-        }
-      });
+      if (this.selectedAudioIndex() !== -1) {
+        const track = this.audioTracks()[this.selectedAudioIndex()];
+        const audioEl = document.getElementById('audioPlayer-' + track.id) as HTMLAudioElement | null;
+        audioEl?.play().catch(e => {
+          if (e.name !== 'AbortError') {
+            console.error('Error starting audio playback:', e);
+          }
+        });
+      }
     }
     this.isPlaying.update(val => !val);
   }
@@ -462,12 +535,20 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
     if (this.audioSrc()) {
       URL.revokeObjectURL(this.audioSrc()!);
     }
+    // Revoke any object URLs created for multi-track uploads
+    for (const t of this.videoTracks()) {
+      try { URL.revokeObjectURL(t.src); } catch (e) { /* ignore */ }
+    }
+    for (const a of this.audioTracks()) {
+      try { URL.revokeObjectURL(a.src); } catch (e) { /* ignore */ }
+    }
   }
 
   // Using bound methods for event listeners to maintain 'this' context
   handleGlobalMove = (event: MouseEvent | TouchEvent): void => {
-    const handleType = this.isDragging();
-    if (!handleType || !this.videoSrc() || this.videoDuration() === 0) return;
+  const handleType = this.isDragging();
+  const selectedVideo = this.videoTracks()[this.selectedVideoIndex()];
+  if (!handleType || !selectedVideo || this.videoDuration() === 0) return;
 
     let clientX: number;
     if ('touches' in event) {
@@ -493,12 +574,14 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
             console.error('Error resuming video playback:', e);
           }
         });
-        this.audioPlayerRef?.nativeElement.play().catch(e => {
-          // Catch and ignore the AbortError specifically
-          if (e.name !== 'AbortError') {
-            console.error('Error resuming audio playback:', e);
-          }
-        });
+        // Resume selected audio track (if present)
+        if (this.selectedAudioIndex() !== -1) {
+          const track = this.audioTracks()[this.selectedAudioIndex()];
+          const audioEl = document.getElementById('audioPlayer-' + track.id) as HTMLAudioElement | null;
+          audioEl?.play().catch(e => {
+            if (e.name !== 'AbortError') console.error('Error resuming audio playback:', e);
+          });
+        }
         this.isPlaying.set(true); // Reset state
       }
       this.wasPlayingBeforeDrag.set(false); // Reset state
@@ -510,7 +593,8 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
   }
 
   handleDragStart(handleType: 'start' | 'end' | 'timeline', event: MouseEvent): void {
-    if (!this.videoSrc() || this.videoDuration() === 0 || this.isGenerating()) return;
+    const selectedVideo = this.videoTracks()[this.selectedVideoIndex()];
+    if (!selectedVideo || this.videoDuration() === 0 || this.isGenerating()) return;
     event.preventDefault(); 
     
     // FIX: Store playback state and pause if playing (prevents AbortError)
@@ -530,7 +614,8 @@ export class WorkbenchComponent implements AfterViewInit, OnDestroy {
   }
 
   handleTouchStart(handleType: 'start' | 'end' | 'timeline', event: TouchEvent): void {
-    if (!this.videoSrc() || this.videoDuration() === 0 || this.isGenerating()) return;
+    const selectedVideo = this.videoTracks()[this.selectedVideoIndex()];
+    if (!selectedVideo || this.videoDuration() === 0 || this.isGenerating()) return;
     event.preventDefault(); 
 
     // FIX: Store playback state and pause if playing (prevents AbortError)

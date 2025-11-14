@@ -1,3 +1,4 @@
+
 <div class="lg:container lg:mx-auto border-none">
     <div class="home-margin grid grid-cols-1">
         <!-- workbench Homepage (Welcome/Loading section remains) -->
@@ -104,10 +105,11 @@
             (change)="handleFileUpload($event)" 
             accept="video/*" 
             class="hidden"
+            multiple
           >
           
           <!-- Upload State -->
-          @if (!videoSrc()) {
+          @if (videoTracks().length === 0) {
             <div class="text-center p-12">
               <svg 
                 (click)="fileInput.click()"
@@ -135,10 +137,10 @@
           }
 
           <!-- Video Player -->
-          @if (videoSrc()) {
+          @if (videoTracks().length > 0) {
             <video 
               #videoPlayer
-              [src]="videoSrc()!"
+              [src]="videoTracks()[selectedVideoIndex()].src"
               (loadedmetadata)="onLoadedMetadata($event)"
               (timeupdate)="updateTime($event)"
               (ended)="onVideoEnded()"
@@ -160,11 +162,22 @@
                 <!-- End Play Icon -->
               </div>
             }
+
+            <!-- Video Track List (select which uploaded video to preview) -->
+            <div class="absolute bottom-4 left-4 right-4 flex gap-2 overflow-x-auto">
+              @for(videoTrack of videoTracks(); track videoTrack.id) {
+                <button (click)="selectVideoById(videoTrack.id)" class="px-3 py-1 bg-gray-800/80 hover:bg-gray-700 text-sm rounded-lg border border-gray-700 flex items-center space-x-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><path d="M12 9v6"></path></svg>
+                  <span class="truncate max-w-xs text-xs text-gray-200">{{ videoTrack.fileName || 'Video' }}</span>
+                  <span *ngIf="videoTrack.duration > 0" class="ml-2 text-xs text-gray-400 font-mono">{{ formatTime(videoTrack.duration) }}</span>
+                </button>
+              }
+            </div>
           }
         </div>
 
         <!-- Controls and Timeline (Only visible if video is loaded) -->
-        @if (videoSrc() && videoDuration() > 0) {
+        @if (videoTracks().length > 0 && videoDuration() > 0) {
           <!-- Enhanced control card -->
           <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700/50">
             
@@ -201,24 +214,15 @@
                       (change)="handleAudioUpload($event)" 
                       accept="audio/*" 
                       class="hidden"
+                      multiple
                   >
-                  @if (!audioSrc()) {
-                      <button 
-                          (click)="audioFileInput.click()" 
-                          class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-xl transition duration-300 flex items-center space-x-2 shadow-md shadow-gray-900/50"
-                      >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 2v20"/><path d="M18 18a6 6 0 0 0-12 0"/><path d="M10 20h4"/></svg>
-                          <span>Add Audio Track</span>
-                      </button>
-                  } @else {
-                      <div class="text-sm text-green-400 flex items-center space-x-2 bg-gray-900/50 p-2 rounded-xl border border-green-400/30">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M9 18V5l12-2v13"/><path d="M17 18a6 6 0 0 0-12 0"/><path d="M10 18h4"/></svg>
-                          <span class="truncate max-w-[150px]">Audio Loaded ({{ formatTime(audioDuration()) }})</span>
-                          <button (click)="audioSrc.set(null); audioDuration.set(0); $event.stopPropagation();" class="text-red-400 hover:text-red-300 transition duration-150 p-1 rounded-full bg-gray-700/50">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-                          </button>
-                      </div>
-                  }
+                  <button 
+                      (click)="audioFileInput.click()" 
+                      class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-xl transition duration-300 flex items-center space-x-2 shadow-md shadow-gray-900/50"
+                  >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 2v20"/><path d="M18 18a6 6 0 0 0-12 0"/><path d="M10 20h4"/></svg>
+                      <span>Add Audio Track</span>
+                  </button>
               </div>
           
             </div>
@@ -283,19 +287,20 @@
             </div>
             
             <!-- NEW: Audio Timeline -->
-            @if (audioSrc()) {
+            @for(audioTrack of audioTracks(); track audioTrack.id) {
                 <div class="mt-4 pt-4 border-t border-gray-700/50">
                     <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Audio Track</p>
                     <div 
                         class="relative h-10 bg-gray-900 rounded-lg shadow-inner shadow-black/50 overflow-hidden"
+            (click)="selectAudioById(audioTrack.id)"
                     >
                         <!-- Audio Waveform Placeholder -->
                         <!-- Placeholder bar uses width based on audio duration vs video duration for visual context -->
                         <div 
                           class="h-full bg-green-700/30 flex items-center justify-center text-green-300 text-xs font-mono rounded-lg"
-                          [style.width]="timeToPercent(audioDuration())"
+                          [style.width]="timeToPercent(audioTrack.duration)"
                         >
-                            <span class="p-2">Audio Waveform (Max Duration: {{ formatTime(audioDuration()) }})</span>
+                            <span class="p-2">Audio Waveform (Max Duration: {{ formatTime(audioTrack.duration) }})</span>
                         </div>
 
                         <!-- Highlighted Range (Uses same start/width as video) -->
@@ -353,11 +358,11 @@
       <canvas #canvasRef class="hidden"></canvas>
       
       <!-- NEW: Hidden Audio Player Element -->
-      @if (audioSrc()) {
+      @for(audioTrack of audioTracks(); track audioTrack.id) {
           <audio 
-              #audioPlayer
-              [src]="audioSrc()!"
-              (loadedmetadata)="onAudioLoadedMetadata($event)"
+              [attr.id]="'audioPlayer-' + audioTrack.id"
+              [src]="audioTrack.src"
+              (loadedmetadata)="onAudioLoadedMetadata($event, audioTrack.id)"
               preload="metadata"
               class="hidden"
               muted="false"

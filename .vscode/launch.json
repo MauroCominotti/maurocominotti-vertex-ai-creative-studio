@@ -9,6 +9,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
       "args": [
         "main:app",
         "--reload",

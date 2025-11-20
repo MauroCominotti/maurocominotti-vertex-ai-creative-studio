@@ -45,10 +45,11 @@ from src.source_assets.source_asset_controller import (
 )
 from src.users.user_controller import router as user_router
 from src.videos.veo_controller import router as video_router
-from src.workflow_runs.workflow_run_controller import (
-    router as workflow_run_router,
-)
+
 from src.workflows.workflow_controller import router as workflow_router
+from src.workflows_executor.workflows_executor_controller import (
+    router as workflows_executor_router,
+)
 from src.workspaces.workspace_controller import router as workspace_router
 
 # Get a logger instance for use in this file. It will inherit the root setup.
@@ -173,4 +174,4 @@ app.include_router(source_asset_router)
 app.include_router(workspace_router)
 app.include_router(brand_guideline_router)
 app.include_router(workflow_router)
-app.include_router(workflow_run_router)
+app.include_router(workflows_executor_router)

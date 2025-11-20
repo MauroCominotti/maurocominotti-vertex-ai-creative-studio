@@ -1,0 +1,75 @@
+
+<div class="step-card" [formGroup]="stepForm" [ngClass]="config.type">
+  <div class="step-header" (click)="isCollapsed = !isCollapsed">
+    <div class="step-title">
+      <mat-icon>{{ config.icon }}</mat-icon>
+      <span>{{ config.title }}</span>
+      <span class="step-id-subtle">#{{ stepIndex + 1 }}</span>
+    </div>
+    <div class="step-actions">
+      <button *ngIf="mode !== 'run'" mat-icon-button color="warn"
+              (click)="$event.stopPropagation(); delete.emit()" matTooltip="Delete step">
+        <mat-icon>delete</mat-icon>
+      </button>
+      <button mat-icon-button class="collapse-icon">
+        <mat-icon>{{ isCollapsed ? 'expand_more' : 'expand_less' }}</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <div class="step-body" *ngIf="!isCollapsed">
+    <div class="section inputs" formGroupName="inputs">
+      <h3>Inputs</h3>
+      <div *ngFor="let input of config.inputs" class="input-group">
+        <label>{{ input.label }}</label>
+        <div class="controls-row">
+          <mat-form-field appearance="outline" class="mode-select">
+            <mat-select [value]="inputModes[input.name]" (selectionChange)="toggleInputMode(input.name, $event.value)">
+              <mat-option value="fixed">Fixed</mat-option>
+              <mat-option value="linked">Link</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field *ngIf="inputModes[input.name] === 'fixed'" appearance="outline" class="value-input">
+            <textarea *ngIf="input.type === 'textarea'" matInput [formControlName]="input.name" [placeholder]="input.label" rows="2"></textarea>
+            <input *ngIf="input.type !== 'textarea'" matInput [formControlName]="input.name" [placeholder]="input.label">
+          </mat-form-field>
+          <mat-form-field *ngIf="inputModes[input.name] === 'linked'" appearance="outline" class="value-input">
+            <mat-select [formControlName]="input.name" [compareWith]="compareFn">
+              <mat-option *ngFor="let out of compatibleOutputs[input.name]" [value]="out.value">
+                {{ out.label }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+
+    <div class="section settings" formGroupName="settings">
+      <h3>Settings</h3>
+      <div class="settings-grid">
+        <ng-container *ngFor="let setting of config.settings">
+          <mat-form-field *ngIf="setting.type === 'select'" appearance="outline">
+            <mat-label>{{ setting.label }}</mat-label>
+            <mat-select [formControlName]="setting.name">
+              <mat-option *ngFor="let option of setting.options" [value]="option.value">{{ option.label }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field *ngIf="setting.type === 'text' || setting.type === 'textarea'" appearance="outline">
+            <mat-label>{{ setting.label }}</mat-label>
+            <input matInput [formControlName]="setting.name">
+          </mat-form-field>
+          <div *ngIf="setting.type === 'checkbox'" class="checkbox-group">
+            <mat-checkbox [formControlName]="setting.name">{{ setting.label }}</mat-checkbox>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+
+    <div class="section outputs">
+      <h3>Outputs</h3>
+      <div *ngFor="let output of config.outputs" class="output-pill">
+        <mat-icon>{{ output.type }}</mat-icon> {{ output.label }}
+      </div>
+    </div>
+  </div>
+</div>

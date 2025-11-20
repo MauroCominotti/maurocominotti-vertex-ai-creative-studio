@@ -41,6 +41,7 @@ class ConfigService(BaseSettings):
     LOCATION: str = "global"
     ENVIRONMENT: str = "development"
     FRONTEND_URL: str = "http://localhost:4200"
+    BACKEND_URL: str = "http://localhost:8000"
     LOG_LEVEL: str = "INFO"
     INIT_VERTEX: bool = True
 
@@ -82,6 +83,12 @@ class ConfigService(BaseSettings):
     # --- Email Service ---
     SENDER_EMAIL: str = (
         ""  # The email address to send from (e.g., no-reply@your-domain.com)
+    )
+
+    # --- Workflows ---
+    WORKFLOWS_LOCATION: str = "us-central1"
+    WORKFLOWS_EXECUTOR_URL: str = (
+        "http://localhost:8080"  # This service could be deployed alone in the future
     )
 
     @model_validator(mode="before")

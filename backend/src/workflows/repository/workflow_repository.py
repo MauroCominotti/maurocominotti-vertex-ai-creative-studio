@@ -36,7 +36,7 @@ class WorkflowRepository(BaseRepository[WorkflowModel]):
         return workflow_model
 
     def get_workflow(
-        self, user_id: str, workspace_id: str, workflow_id: str
+        self, user_id: str, workflow_id: str
     ) -> WorkflowModel | None:
         """Retrieves a single workflow document from Firestore by its ID."""
         doc_ref = self.collection_ref.document(workflow_id)
@@ -44,12 +44,8 @@ class WorkflowRepository(BaseRepository[WorkflowModel]):
 
         if doc.exists:
             workflow_data = doc.to_dict()
-            # Security check: Ensure the retrieved workflow belongs to the requesting user and workspace.
-            if (
-                workflow_data
-                and workflow_data.get("user_id") == user_id
-                and workflow_data.get("workspace_id") == workspace_id
-            ):
+            # Security check: Ensure the retrieved workflow belongs to the requesting user.
+            if workflow_data and workflow_data.get("user_id") == user_id:
                 return WorkflowModel(**workflow_data)
         return None
 

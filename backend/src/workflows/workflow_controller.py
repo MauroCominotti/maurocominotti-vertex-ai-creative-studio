@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status, Header
+from typing import Annotated
 
 from src.auth.auth_guard import RoleChecker, get_current_user
 from src.common.dto.pagination_response_dto import PaginationResponseDto
 from src.users.user_model import UserModel, UserRoleEnum
 from src.workflows.dto.workflow_search_dto import WorkflowSearchDto
-from src.workflows.schema.workflow_model import WorkflowCreateDto, WorkflowModel
+from src.workflows.schema.workflow_model import WorkflowCreateDto, WorkflowModel, WorkflowExecuteDto
 from src.workflows.workflow_service import WorkflowService
 from src.workspaces.workspace_auth_guard import workspace_auth_service
 
@@ -108,21 +109,14 @@ def update_workflow(
     )
 
 
-@router.get("/{workspace_id}/{workflow_id}", response_model=WorkflowModel)
+@router.get("/{workflow_id}", response_model=WorkflowModel)
 def get_workflow(
-    workspace_id,
     workflow_id,
     current_user: UserModel = Depends(get_current_user),
     workflow_service: WorkflowService = Depends(),
 ):
     try:
-        workspace_auth_service.authorize(
-            workspace_id=workspace_id, user=current_user
-        )
-
-        workflow = workflow_service.get_workflow(
-            current_user.id, workspace_id, workflow_id  # type: ignore
-        )
+        workflow = workflow_service.get_workflow(current_user.id, workflow_id)
         if workflow:
             return workflow
         return Response(status_code=status.HTTP_404_NOT_FOUND)
@@ -133,13 +127,12 @@ def get_workflow(
 
 
 @router.delete(
-    "/{workspace_id}/{workflow_id}",
+    "/{workflow_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a Workflow",
 )
-async def delete_user(
+async def delete_workflow(
     workflow_id: str,
-    workspace_id: str,
     current_user: UserModel = Depends(get_current_user),
     workflow_service: WorkflowService = Depends(),
 ):
@@ -147,10 +140,32 @@ async def delete_user(
     Permanently deletes a workflow from the database.
     This functionality is restricted to owners of the workflow.
     """
-    workspace_auth_service.authorize(
-        workspace_id=workspace_id, user=current_user
+    workflow = workflow_service.get_workflow(
+        current_user.id, workflow_id  # type: ignore
     )
+
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
 
     if not workflow_service.delete_by_id(workflow_id):
         raise HTTPException(status_code=404, detail="Workflow not found")
     return
+
+@router.post("/{workflow_id}/workflow-execute")
+async def execute_workflow(
+    workflow_id: str,
+    workflow_execute_dto: WorkflowExecuteDto,
+    authorization: str | None = Header(default=None),
+    current_user: UserModel = Depends(get_current_user),
+    workflow_service: WorkflowService = Depends(),
+):
+    """
+    This function is the controller that calls the service to generate the workflow.
+    """
+    workflow_execute_dto.args["user_auth_header"] = authorization
+
+    response = workflow_service.execute_workflow(
+        workflow_id=workflow_id, args=workflow_execute_dto.args
+    )
+    print(f"Created execution: {response}")

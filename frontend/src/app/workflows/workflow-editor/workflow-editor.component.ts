@@ -1,5 +1,5 @@
-import {Component, OnDestroy, OnInit} from '@angular/core';
-import {ActivatedRoute, Router} from '@angular/router';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import {
   AbstractControl,
   FormArray,
@@ -7,24 +7,28 @@ import {
   FormGroup,
   Validators,
 } from '@angular/forms';
-import {MatDialog} from '@angular/material/dialog';
-import {WorkflowService} from '../workflow.service';
+import { MatDialog } from '@angular/material/dialog';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Observable, Subscription, of } from 'rxjs';
+import { switchMap, tap } from 'rxjs/operators';
 import {
   NodeTypes,
   StepStatusEnum,
   WorkflowBase,
   WorkflowCreateDto,
-  WorkflowDefinitionStatusEnum,
   WorkflowModel,
   WorkflowRunModel,
-  WorkflowRunStatusEnum,
   WorkflowStep,
   WorkflowUpdateDto
 } from '../workflow.models';
-import {Observable, Subscription, of} from 'rxjs';
-import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
-import {filter, switchMap, tap} from 'rxjs/operators';
-import {AddStepModalComponent} from './add-step-modal/add-step-modal.component';
+import { WorkflowService } from '../workflow.service';
+import { AddStepModalComponent } from './add-step-modal/add-step-modal.component';
+import { CROP_IMAGE_STEP_CONFIG } from './step-components/step-configs/crop-image-step.config';
+import { EDIT_IMAGE_STEP_CONFIG } from './step-components/step-configs/edit-image-step.config';
+import { GENERATE_IMAGE_STEP_CONFIG } from './step-components/step-configs/generate-image-step.config';
+import { GENERATE_TEXT_STEP_CONFIG } from './step-components/step-configs/generate-text-step.config';
+import { GENERATE_VIDEO_STEP_CONFIG } from './step-components/step-configs/generate-video-step.config';
+import { VIRTUAL_TRY_ON_STEP_CONFIG } from './step-components/step-configs/virtual-try-on-step.config';
 
 
 @Component({
@@ -51,8 +55,18 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   errorMessage: string | null = null;
   selectedView: 'workflow' | 'history' = 'workflow';
   selectedStep: WorkflowStep | null = null;
+  availableOutputsPerStep: any[][] = [];
 
   private mainSubscription!: Subscription;
+
+  stepConfigs = {
+    [NodeTypes.GENERATE_TEXT]: GENERATE_TEXT_STEP_CONFIG,
+    [NodeTypes.GENERATE_IMAGE]: GENERATE_IMAGE_STEP_CONFIG,
+    [NodeTypes.EDIT_IMAGE]: EDIT_IMAGE_STEP_CONFIG,
+    [NodeTypes.CROP_IMAGE]: CROP_IMAGE_STEP_CONFIG,
+    [NodeTypes.GENERATE_VIDEO]: GENERATE_VIDEO_STEP_CONFIG,
+    [NodeTypes.VIRTUAL_TRY_ON]: VIRTUAL_TRY_ON_STEP_CONFIG,
+  };
 
   constructor(
     private fb: FormBuilder,
@@ -75,16 +89,20 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         switchMap(params => {
           this.runId = params.get('runId');
           this.workflowId = params.get('workflowId');
-
+          console.log(`run id: ${this.runId}`)
+          console.log(`workflow id: ${this.workflowId}`)
           if (this.runId) {
+            console.log("This mode run")
             this.mode = EditorMode.Run;
             // TODO: Create and use a WorkflowRunService
             // return this.workflowRunService.getWorkflowRun(this.runId);
             return of(null); // Placeholder
           } else if (this.workflowId) {
+            console.log("This mode edit")
             this.mode = EditorMode.Edit;
             return this.workflowService.getWorkflowById(this.workflowId);
           } else {
+            console.log("This mode create")
             this.mode = EditorMode.Create;
             return of(null);
           }
@@ -95,7 +113,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
           if (this.mode === EditorMode.Run) {
             this.workflowRun = data ? (data as WorkflowRunModel) : null;
             this.displayedWorkflow = this.workflowRun?.workflowSnapshot ?? null;
-            this.workflowId = this.workflowRun?.workflowId ?? null;
+            this.workflowId = this.workflowRun?.id ?? null;
             this.populateFormFromData(this.displayedWorkflow);
             this.workflowForm.disable(); // Read-only mode
           } else if (this.mode === EditorMode.Edit) {
@@ -113,9 +131,17 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
           this.isLoading = false;
         },
       });
+
+    // Initialize and subscribe to user input changes
+    this.syncOutputs();
+    this.outputDefinitionsArray.valueChanges.subscribe(() => this.syncOutputs());
   }
 
   // ... (rest of the component logic will be updated in subsequent steps)
+
+  getStepConfig(type: string) {
+    return this.stepConfigs[type as keyof typeof this.stepConfigs];
+  }
 
   get isReadOnly(): boolean {
     return this.mode === EditorMode.Run;
@@ -131,16 +157,96 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   initForm() {
     this.workflowForm = this.fb.group({
       id: [''],
-      name: ['', Validators.required],
+      name: ['Untitled Workflow', Validators.required],
       description: [''],
       workspaceId: [''],
       userId: ['user123'],
+      userInput: this.fb.group({
+        stepId: ['user_input'],
+        type: ['user_input'],
+        status: [StepStatusEnum.IDLE],
+        outputs: this.fb.group({}),
+        settings: this.fb.group({
+          definitions: this.fb.array([]),
+        }),
+      }),
       steps: this.fb.array([]),
     });
   }
 
   get stepsArray(): FormArray {
     return this.workflowForm.get('steps') as FormArray;
+  }
+
+  get outputDefinitionsArray(): FormArray {
+    return this.workflowForm.get('userInput.settings.definitions') as FormArray;
+  }
+
+  private createOutputDefinition(name: string, type: string): FormGroup {
+    return this.fb.group({
+      name: [name, Validators.required],
+      type: [type, Validators.required],
+    });
+  }
+
+  addOutput(name = '', type = 'text'): void {
+    this.outputDefinitionsArray.push(this.createOutputDefinition(name, type));
+  }
+
+  removeOutput(index: number): void {
+    this.outputDefinitionsArray.removeAt(index);
+  }
+
+  private syncOutputs(): void {
+    const outputs = this.workflowForm.get('userInput.outputs') as FormGroup;
+
+    Object.keys(outputs.controls).forEach(key => outputs.removeControl(key));
+    this.outputDefinitionsArray.controls.forEach(control => {
+      const name = control.get('name')?.value;
+      const type = control.get('type')?.value;
+      if (name && type) {
+        outputs.addControl(name, this.fb.control({ type: type }));
+      }
+    });
+    this.updateAvailableOutputs();
+  }
+
+  updateAvailableOutputs(): void {
+    const userInputOutputs: any[] = [];
+    const outputs = (this.workflowForm.get('userInput.outputs') as FormGroup).controls;
+    for (const key in outputs) {
+      userInputOutputs.push({
+        label: `User Input: ${key}`,
+        value: {
+          step: "user_input",
+          output: key,
+        },
+        type: outputs[key].value.type,
+      });
+    }
+
+    this.availableOutputsPerStep = this.stepsArray.controls.map((_, currentStepIndex) => {
+      const previousSteps = this.stepsArray.controls.slice(0, currentStepIndex);
+      const availableOutputs: any[] = [...userInputOutputs];
+
+      previousSteps.forEach((stepControl, stepIndex) => {
+        const step = stepControl.value;
+        const stepConfig = this.getStepConfig(step.type);
+        if (!stepConfig) return;
+
+        stepConfig.outputs.forEach(output => {
+          availableOutputs.push({
+            label: `Step ${stepIndex + 1}: ${output.label}`,
+            value: {
+              step: step.stepId,
+              output: output.name,
+            },
+            type: output.type,
+          });
+        });
+      });
+      return availableOutputs;
+    });
   }
 
   openAddStepModal() {
@@ -155,7 +261,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   }
 
   addStepToForm(type: string, existingData?: any) {
-    const stepData = existingData || {
+    let stepData = existingData || {
       stepId: `${type}_${Date.now()}`,
       type: type,
       status: StepStatusEnum.IDLE,
@@ -163,6 +269,21 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       outputs: {},
       settings: {},
     };
+
+    // Set default settings for specific step types if not already present
+    if (!existingData) {
+      switch (type) {
+        case NodeTypes.EDIT_IMAGE:
+          stepData.settings = {
+            ...stepData.settings,
+            aspectRatio: '1:1', // Default value
+            saveOutputToGallery: true, // Default value
+          };
+          break;
+        // Add other step types with their default settings here if needed
+      }
+    }
+
     const stepGroup = this.fb.group({
       stepId: [stepData.stepId],
       type: [stepData.type],
@@ -173,10 +294,12 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     });
 
     this.stepsArray.push(stepGroup);
+    this.updateAvailableOutputs();
   }
 
   deleteStep(index: number) {
     this.stepsArray.removeAt(index);
+    this.updateAvailableOutputs();
   }
 
   dropStep(event: CdkDragDrop<string[]>) {
@@ -185,9 +308,11 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       event.previousIndex,
       event.currentIndex,
     );
+    this.updateAvailableOutputs();
   }
 
   save() {
+    console.log(this.workflowForm)
     if (this.workflowForm.invalid) return;
 
     this.isLoading = true;
@@ -199,21 +324,31 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
     const formValue = this.workflowForm.getRawValue();
 
+    const user_input_step = {
+      ...formValue.userInput,
+      stepId: `${NodeTypes.USER_INPUT}`,
+      type: NodeTypes.USER_INPUT,
+      status: StepStatusEnum.IDLE,
+    }
+    const steps = [user_input_step, ...formValue.steps];
+
     if (this.mode === EditorMode.Edit) {
+
       const updateDto: WorkflowUpdateDto = {
         name: formValue.name,
-        description: formValue.description,
-        steps: formValue.steps,
+        description: formValue.description || '',
+        steps: steps,
         status: formValue.status,
         workspaceId: formValue.workspaceId,
       };
 
       request$ = this.workflowService.updateWorkflow(formValue.id, updateDto);
     } else {
-      const createDto: Omit<WorkflowCreateDto, 'workspaceId'> = {
+      const createDto: WorkflowCreateDto = {
         name: formValue.name,
-        description: formValue.description,
-        steps: formValue.steps,
+        description: formValue.description || '',
+        steps: steps,
+        workspaceId: formValue.workspaceId,
       };
       request$ = this.workflowService.createWorkflow(createDto);
     }
@@ -236,18 +371,44 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       this.resetFormForNew();
       return;
     }
-    this.workflowForm.patchValue(data);
+
+    const userInputStep = data.steps?.find(s => s.type === NodeTypes.USER_INPUT);
+    const otherSteps = data.steps?.filter(s => s.type !== NodeTypes.USER_INPUT) || [];
+    this.workflowForm.get('userInput.outputs') as FormGroup
+    // Patch basic form values
+    this.workflowForm.patchValue({
+      ...data,
+      userInput: userInputStep || (this.workflowForm.get('userInput') as FormGroup).value,
+    });
+
+    // Clear and populate the output definitions from the loaded data
+    this.outputDefinitionsArray.clear();
+    if (userInputStep && userInputStep.outputs) {
+      Object.entries(userInputStep.outputs).forEach(([key, value]) => {
+        this.addOutput(key, value.type);
+      });
+    }
+
+    // Clear and populate the steps
     this.stepsArray.clear();
-    data.steps?.forEach(step => this.addStepToForm(step.type, step));
+    otherSteps.forEach(step => this.addStepToForm(step.type, step));
+
+    // Sync everything
+    this.syncOutputs();
   }
 
   private resetFormForNew() {
+    console.log("Reset form for new")
     this.workflowForm.reset();
     this.workflowForm.patchValue({
+      name: 'Untitled Workflow',
       userId: '',
     });
     this.stepsArray.clear();
-    this.addStepToForm('user_input');
+    this.outputDefinitionsArray.clear();
+    this.addOutput('main_prompt', 'text');
+    this.addOutput('model_image', 'image');
+    this.updateAvailableOutputs();
   }
 
   getStepIcon(type: string): string {

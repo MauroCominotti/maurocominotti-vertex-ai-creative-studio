@@ -33,14 +33,14 @@ interface BaseStep<T, S> {
   startedAt?: string;
   completedAt?: string;
 
-  outputs: {[key: string]: any};
+  outputs: { [key: string]: any };
   inputs: T;
   settings: S;
 }
 
 // --- User Input ---
-export interface UserInputInputs {}
-export interface UserInputSettings {}
+export interface UserInputInputs { }
+export interface UserInputSettings { }
 export type UserInputStep = BaseStep<UserInputInputs, UserInputSettings> & {
   type: NodeTypes.USER_INPUT;
 };
@@ -56,7 +56,7 @@ export interface GenerateTextSettings {
 export type GenerateTextStep = BaseStep<
   GenerateTextInputs,
   GenerateTextSettings
-> & {type: NodeTypes.GENERATE_TEXT};
+> & { type: NodeTypes.GENERATE_TEXT };
 
 // --- Generate Image ---
 export interface GenerateImageInputs {
@@ -71,7 +71,7 @@ export interface GenerateImageSettings {
 export type GenerateImageStep = BaseStep<
   GenerateImageInputs,
   GenerateImageSettings
-> & {type: NodeTypes.GENERATE_IMAGE};
+> & { type: NodeTypes.GENERATE_IMAGE };
 
 // --- Edit Image ---
 export interface EditImageInputs {
@@ -121,7 +121,7 @@ export interface WorkflowModel extends WorkflowBase {
   userId: string;
 }
 
-export interface WorkflowCreateDto extends WorkflowBase {}
+export interface WorkflowCreateDto extends WorkflowBase { }
 
 export interface WorkflowUpdateDto extends WorkflowBase {
   status: WorkflowDefinitionStatusEnum;
@@ -143,7 +143,6 @@ export interface PaginatedWorkflowsResponse {
 
 export interface WorkflowRunModel {
   id: string;
-  workflowId: string;
   userId: string;
   workspaceId: string;
   status: WorkflowRunStatusEnum;

@@ -39,6 +39,7 @@ import {
   MediaItemSelection,
 } from '../common/components/image-selector/image-selector.component';
 import { ToastMessageComponent } from '../common/components/toast-message/toast-message.component';
+import { ImageGenerationModelConfig, ImageGenerationModelEnum } from '../common/enums/image-generation-models';
 import { MediaItem } from '../common/models/media-item.model';
 import {
   ImagenRequest,
@@ -99,48 +100,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   negativePhrases: string[] = [];
 
   // --- Dropdown Options ---
-  generationModels = [
-    {
-      value: 'gemini-3-pro-image-preview',
-      viewValue: 'Nano Banana Pro',
-      isImage: true,
-      imageSrc: 'assets/images/banana-peel.png',
-    },
-    {
-      value: 'gemini-2.5-flash-image-preview',
-      viewValue: 'Nano Banana',
-      isImage: true,
-      imageSrc: 'assets/images/banana-peel.png',
-    },
-    {
-      value: 'imagen-4.0-generate-001',
-      viewValue: 'Imagen 4', // Keeping gemini-spark-icon for Imagen
-      icon: 'gemini-spark-icon',
-      isSvg: true,
-    },
-    {
-      value: 'imagen-4.0-ultra-generate-001',
-      viewValue: 'Imagen 4 Ultra', // Keeping gemini-spark-icon for Imagen
-      icon: 'gemini-spark-icon',
-      isSvg: true,
-    },
-    {
-      value: 'imagen-4.0-fast-generate-001',
-      viewValue: 'Imagen 4 Fast', // Keeping gemini-spark-icon for Imagen
-      icon: 'gemini-spark-icon',
-      isSvg: true,
-    },
-    {
-      value: 'imagen-3.0-generate-002',
-      viewValue: 'Imagen 3',
-      icon: 'auto_awesome',
-    },
-    {
-      value: 'imagen-3.0-fast-generate-001',
-      viewValue: 'Imagen 3 Fast',
-      icon: 'auto_awesome',
-    },
-  ];
+  generationModels = Object.entries(ImageGenerationModelConfig).map(([key, meta]) => ({
+    value: key as ImageGenerationModelEnum,
+    ...meta
+  }));
+
   selectedGenerationModelObject = this.generationModels[0];
   selectedGenerationModel = this.generationModels[0].viewValue;
   aspectRatioOptions: {

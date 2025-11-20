@@ -89,13 +89,7 @@ import { LoginComponent } from './login/login.component';
 import { VideoComponent } from './video/video.component';
 import { VtoComponent } from './vto/vto.component';
 import { AddStepModalComponent } from './workflows/workflow-editor/add-step-modal/add-step-modal.component';
-import { CropImageStepComponent } from './workflows/workflow-editor/step-components/crop-image-step/crop-image-step.component';
-import { EditImageStepComponent } from './workflows/workflow-editor/step-components/edit-image-step/edit-image-step.component';
-import { GenerateImageStepComponent } from './workflows/workflow-editor/step-components/generate-image-step/generate-image-step.component';
-import { GenerateTextStepComponent } from './workflows/workflow-editor/step-components/generate-text-step/generate-text-step.component';
-import { GenerateVideoStepComponent } from './workflows/workflow-editor/step-components/generate-video-step/generate-video-step.component';
-import { UserInputStepComponent } from './workflows/workflow-editor/step-components/user-input-step/user-input-step.component';
-import { VirtualTryOnStepComponent } from './workflows/workflow-editor/step-components/virtual-try-on-step/virtual-try-on-step.component';
+import { GenericStepComponent } from './workflows/workflow-editor/step-components/generic-step/generic-step.component';
 import { WorkflowEditorComponent } from './workflows/workflow-editor/workflow-editor.component';
 import { WorkflowListComponent } from './workflows/workflow-list/workflow-list.component';
 
@@ -123,13 +117,7 @@ import { WorkflowListComponent } from './workflows/workflow-list/workflow-list.c
     WorkflowListComponent,
     WorkflowEditorComponent,
     AddStepModalComponent,
-    UserInputStepComponent,
-    GenerateTextStepComponent,
-    GenerateImageStepComponent,
-    EditImageStepComponent,
-    CropImageStepComponent,
-    GenerateVideoStepComponent,
-    VirtualTryOnStepComponent,
+    GenericStepComponent,
   ],
   imports: [
     BrowserModule,

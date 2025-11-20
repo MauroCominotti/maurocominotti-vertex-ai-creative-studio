@@ -122,3 +122,68 @@
 .cdk-drag-animating {
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
+
+
+.user-input-panel {
+  border: 2px dashed var(--accent-color-light);
+  background-color: rgba(140, 92, 245, 0.05);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+
+  .step-header {
+    cursor: default;
+  }
+
+  .description {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 24px;
+  }
+
+  .definitions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .definition-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 40px;
+    gap: 16px;
+    align-items: center;
+
+    &.header-row {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      padding: 0 12px;
+    }
+
+    .name-col { grid-column: 1 / 2; }
+    .type-col { grid-column: 2 / 3; }
+    .action-col { grid-column: 3 / 4; justify-self: center; }
+
+    .mat-mdc-form-field {
+      font-size: 14px;
+      .mat-mdc-form-field-subscript-wrapper {
+        display: none;
+      }
+    }
+  }
+
+  .add-output-btn {
+    margin-top: 20px;
+    border-color: #555;
+    color: #ccc;
+
+    &:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      background: rgba(140, 92, 245, 0.1);
+    }
+  }
+}
+

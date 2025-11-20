@@ -78,7 +78,7 @@ class StepStatusEnum(str, Enum):
     SKIPPED = "skipped"  # Useful for conditional workflows later on
 
 
-class BaseStep(BaseModel, Generic[InputT, SettingsT]):
+class BaseStep(BaseDto, Generic[InputT, SettingsT]):
     """
     Abstract-like base step.
     It defines that every step MUST have 'inputs' and 'settings',
@@ -148,7 +148,6 @@ class GenerateImageSettings(BaseModel):
     model: str
     brand_guidelines: bool
     aspect_ratio: str
-    save_output_to_gallery: bool
 
 
 class GenerateImageStep(BaseStep[GenerateImageInputs, GenerateImageSettings]):
@@ -164,9 +163,9 @@ class EditImageInputs(BaseModel):
 
 
 class EditImageSettings(BaseModel):
+    model: str
     brand_guidelines: bool
     aspect_ratio: str
-    save_output_to_gallery: bool
 
 
 class EditImageStep(BaseStep[EditImageInputs, EditImageSettings]):
@@ -184,7 +183,6 @@ class GenerateVideoInputs(BaseModel):
 class GenerateVideoSettings(BaseModel):
     model: str
     brand_guidelines: bool
-    save_output_to_gallery: bool
 
 
 class GenerateVideoStep(BaseStep[GenerateVideoInputs, GenerateVideoSettings]):
@@ -202,7 +200,6 @@ class CropImageSettings(BaseModel):
     crop_aspect_ratio: str
     fill_aspect_ratio: bool
     background_color: str
-    save_output_to_gallery: bool
 
 
 class CropImageStep(BaseStep[CropImageInputs, CropImageSettings]):
@@ -221,7 +218,7 @@ class VirtualTryOnInputs(BaseModel):
 
 
 class VirtualTryOnSettings(BaseModel):
-    save_output_to_gallery: bool
+    pass
 
 
 class VirtualTryOnStep(BaseStep[VirtualTryOnInputs, VirtualTryOnSettings]):
@@ -284,6 +281,7 @@ class WorkflowModel(BaseDocument, WorkflowBase):
     The editable workflow *definition* (template).
     This is what the user edits in the UI.
     """
+
     status: WorkflowDefinitionStatusEnum = Field(
         default=WorkflowDefinitionStatusEnum.DRAFT
     )
@@ -295,8 +293,10 @@ class WorkflowCreateDto(WorkflowBase):
 
     pass
 
+class WorkflowExecuteDto(BaseModel):
+    args: dict[str, Any]
 
-# Collection: "workflow_runs"
+
 class WorkflowRunModel(BaseDocument):
     """
     A record of a single, immutable workflow *execution*.

@@ -28,6 +28,8 @@ dependencies = [
     "pypdf>=6.1.1",
     "google-cloud-texttospeech>=2.33.0",
     "google-cloud-storage>=3.0.0",
+    "pyyaml>=6.0.3",
+    "google-cloud-workflows>=1.19.0",
 ]
 
 [project.optional-dependencies]

@@ -38,6 +38,7 @@ import {
   ImageSelectorComponent,
   MediaItemSelection,
 } from '../common/components/image-selector/image-selector.component';
+import { GenerationModelConfig, MODEL_CONFIGS } from '../common/config/model-config';
 import { MediaItem } from '../common/models/media-item.model';
 import {
   ImagenRequest,
@@ -49,11 +50,10 @@ import {
   EnrichedSourceAsset,
   GenerationParameters,
 } from '../fun-templates/media-template.model';
+import { ImageStateService } from '../services/image-state.service';
 import { SearchService } from '../services/search/search.service';
 import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
-import { ImageStateService } from '../services/image-state.service';
-import { handleErrorSnackbar, handleSuccessSnackbar, handleInfoSnackbar } from '../utils/handleMessageSnackbar';
-import { MODEL_CONFIGS, GenerationModelConfig } from '../common/config/model-config';
+import { handleErrorSnackbar, handleInfoSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
 
 @Component({
   selector: 'app-home',
@@ -367,7 +367,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       this.selectedGenerationModel = this.generationModels.find(
         m => m.value === state.model
       )?.viewValue || this.generationModels[0].viewValue;
-      
+
       this.selectedGenerationModelObject = this.generationModels.find(
         m => m.value === state.model
       ) || this.generationModels[0];
@@ -379,7 +379,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       this.selectedWatermark = this.watermarkOptions.find(
         o => o.value === state.watermark
       )?.viewValue || 'No';
-      
+
       this.service.imagePrompt = state.prompt;
     });
   }
@@ -422,7 +422,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.negativePhrases = state.negativePrompt
       ? state.negativePrompt.split(', ').filter(Boolean)
       : [];
-    
+
     // Update selected options for UI
     const modelOption = this.generationModels.find(m => m.value === state.model);
     if (modelOption) {
@@ -579,7 +579,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.selectNumberOfImages(count);
   }
 
-  onClearReferenceImage(data: {index: number, event: Event}) {
+  onClearReferenceImage(data: { index: number, event: Event }) {
     this.clearImage(data.index, data.event as MouseEvent);
   }
 
@@ -710,7 +710,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       negativePrompt: this.negativePhrases.join(', '),
       sourceMediaItems:
         this.currentMode === 'Ingredients to Image' &&
-        validSourceMediaItems.length
+          validSourceMediaItems.length
           ? validSourceMediaItems
           : undefined,
       sourceAssetIds:

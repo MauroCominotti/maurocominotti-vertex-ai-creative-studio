@@ -2,7 +2,7 @@ import { ImageGenerationModelConfig, ImageGenerationModelEnum } from '../../../.
 import { StepConfig } from '../generic-step/step.model';
 
 const model_options = Object.entries(ImageGenerationModelConfig)
-  .filter(([key]) => key === ImageGenerationModelEnum.NANO_BANANA)
+  .filter(([key]) => key === ImageGenerationModelEnum.NANO_BANANA || key === ImageGenerationModelEnum.NANO_BANANA_PRO)
   .map(([key, meta]) => ({
     value: key as ImageGenerationModelEnum,
     label: meta.viewValue,

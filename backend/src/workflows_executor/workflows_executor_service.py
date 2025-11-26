@@ -7,6 +7,7 @@ from google import genai
 from google.genai import types
 from httpx import Client as RestClient
 
+from src.common.schema.genai_model_setup import GenAIModelSetup
 from src.workflows_executor.dto.workflows_executor_dto import (
     GenerateTextRequest,
     GenerateImageRequest,
@@ -24,9 +25,7 @@ class WorkflowsExecutorService:
     def __init__(self):
         self.backend_url = config_service.BACKEND_URL
         self.rest_client = RestClient(timeout=300)
-        self.genai_client = genai.Client(
-            vertexai=True,
-        )
+        self.genai_client = GenAIModelSetup.init()
 
     async def generate_text(self, request: GenerateTextRequest):
         generate_content_config = types.GenerateContentConfig(

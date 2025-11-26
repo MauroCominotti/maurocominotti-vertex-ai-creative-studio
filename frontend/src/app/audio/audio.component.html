@@ -19,6 +19,81 @@
           Describe Your Sound
         </h1>
     </div>
+    <!-- new implementation for overlay  -->
+
+    
+      <ng-container>
+        <div *ngIf="showOverlay"
+          class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black bg-opacity-70 rounded-xl">
+          <mat-progress-spinner
+            color="primary"
+            mode="indeterminate"
+            [diameter]="50"></mat-progress-spinner>
+          <p class="mt-4 text-white text-lg"> 
+            Your audio is being generated...
+          </p>
+          <p class="text-gray-400 text-sm">
+            This may take a few minutes.
+          </p>
+        </div>
+
+        <!-- <div
+        
+          class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black bg-opacity-70 rounded-xl text-center p-4">
+          <mat-icon class="text-red-500 !w-16 !h-16 !text-6xl">error_outline</mat-icon>
+          <p class="mt-4 text-white text-lg">Audio Generation Failed</p>
+          <p class="text-gray-400 text-sm max-w-md">
+             job.errorMessage || job.error_message
+          </p>
+          <button
+            mat-raised-button
+            color="primary"
+           
+            class="mt-4">Close
+          </button>
+        </div> -->
+
+        <!-- Video Gallery -->
+        <!-- <app-media-lightbox
+          *ngIf="job.status === JobStatus.COMPLETED"
+          [mediaItem]="job"
+          [initialIndex]="0"
+          [showSeeMoreInfoButton]="true"
+          (extendWithAiClicked)="handleExtendWithAi($event)"
+          (concatenateClicked)="handleConcatenate($event)"
+          style="max-height: 60vh"
+        ></app-media-lightbox> -->
+      </ng-container>
+
+      <!-- <ng-container
+        *ngIf="(activeVideoJob$ | async)?.status !== JobStatus.COMPLETED"
+      >
+        <div class="video-container">
+          <video
+            class="w-full rounded-xl"
+            oncanplay="this.play()"
+            onloadedmetadata="this.muted = true"
+            muted
+            playsinline
+            loop
+            autoplay
+          >
+            <source
+              src="assets/videos/generate-video-homepage-video.mp4"
+              type="video/mp4"
+            />
+          </video>
+          <div
+            class="top-[40%] md:top-[20%] lg:top-[30%] xl:top-[40%] absolute w-full text-center justify-center text-3xl md:text-6xl font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-red-400 bg-clip-text text-transparent"
+          >
+            Generate Video Ads
+          </div>
+        </div>
+      </ng-container> -->
+
+
+
+    <!--  -->
 
     <div class="result-container" *ngIf="mediaItem">
         <app-media-lightbox

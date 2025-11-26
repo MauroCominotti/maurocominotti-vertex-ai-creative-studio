@@ -34,6 +34,7 @@ export class AudioComponent {
   selectedModel: UiModelType = 'lyria';
   isLoading = false;
   audioUrl: SafeResourceUrl | null = null;
+  showOverlay = false;
 
   // Lyria Specific Inputs
   prompt = '';
@@ -187,7 +188,7 @@ export class AudioComponent {
     });
   }
 
-  generate() {
+  generate() { //alert('generate');
     this.isLoading = true;
     this.mediaItem = null; // Clear previous result
 
@@ -233,16 +234,19 @@ export class AudioComponent {
 
     this.isLoading = true;
     this.audioUrl = null;
+    this.showOverlay = true;
 
     this.audioService
       .generateAudio(request)
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
         next: (response: MediaItem) => {
+          this.showOverlay = false;
           this.mediaItem = response;
           // The Lightbox will handle displaying the first item automatically via inputs
         },
         error: (error: any) => {
+          this.showOverlay = false;
           this.snackBar.open(
             'Error generating audio. Please try again.',
             'Close',

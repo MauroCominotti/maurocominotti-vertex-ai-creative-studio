@@ -1,17 +1,5 @@
-
 <div class="lg:container lg:mx-auto border-none">
     <div class="home-margin grid grid-cols-1">
-        <!-- workbench Homepage (Welcome/Loading section remains) -->
-
-        <ng-container *ngIf="isLoading">
-            <div class="workbench-container">
-                <div class="w-full h-full flex justify-center items-center">
-                    <mat-progress-spinner color="primary" mode="indeterminate"></mat-progress-spinner>
-                </div>
-            </div>
-        </ng-container>
-
-
         <ng-container>
             <div class="workbench-container">
                 <!-- Text for Tablet and beyond -->
@@ -53,325 +41,326 @@
                 </div>
             </div>
         </ng-container>
+<!-- Main App Container (Dark Theme) -->
+    <div class="flex justify-center  text-white font-sans overflow-hidden selection:bg-blue-500 selection:text-white">
 
-    
-        <!-- Updated Top Feature Selection - Styled for better visual hierarchy -->
-        <!-- <div class="flex h-24 workbench-container p-4 gap-4 bg-gray-900 rounded-xl shadow-lg mb-8">
-            <div class="w-1/2 flex items-center justify-center bg-gray-800 hover:bg-gray-700 cursor-pointer rounded-lg transition duration-200" (click)="showImageGeneration()">
-                <p class="text-md font-semibold text-gray-300">Image Generation</p>
-            </div>
-
-            <div class="w-1/2 flex items-center justify-center bg-gray-800 hover:bg-gray-700 cursor-pointer rounded-lg transition duration-200" (click)="showAudioGeneration()">
-                <p class="text-md font-semibold text-gray-300">Audio Generation</p>
-            </div>
-        </div> -->
-        <!-- End Updated Top Feature Selection -->
-
-
-        <ng-template #videogallary1>
-                <div class="flex justify-center items-center w-full h-full">           
-                    <div class="text-center justify-center text-white title-font font-bold">
-                      video gallary 
-                    </div>
-                </div>
-        </ng-template>
-
-        <ng-template #videoeditor1>
-                <div class="flex justify-center items-center w-full h-full">
-                    <div class="text-center justify-center text-white title-font font-bold">
-                     videoeditor
-                     <!-- <video width="400" controls>
-                    <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
-                    <source src="https://www.w3schools.com/html/mov_bbb.ogg" type="video/ogg">
-                    Your browser does not support HTML video.
-                    </video> -->
-                    </div>
-                </div>
-        </ng-template>
-
-        <ng-container *ngIf="videogallary;then videogallary1 else videoeditor1"></ng-container>
- 
-<!-- MAIN VIDEO EDITOR AREA START -->
-<div class="min-h-screen bg-gray-950 text-gray-100 p-4 md:p-8 font-sans">
- 
-
-      <!-- File Upload & Video Player -->
-      <div class="max-w-5xl mx-auto space-y-6"> <!-- Wider max width -->
-        <!-- Enhanced player container appearance -->
-        <div class="relative w-full aspect-video bg-black rounded-2xl shadow-2xl shadow-indigo-500/30 overflow-hidden flex items-center justify-center border border-indigo-500/50">
-          <input 
-            #fileInput 
-            type="file" 
-            (change)="handleFileUpload($event)" 
-            accept="video/*" 
-            class="hidden"
-            multiple
-          >
-          
-          <!-- Upload State -->
-          @if (videoTracks().length === 0) {
-            <div class="text-center p-12">
-              <svg 
-                (click)="fileInput.click()"
-                xmlns="http://www.w3.org/2000/svg" 
-                width="24" height="24" 
-                viewBox="0 0 24 24" fill="none" 
-                stroke="currentColor" 
-                stroke-width="1.5" stroke-linecap="round" 
-                stroke-linejoin="round" 
-                class="w-20 h-20 text-indigo-400 mx-auto mb-6 cursor-pointer hover:text-indigo-300 transition duration-300"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" x2="12" y1="3" y2="15"></line>
-              </svg>
-
-              <button 
-                (click)="fileInput.click()" 
-                class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-8 rounded-xl transition duration-300 shadow-lg shadow-indigo-500/50"
-              >
-                Upload Video File
-              </button>
-              <p class="mt-4 text-gray-400 text-sm">Supports MP4, MOV, and WebM formats.</p>
-            </div>
-          }
-
-          <!-- Video Player -->
-          @if (videoTracks().length > 0) {
-            <video 
-              #videoPlayer
-              [src]="videoTracks()[selectedVideoIndex()].src"
-              (loadedmetadata)="onLoadedMetadata($event)"
-              (timeupdate)="updateTime($event)"
-              (ended)="onVideoEnded()"
-              class="w-full h-full object-contain cursor-pointer"
-              (click)="togglePlayPause()"
-              preload="metadata"
-              muted="false"
-            >
-              Your browser does not support the video tag.
-            </video>
+      <!-- Main Content Area -->
+      <div class="flex flex-col  md:w-11/12 mx-auto">
+        
+        <!-- Top Workspace (3 Columns) -->
+        <div class="flex flex-col xl:flex-row w-11/12 md:w-4/5 mx-auto p-6 gap-6 min-h-0 overflow-hidden">
             
-            <!-- Play/Pause Overlay Icon -->
-            @if (!isPlaying()) {
-              <div (click)="togglePlayPause()" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 cursor-pointer transition duration-300 hover:bg-opacity-50">
-                <!-- Play Icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-24 h-24 text-white/90 transform hover:scale-105 transition duration-200 drop-shadow-lg">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                </svg>
-                <!-- End Play Icon -->
-              </div>
-            }
-
-            <!-- Video Track List (select which uploaded video to preview) -->
-            <div class="absolute bottom-4 left-4 right-4 flex gap-2 overflow-x-auto">
-              @for(videoTrack of videoTracks(); track videoTrack.id) {
-                <button (click)="selectVideoById(videoTrack.id)" class="px-3 py-1 bg-gray-800/80 hover:bg-gray-700 text-sm rounded-lg border border-gray-700 flex items-center space-x-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><path d="M12 9v6"></path></svg>
-                  <span class="truncate max-w-xs text-xs text-gray-200">{{ videoTrack.fileName || 'Video' }}</span>
-                  <span *ngIf="videoTrack.duration > 0" class="ml-2 text-xs text-gray-400 font-mono">{{ formatTime(videoTrack.duration) }}</span>
-                </button>
-              }
-            </div>
-          }
-        </div>
-
-        <!-- Controls and Timeline (Only visible if video is loaded) -->
-        @if (videoTracks().length > 0 && videoDuration() > 0) {
-          <!-- Enhanced control card -->
-          <div class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700/50">
-            
-            <!-- Playback Controls and Audio Upload -->
-            <div class="flex items-center justify-between mb-6">
-              <div class="flex items-center space-x-4">
-                <button 
-                  (click)="togglePlayPause()"
-                  [disabled]="isGenerating()"
-                  class="p-4 rounded-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition duration-300 shadow-md shadow-indigo-500/50"
-                >
-                  @if (isPlaying()) {
-                    <!-- Pause Icon -->
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-white">
-                      <rect width="4" height="16" x="6" y="4"></rect>
-                      <rect width="4" height="16" x="14" y="4"></rect>
-                    </svg>
-                  } @else {
-                    <!-- Play Icon -->
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-white">
-                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                    </svg>
-                  }
-                </button>
-                <span class="text-xl font-mono text-indigo-400">{{ formatTime(currentTime()) }}</span>
-                <span class="text-xl font-mono text-gray-500">/ {{ formatTime(videoDuration()) }}</span>
-              </div>
-          
-              <!-- NEW: Audio File Upload UI -->
-              <div class="flex items-center space-x-4">
-                  <input 
-                      #audioFileInput 
-                      type="file" 
-                      (change)="handleAudioUpload($event)" 
-                      accept="audio/*" 
-                      class="hidden"
-                      multiple
-                  >
-                  <button 
-                      (click)="audioFileInput.click()" 
-                      class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-xl transition duration-300 flex items-center space-x-2 shadow-md shadow-gray-900/50"
-                  >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 2v20"/><path d="M18 18a6 6 0 0 0-12 0"/><path d="M10 20h4"/></svg>
-                      <span>Add Audio Track</span>
-                  </button>
-              </div>
-          
-            </div>
-
-            <!-- Video Timeline & Handles -->
-            <div 
-              #timelineContainer
-              class="relative h-20 bg-gray-900 rounded-lg shadow-inner shadow-black/50 overflow-hidden cursor-ew-resize"
-              (mousedown)="handleDragStart('timeline', $event)"
-              (touchstart)="handleTouchStart('timeline', $event)"
-            >
-              
-              <!-- Thumbnail Strip -->
-              @if (thumbnails().length > 0 && !isGenerating()) {
-                <div class="flex h-full">
-                  @for (thumb of thumbnails(); track thumb.time) {
-                    <img 
-                      [src]="thumb.src" 
-                      class="h-full object-cover flex-grow opacity-90" 
-                      [alt]="'Thumbnail at ' + formatTime(thumb.time)"
-                    >
-                  }
+            <!-- COL 1: Assets Panel -->
+            <div class="w-120 rounded-xl p-5 flex flex-col bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[48px] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-medium text-gray-200 tracking-tight">Assets - Videos</h2>
                 </div>
-              } @else if (isGenerating()) {
-                <div class="flex items-center justify-center h-full text-indigo-400 animate-pulse text-lg font-medium">
-                  Generating Thumbnails...
-                </div>
-              }
+                
+                <!-- Grid of assets -->
+                <div class="flex-1 overflow-y-auto grid grid-cols-2 gap-3 content-start custom-scrollbar">
+                    
+                    <!-- "Add New" Card (Always visible) -->
+                    <label class="aspect-square border-2 border-dashed border-gray-700 rounded-xl flex flex-col items-center justify-center text-gray-500 gap-2 cursor-pointer hover:border-blue-500 hover:text-blue-400 transition-colors relative group bg-[#151517]">
+                        <div class="w-8 h-8 rounded-full bg-gray-800 group-hover:bg-blue-500/20 flex items-center justify-center transition-colors">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </div>
+                        <span class="text-[10px] font-medium">Add Media</span>
+                        <input type="file" multiple accept="video/*,audio/*" class="absolute inset-0 opacity-0 cursor-pointer" (change)="onFileSelected($event)">
+                    </label>
 
-              <!-- Highlighted Range -->
-              <div 
-                class="absolute top-0 h-full bg-indigo-500/50 border-x-4 border-indigo-400 transition-all duration-100 ease-linear pointer-events-none shadow-xl shadow-indigo-500/30"
-                [style.left]="rangeStartPercent()"
-                [style.width]="rangeWidthPercent()"
-              ></div>
-
-              <!-- Current Time Indicator -->
-              <div 
-                class="absolute top-0 h-full w-1 bg-red-500 pointer-events-none z-20 transition-all duration-100 ease-linear shadow-lg shadow-red-500/50"
-                [style.left]="currentTimePercent()"
-              ></div>
-
-              <!-- Start Handle - Enhanced Look -->
-              <div 
-                class="absolute top-0 h-full w-5 flex items-center justify-center cursor-ew-resize z-30 -ml-2.5"
-                [style.left]="rangeStartPercent()"
-                (mousedown)="handleDragStart('start', $event)"
-                (touchstart)="handleTouchStart('start', $event)"
-              >
-                <div class="h-14 w-2 bg-indigo-400 rounded-full shadow-lg shadow-indigo-400/50 hover:bg-indigo-300 transition duration-150"></div>
-              </div>
-
-              <!-- End Handle - Enhanced Look -->
-              <div 
-                class="absolute top-0 h-full w-5 flex items-center justify-center cursor-ew-resize z-30 -ml-2.5"
-                [style.left]="rangeEndPercent()"
-                (mousedown)="handleDragStart('end', $event)"
-                (touchstart)="handleTouchStart('end', $event)"
-              >
-                <div class="h-14 w-2 bg-indigo-400 rounded-full shadow-lg shadow-indigo-400/50 hover:bg-indigo-300 transition duration-150"></div>
-              </div>
-            </div>
-            
-            <!-- NEW: Audio Timeline -->
-            @for(audioTrack of audioTracks(); track audioTrack.id) {
-                <div class="mt-4 pt-4 border-t border-gray-700/50">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Audio Track</p>
-                    <div 
-                        class="relative h-10 bg-gray-900 rounded-lg shadow-inner shadow-black/50 overflow-hidden"
-            (click)="selectAudioById(audioTrack.id)"
-                    >
-                        <!-- Audio Waveform Placeholder -->
-                        <!-- Placeholder bar uses width based on audio duration vs video duration for visual context -->
-                        <div 
-                          class="h-full bg-green-700/30 flex items-center justify-center text-green-300 text-xs font-mono rounded-lg"
-                          [style.width]="timeToPercent(audioTrack.duration)"
-                        >
-                            <span class="p-2">Audio Waveform (Max Duration: {{ formatTime(audioTrack.duration) }})</span>
+                    <!-- Asset Cards -->
+                    <div *ngFor="let asset of assets()" class="group relative aspect-square bg-black rounded-xl overflow-hidden border border-white/5 cursor-pointer hover:ring-2 hover:ring-blue-500/50 transition-all">
+                        <img *ngIf="asset.thumbnail" [src]="asset.thumbnail" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
+                        <div *ngIf="!asset.thumbnail && asset.type === 'audio'" class="w-full h-full flex items-center justify-center bg-gray-900">
+                            <svg class="text-purple-400 w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                        </div>
+                        
+                        <!-- Overlay Info -->
+                        <div class="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/90 to-transparent">
+                            <p class="text-[10px] font-medium truncate text-white">{{asset.name}}</p>
+                            <p class="text-[9px] text-gray-400">{{formatTime(asset.duration)}}</p>
                         </div>
 
-                        <!-- Highlighted Range (Uses same start/width as video) -->
-                        <div 
-                            class="absolute top-0 h-full bg-green-500/50 border-x-4 border-green-400 transition-all duration-100 ease-linear pointer-events-none shadow-xl shadow-green-500/30"
-                            [style.left]="rangeStartPercent()"
-                            [style.width]="rangeWidthPercent()"
-                        ></div>
-
-                        <!-- Current Time Indicator (Uses same position as video) -->
-                        <div 
-                            class="absolute top-0 h-full w-1 bg-red-500 pointer-events-none z-20 transition-all duration-100 ease-linear shadow-lg shadow-red-500/50"
-                            [style.left]="currentTimePercent()"
-                        ></div>
+                        <!-- Add Button (Hover) -->
+                        <button (click)="addToTimeline(asset)" class="absolute top-2 right-2 bg-blue-600 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-lg">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        </button>
                     </div>
                 </div>
-            }
 
-            <!-- Time Display Below Timeline -->
-            <div class="flex justify-between mt-3 text-sm font-mono text-gray-400 px-1">
-              <span class="text-indigo-300 font-semibold">Start: {{ formatTime(startTime()) }}</span>
-              <span class="text-indigo-300 font-semibold">End: {{ formatTime(endTime()) }}</span>
+                <!-- Bottom Tabs -->
+                <div class="mt-4 flex  p-1 gap-1">
+                    <button class="w-20 flex items-center justify-center gap-1.5 py-1 px-1 rounded-full text-xs font-medium text-white shadow-sm bg-gradient-to-b from-zinc-500/50 to-neutral-700/20  shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
+                        <mat-icon  svgIcon="video-clap-icon" class="!w-5 !h-5"></mat-icon>
+                        Videos
+                    </button>
+                    <button class="w-20  flex items-center justify-center gap-1.5 py-1 px-1 rounded-full text-xs font-medium text-white shadow-sm bg-gradient-to-b from-zinc-500/50 to-neutral-700/20  shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
+                         <mat-icon  svgIcon="img-icon" class="!w-5 !h-5"></mat-icon>
+                        Photos
+                    </button>
+                    <button class="w-20  flex items-center justify-center gap-1.5 py-1 px-1 rounded-full text-xs font-medium text-white shadow-sm bg-gradient-to-b from-zinc-500/50 to-neutral-700/20  shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
+                         <mat-icon  svgIcon="drive-icon" class="!w-5 !h-5"></mat-icon>
+                        Drive
+                    </button>
+                    
+                    <!-- Functional Upload Button -->
+                    <label class="w-8 flex items-center justify-center bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[50%] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]" title="Upload Media">
+                        <mat-icon  svgIcon="upload-icon" class="!w-5 !h-5"></mat-icon>
+                        <input type="file" multiple accept="video/*,audio/*" class="hidden" (change)="onFileSelected($event)">
+                    </label>
+                </div>
             </div>
-          </div>
-        }
-      </div>
 
-      <!-- Frame Preview Overlay (only visible when dragging) -->
-      @if (previewFrameSrc() && isDragging()) {
-        <!-- Outer container for positioning and centering -->
-        <div 
-          class="absolute z-50 top-16" 
-          [style.left.px]="previewBoxLeft()"
-          style="transform: translateX(-50%);"
-        >
-          <!-- The Preview Box (Thumbnail + Time) -->
-          <div 
-            class="shadow-2xl border-4 border-indigo-400 rounded-lg overflow-hidden"
-          >
-            <img [src]="previewFrameSrc()!" class="w-[200px] h-auto object-contain"> <!-- Increased size -->
-            <div class="bg-indigo-600 text-white text-sm font-semibold text-center p-2"> <!-- Enhanced style -->
-              {{ formatTime(previewTime()) }}
+            <!-- COL 2: Preview Area -->
+            <div class="w-100 flex-1 min-h-[600px] min-w-[400px] flex flex-col items-center justify-center rounded-xl overflow-hidden bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[48px] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
+                
+                <!-- Video Player (Flexible Size) -->
+                <div class="relative w-full h-full flex items-center justify-center group bg-black/20 rounded-lg overflow-hidden">
+                     
+                     <!-- Placeholder when no video (Empty State) -->
+                     <div [class.hidden]="activeVideoClip()" class="absolute inset-0 flex flex-col items-center justify-center text-white/10 pointer-events-none select-none z-10">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
+                        <p class="text-xs font-medium mt-2 tracking-wide">No Signal</p>
+                     </div>
+
+                     <!-- The Video Element -->
+                     <video #mainVideo 
+                        class="max-w-full max-h-full object-contain shadow-2xl rounded-lg" 
+                        [class.hidden]="!activeVideoClip()"
+                        [style.filter]="videoFilter()"
+                        [src]="activeVideoSrc()"
+                        [muted]="true"
+                        (loadedmetadata)="onMetadataLoaded()"
+                        (ended)="onVideoEnded()"
+                     ></video>
+                     
+                     <!-- Hidden Audio -->
+                     <audio #bgAudio [src]="activeAudioSrc()"></audio>
+
+                     <!-- Playback Controls Overlay (Hover) -->
+                     <div [class.hidden]="!activeVideoClip()" class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                        <div *ngIf="!isPlaying()" class="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center cursor-pointer pointer-events-auto shadow-lg ring-1 ring-white/20" (click)="togglePlay()">
+                            <svg class="fill-white ml-1" width="32" height="32" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                     </div>
+                </div>
+
+                <!-- Time Display Pill -->
+                <div class="absolute bottom-6 px-4 py-1.5 bg-black/40 backdrop-blur-md border border-white/10 rounded-full text-xs font-mono text-gray-300 z-20">
+                    {{ formatTime(currentTime()) }} <span class="text-gray-600 mx-1">/</span> {{ formatTime(totalDuration()) }}
+                </div>
             </div>
-          </div>
-          
-          <!-- The Triangle Pointer -->
-          <!-- The triangle is created using zero width/height and borders, pointing down (border-t) -->
-          <div class="w-full flex justify-center">
-            <div class="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent border-t-indigo-400 -mt-1 z-50"></div>
-          </div>
+
+            <!-- COL 3: Properties Panel -->
+            <div class="w-120 rounded-xl p-6 flex flex-col bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[48px] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
+                
+                <!-- Aspect Ratio -->
+                <div class="mb-8">
+                    <h3 class="text-gray-400 text-sm font-medium mb-3">Aspect Ratio</h3>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button class="aspect-square rounded-xl border border-white/10 hover:border-blue-500 hover:bg-blue-500/10 flex flex-col items-center justify-center gap-1 transition-colors text-gray-500 hover:text-blue-400">
+                            <div class="w-4 h-3 border-2 border-current rounded-sm"></div>
+                            <span class="text-[9px]">16:9</span>
+                        </button>
+                         <button class="aspect-square rounded-xl border border-blue-500 bg-blue-500/10 flex flex-col items-center justify-center gap-1 text-blue-400">
+                            <div class="w-3 h-4 border-2 border-current rounded-sm"></div>
+                            <span class="text-[9px]">9:16</span>
+                        </button>
+                         <button class="aspect-square rounded-xl border border-white/10 hover:border-blue-500 hover:bg-blue-500/10 flex flex-col items-center justify-center gap-1 transition-colors text-gray-500 hover:text-blue-400">
+                            <div class="w-3 h-3 border-2 border-current rounded-sm"></div>
+                            <span class="text-[9px]">1:1</span>
+                        </button>
+                         <button class="aspect-square rounded-xl border border-white/10 hover:border-blue-500 hover:bg-blue-500/10 flex flex-col items-center justify-center gap-1 transition-colors text-gray-500 hover:text-blue-400">
+                            <div class="w-4 h-3 border-2 border-current rounded-sm"></div>
+                            <span class="text-[9px]">4:3</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lighting Controls -->
+                <div class="flex-1 space-y-6">
+                    <div class="flex items-center gap-2 text-gray-200 mb-2">
+                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                        <h3 class="text-sm font-medium">Lighting</h3>
+                    </div>
+
+                    <!-- Exposure Slider -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-[10px] text-gray-400 font-medium">
+                            <span>Exposure</span>
+                            <span>{{exposureVal}}%</span>
+                        </div>
+                        <input type="range" [(ngModel)]="exposureVal" min="0" max="200" class="w-full h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500">
+                    </div>
+
+                    <!-- Contrast Slider -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-[10px] text-gray-400 font-medium">
+                            <span>Contrast</span>
+                            <span>{{contrastVal}}%</span>
+                        </div>
+                        <input type="range" [(ngModel)]="contrastVal" min="0" max="200" class="w-full h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500">
+                    </div>
+
+                     <!-- Saturation Slider -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-[10px] text-gray-400 font-medium">
+                            <span>Saturation</span>
+                            <span>{{saturateVal}}%</span>
+                        </div>
+                        <input type="range" [(ngModel)]="saturateVal" min="0" max="200" class="w-full h-1.5 bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500">
+                    </div>
+                </div>
+            </div>
         </div>
-      }
-      
-      <!-- Hidden Canvas for Frame Capture -->
-      <canvas #canvasRef class="hidden"></canvas>
-      
-      <!-- NEW: Hidden Audio Player Element -->
-      @for(audioTrack of audioTracks(); track audioTrack.id) {
-          <audio 
-              [attr.id]="'audioPlayer-' + audioTrack.id"
-              [src]="audioTrack.src"
-              (loadedmetadata)="onAudioLoadedMetadata($event, audioTrack.id)"
-              preload="metadata"
-              class="hidden"
-              muted="false"
-          >
-              Your browser does not support the audio tag.
-          </audio>
-      }
-    </div>
-<!-- MAIN VIDEO EDITOR AREA END -->
 
+        <!-- Bottom Timeline (Floating) -->
+        <div class="h-72 p-6 relative z-10  bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[48px] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
+            <div class="h-full  rounded-3xl  shadow-2xl flex flex-col overflow-hidden relative">
+                
+                <!-- Timeline Header / Toolbar -->
+                <div class="h-12 border-b border-white/5 flex items-center justify-between px-4 ">
+                    <div class="flex items-center gap-4">
+                        <div class="text-xs text-gray-500 font-mono">{{ formatTime(currentTime()) }}</div>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                         <!-- Zoom Slider -->
+                         <div class="flex items-center gap-2 text-gray-500">
+                            <span class="text-[10px]">Zoom</span>
+                            <input type="range" [(ngModel)]="pixelsPerSecond" min="5" max="100" step="5" class="w-20 h-1 bg-gray-700 rounded-full appearance-none cursor-pointer accent-gray-400">
+                         </div>
+
+                         <button (click)="deleteSelectedClip()" [disabled]="!selectedClipId()" class="p-2 text-gray-500 hover:text-red-400 disabled:opacity-20 transition-colors">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                         </button>
+                    </div>
+                </div>
+
+                <!-- Tracks Area -->
+                <div class="flex-1 flex relative overflow-hidden" #timelineContainer>
+                    
+                    <!-- Left Track Controls -->
+                    <div class="w-72  border-r border-white/5 flex flex-col py-2 z-20 relative shadow-lg shrink-0">
+                         <!-- Video Control -->
+                         <div class="h-16 flex items-center px-3 gap-3 border-b border-white/5">
+                             <mat-icon  svgIcon="movie-shallow-icon" class="!w-6 !h-6"></mat-icon>                             
+                             <div class="flex gap-2 p-2 bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[48px] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
+                                <button class="w-10 h-10 rounded-[50%] bg-black/20 flex items-center justify-center text-gray-500 hover:text-white"><mat-icon  svgIcon="eye-icon" class="!w-5 !h-5"></mat-icon></button>
+                                 <button class="w-10 h-10 rounded-[50%] bg-black/20 flex items-center justify-center text-gray-500 hover:text-white"><mat-icon  svgIcon="lock-icon" class="!w-5 !h-5"></mat-icon></button>
+                                 <button class="w-10 h-10 rounded-[50%] bg-black/20 flex items-center justify-center text-gray-500 hover:text-white"><mat-icon  svgIcon="volume-off-icon" class="!w-5 !h-5"></mat-icon></button>
+                             </div>
+                             <button (click)="togglePlay()" class="flex items-center justify-center w-15 h-15 p-4 rounded-[50%] bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[48px] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
+                                <mat-icon *ngIf="!isPlaying()" svgIcon="play-arrow-icon" class="!w-6 !h-6"></mat-icon>
+                                <mat-icon *ngIf="isPlaying()" class="!w-6 !h-6">pause</mat-icon>
+                             </button>
+                         </div>
+                         <!-- Audio Control -->
+                         <div class="h-16 flex items-center px-3 gap-3 mt-2">
+                             <mat-icon  svgIcon="sound-sensing-icon" class="!w-6 !h-6"></mat-icon>                             
+                             <div class="flex gap-2 p-2 bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[48px] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
+                                <button class="w-10 h-10 rounded-[50%] bg-black/20 flex items-center justify-center text-gray-500 hover:text-white"><mat-icon  svgIcon="audio-magic-eraser-icon" class="!w-5 !h-5"></mat-icon></button>
+                                 <button class="w-10 h-10 rounded-[50%] bg-black/20 flex items-center justify-center text-gray-500 hover:text-white"><mat-icon  svgIcon="lock-icon" class="!w-5 !h-5"></mat-icon></button>
+                                 <button class="w-10 h-10 rounded-[50%] bg-black/20 flex items-center justify-center text-gray-500 hover:text-white"><mat-icon  svgIcon="volume-off-icon" class="!w-5 !h-5"></mat-icon></button>
+                             </div>
+                         </div>
+                    </div>
+
+                    <!-- Main Scrollable Timeline -->
+                    <div class="flex-1 overflow-x-auto overflow-y-hidden relative custom-scrollbar " 
+                         (mousedown)="onTimelineMouseDown($event)">
+                         
+                         <div class="relative min-w-full h-full" [style.width.px]="timelineWidth()">
+                            
+                            <!-- Ruler (Subtle) -->
+                            <div class="h-6 border-b border-white/5 w-full sticky top-0  z-10">
+                                <div *ngFor="let tick of timeRulerTicks()" class="absolute top-0 bottom-0 border-l border-white/10 text-[9px] pl-1 text-gray-600" [style.left.px]="tick * pixelsPerSecond">
+                                    {{tick}}s
+                                </div>
+                            </div>
+
+                            <!-- Playhead -->
+                            <div class="absolute top-0 bottom-0 w-px bg-white z-400 pointer-events-none"
+                                [style.left.px]="currentTime() * pixelsPerSecond">
+                                <div class="w-3 h-3 -ml-1.5 bg-white rounded-full -mt-1.5 shadow-[0_0_10px_rgba(255,255,255,0.5)]"></div>
+                                <div class="absolute bottom-2 left-2 bg-[#2a2a2c] text-[9px] px-1.5 py-0.5 rounded text-white border border-white/10 whitespace-nowrap z-50">
+                                    {{formatTime(currentTime())}}
+                                </div>
+                            </div>
+
+                            <!-- VIDEO TRACK -->
+                            <div class="h-16 mt-2 relative w-full">
+                                <div *ngFor="let clip of videoClips()"
+                                    (click)="selectClip(clip.id, $event)"
+                                    class="absolute top-1 bottom-1 rounded-xl cursor-pointer overflow-hidden border flex items-center group"
+                                    [ngClass]="{
+                                        'border-blue-500 ring-2 ring-blue-500/30 z-30': selectedClipId() === clip.id,
+                                        'border-white/10 bg-[#2a2a2c] hover:border-white/30': selectedClipId() !== clip.id
+                                    }"
+                                    [style.left.px]="clip.startTime * pixelsPerSecond"
+                                    [style.width.px]="clip.duration * pixelsPerSecond">
+                                    
+                                    <!-- Thumbnail Strip -->
+                                    <div class="absolute inset-0 flex opacity-50 group-hover:opacity-70 transition-opacity pointer-events-none grayscale group-hover:grayscale-0 overflow-hidden">
+                                        <ng-container *ngFor="let i of [1,2,3,4,5]">
+                                            <img *ngIf="getAssetThumbnail(clip.assetId)" [src]="getAssetThumbnail(clip.assetId)" class="h-full object-cover w-20 flex-shrink-0">
+                                        </ng-container>
+                                    </div>
+                                    
+                                    <!-- Handle -->
+                                    <div class="absolute left-0 top-2 bottom-2 w-1 bg-white/20 rounded-full ml-1"></div>
+                                    <div class="absolute right-0 top-2 bottom-2 w-1 bg-white/20 rounded-full mr-1"></div>
+                                </div>
+                            </div>
+
+                            <!-- AUDIO TRACK -->
+                            <div class="h-16 mt-2 relative w-full">
+                                <div *ngFor="let clip of audioClips()"
+                                    (click)="selectClip(clip.id, $event)"
+                                    class="absolute top-2 bottom-2 rounded-lg cursor-pointer overflow-hidden border bg-black/40 flex items-center justify-center"
+                                    [ngClass]="{
+                                        'border-emerald-500 ring-1 ring-emerald-500/30 z-30': selectedClipId() === clip.id,
+                                        'border-white/5 hover:border-white/20': selectedClipId() !== clip.id
+                                    }"
+                                    [style.left.px]="clip.startTime * pixelsPerSecond"
+                                    [style.width.px]="clip.duration * pixelsPerSecond">
+                                    
+                                    <!-- Waveform Graphic -->
+                                    <div class="flex items-end gap-0.5 h-1/2 w-full justify-center px-2 opacity-80">
+                                        <div *ngFor="let i of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]" 
+                                            class="flex-1 rounded-t-sm" 
+                                            [ngClass]="isAssetVideo(clip.assetId) ? 'bg-blue-400' : 'bg-emerald-400'"
+                                            [style.height.%]="getRandomHeight(i)"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating AI Bar (Bottom Center) -->
+        <!-- <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-50 w-96">
+            <div class="bg-[#1c1c1e]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-1.5 flex items-center shadow-2xl ring-1 ring-black/50">
+                <button class="flex items-center gap-1.5 px-3 py-1.5 bg-[#2a2a2c] rounded-xl text-[10px] font-medium text-gray-300 hover:text-white">
+                    Text to Video <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <input type="text" placeholder="Describe your scene" class="flex-1 bg-transparent border-none text-xs px-3 text-white placeholder-gray-500 focus:outline-none">
+                <div class="flex items-center gap-1 pr-1">
+                    <span class="text-[9px] text-gray-600 font-mono">x4</span>
+                    <button class="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10">
+                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                    </button>
+                    <button class="p-1.5 text-white hover:bg-white/10 rounded-lg">
+                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div> -->
+
+      </div>
+    </div>
     </div>
 </div>

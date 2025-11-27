@@ -369,21 +369,25 @@ class WorkflowService:
         # Format step entries
         formatted_step_entries = []
         for entry in step_entries:
-            step_name = entry.get("step")
+            step_id = entry.get("step")
             step_state = entry.get("state")
             
             # Extract inputs and outputs from the call details
-            call_details = entry.get("call", {})
-            step_inputs = call_details.get("args", {})
-            step_outputs = call_details.get("result", {})
+            variable_data = entry.get("variableData", {})
+            variables = variable_data.get("variables", {})
+            step_inputs = variables.get("args", None)
+            # Magic to remove the user_auth_header from the inputs
+            step_inputs.pop('user_auth_header', None)
+            step_results = variables.get(f"{step_id}_result", {})
+            step_outputs = step_results.get("body", None)
 
             formatted_step_entries.append({
-                "step_id": step_name,
+                "step_id": step_id,
                 "state": step_state,
                 "step_inputs": step_inputs,
                 "step_outputs": step_outputs,
-                "start_time": entry.get("startTime"),
-                "end_time": entry.get("endTime")
+                "start_time": entry.get("createTime"),
+                "end_time": entry.get("updateTime")
             })
 
         return {

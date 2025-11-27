@@ -5,6 +5,15 @@
       <mat-icon>{{ config.icon }}</mat-icon>
       <span>{{ config.title }}</span>
       <span class="step-id-subtle">#{{ stepIndex + 1 }}</span>
+      <!-- Status Chip -->
+      <mat-chip *ngIf="stepForm.get('status')?.value !== 'idle'" 
+                [ngClass]="getStatusClass(stepForm.get('status')?.value)"
+                class="ml-2">
+        <mat-icon *ngIf="getStatusIcon(stepForm.get('status')?.value)" class="!text-sm !w-4 !h-4 mr-1">
+          {{ getStatusIcon(stepForm.get('status')?.value) }}
+        </mat-icon>
+        {{ stepForm.get('status')?.value | uppercase }}
+      </mat-chip>
     </div>
     <div class="step-actions">
       <button *ngIf="mode !== 'run'" mat-icon-button color="warn"

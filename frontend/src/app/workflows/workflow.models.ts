@@ -148,3 +148,25 @@ export interface WorkflowRunModel {
   status: WorkflowRunStatusEnum;
   workflowSnapshot: WorkflowBase;
 }
+
+export interface ExecutionResponse {
+  execution_id: string;
+}
+
+export interface StepEntry {
+  step_id: string;
+  state: string;
+  step_inputs: any;
+  step_outputs: any;
+  start_time: string;
+  end_time?: string;
+}
+
+export interface ExecutionDetails {
+  id: string;
+  state: string;
+  result?: any;
+  duration: number;
+  error?: string;
+  step_entries: StepEntry[];
+}

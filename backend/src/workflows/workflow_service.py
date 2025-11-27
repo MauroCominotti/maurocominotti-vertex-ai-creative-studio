@@ -20,6 +20,10 @@ import yaml
 from google.cloud import workflows_v1
 from google.cloud.workflows import executions_v1
 from google.api_core.exceptions import NotFound
+from google.auth.transport.requests import Request
+from google.oauth2 import service_account
+import google.auth
+import requests
 from pydantic import BaseModel, ValidationError
 
 from src.common.dto.pagination_response_dto import PaginationResponseDto
@@ -129,6 +133,18 @@ class WorkflowService:
                 output_name: f"{step_name}_result.{output_name}"
                 for output_name in step.outputs
             }
+        
+        # Add a return step to the workflow to output all step results
+        return_step = {
+            "return": {
+                "step_outputs": {
+                    step_name: f"${{{step_name}_result.body}}"
+                    for step_name in step_outputs.keys()
+                }
+            }
+        }
+        gcp_steps.append(return_step)
+
         gcp_workflow = {"main": {"params": ["args"], "steps": gcp_steps}}
 
         yaml_output = yaml.dump(gcp_workflow, indent=2)
@@ -152,6 +168,25 @@ class WorkflowService:
         )
 
         operation = client.create_workflow(request=request)
+        response = operation.result()
+        return response
+
+    def _update_gcp_workflow(self, source_contents: str, workflow_id: str):
+        client = workflows_v1.WorkflowsClient()
+
+        # Initialize request argument(s)
+        workflow = workflows_v1.Workflow()
+        workflow.source_contents = source_contents
+        workflow.execution_history_level = (
+            workflows_v1.ExecutionHistoryLevel.EXECUTION_HISTORY_DETAILED
+        )
+
+        request = workflows_v1.UpdateWorkflowRequest(
+            workflow=workflow,
+            name=f"projects/{PROJECT_ID}/locations/{LOCATION}/workflows/{workflow_id}",
+        )
+
+        operation = client.update_workflow(request=request)
         response = operation.result()
         return response
     
@@ -230,6 +265,12 @@ class WorkflowService:
                 workspace_id=workflow_dto.workspace_id,
                 steps=workflow_dto.steps,
             )
+
+            yaml_output = self._generate_workflow_yaml(updated_model)
+            logger.info("Generated YAML for update:")
+            logger.info(yaml_output)
+            self._update_gcp_workflow(yaml_output, workflow_id)
+
             return self.workflow_repository.update_workflow(updated_model)
         except ValidationError as e:
             raise ValueError(str(e))
@@ -258,5 +299,99 @@ class WorkflowService:
             parent=parent, execution=execution
         )
 
-        return response.name
+        # Extract just the execution ID (UUID) from the full resource name
+        # Format: projects/{project}/locations/{location}/workflows/{workflow}/executions/{execution_id}
+        execution_id = response.name.split('/')[-1]
+        return execution_id
 
+    def get_execution_details(self, workflow_id: str, execution_id: str) -> dict:
+        """Retrieves the details of a workflow execution."""
+        client = executions_v1.ExecutionsClient()
+        
+        # The execution_id passed here is expected to be the full resource name
+        # If it's just the ID, we might need to construct the path, but let's assume full name for now
+        # or handle both. The controller should probably pass the full name or we construct it.
+        # Let's assume the controller passes the ID and we construct the path, 
+        # BUT the execute_workflow returns the full name. 
+        # Let's try to parse it or assume it is the full name if it starts with projects/
+        
+        if not execution_id.startswith("projects/"):
+             parent = client.workflow_path(
+                config_service.PROJECT_ID, config_service.WORKFLOWS_LOCATION, workflow_id
+            )
+             execution_name = f"{parent}/executions/{execution_id}"
+        else:
+            execution_name = execution_id
+
+        try:
+            execution = client.get_execution(name=execution_name)
+        except NotFound:
+            return None
+
+        result = None
+        if execution.state == executions_v1.Execution.State.SUCCEEDED:
+             try:
+                result = json.loads(execution.result)
+             except:
+                 result = execution.result
+        
+        # Fetch step entries using REST API
+        step_entries = []
+        try:
+            credentials, project = google.auth.default()
+            if credentials.expired and credentials.refresh_token:
+                credentials.refresh(Request())
+            
+            headers = {"Authorization": f"Bearer {credentials.token}"}
+            url = f"https://workflowexecutions.googleapis.com/v1/{execution_name}/stepEntries"
+            
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                step_entries = response.json().get("stepEntries", [])
+            else:
+                logger.warning(f"Failed to fetch step entries: {response.text}")
+        except Exception as e:
+            logger.error(f"Error fetching step entries: {e}")
+
+        logger.info("Step entries:")
+        logger.info(step_entries)
+
+        # Calculate duration
+        duration = 0.0
+        if execution.start_time:
+            start_timestamp = execution.start_time.timestamp()
+            if execution.end_time:
+                end_timestamp = execution.end_time.timestamp()
+                duration = end_timestamp - start_timestamp
+            else:
+                import time
+                duration = time.time() - start_timestamp
+
+        # Format step entries
+        formatted_step_entries = []
+        for entry in step_entries:
+            step_name = entry.get("step")
+            step_state = entry.get("state")
+            
+            # Extract inputs and outputs from the call details
+            call_details = entry.get("call", {})
+            step_inputs = call_details.get("args", {})
+            step_outputs = call_details.get("result", {})
+
+            formatted_step_entries.append({
+                "step_id": step_name,
+                "state": step_state,
+                "step_inputs": step_inputs,
+                "step_outputs": step_outputs,
+                "start_time": entry.get("startTime"),
+                "end_time": entry.get("endTime")
+            })
+
+        return {
+            "id": execution.name,
+            "state": execution.state.name,
+            "result": result,
+            "duration": round(duration, 2),
+            "error": execution.error.context if execution.error else None,
+            "step_entries": formatted_step_entries
+        }

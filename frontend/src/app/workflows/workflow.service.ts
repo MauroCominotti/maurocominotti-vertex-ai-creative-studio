@@ -8,6 +8,8 @@ import { environment } from '../../environments/environment';
 import { PaginationResponseDto } from '../common/services/source-asset.service';
 import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
 import {
+  ExecutionDetails,
+  ExecutionResponse,
   WorkflowCreateDto,
   WorkflowModel,
   WorkflowRunModel,
@@ -193,14 +195,20 @@ export class WorkflowService implements OnDestroy {
       );
   }
 
-  executeWorkflow(workflowId: string, args: any): Observable<any> {
+  executeWorkflow(workflowId: string, args: any): Observable<ExecutionResponse> {
     const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (!workspaceId) {
       return throwError(() => new Error('No active workspace ID found.'));
     }
-    return this.http.post(
+    return this.http.post<ExecutionResponse>(
       `${this.API_BASE_URL}/workflows/${workflowId}/workflow-execute`,
       { args }
+    );
+  }
+
+  getExecutionDetails(workflowId: string, executionId: string): Observable<ExecutionDetails> {
+    return this.http.get<ExecutionDetails>(
+      `${this.API_BASE_URL}/workflows/${workflowId}/executions/${encodeURIComponent(executionId)}`
     );
   }
 }

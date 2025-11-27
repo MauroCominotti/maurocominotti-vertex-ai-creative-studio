@@ -89,6 +89,7 @@ import { LoginComponent } from './login/login.component';
 import { VideoComponent } from './video/video.component';
 import { VtoComponent } from './vto/vto.component';
 import { AddStepModalComponent } from './workflows/workflow-editor/add-step-modal/add-step-modal.component';
+import { RunWorkflowModalComponent } from './workflows/workflow-editor/run-workflow-modal/run-workflow-modal.component';
 import { GenericStepComponent } from './workflows/workflow-editor/step-components/generic-step/generic-step.component';
 import { WorkflowEditorComponent } from './workflows/workflow-editor/workflow-editor.component';
 import { WorkflowListComponent } from './workflows/workflow-list/workflow-list.component';
@@ -118,6 +119,7 @@ import { WorkflowListComponent } from './workflows/workflow-list/workflow-list.c
     WorkflowEditorComponent,
     AddStepModalComponent,
     GenericStepComponent,
+    RunWorkflowModalComponent,
   ],
   imports: [
     BrowserModule,

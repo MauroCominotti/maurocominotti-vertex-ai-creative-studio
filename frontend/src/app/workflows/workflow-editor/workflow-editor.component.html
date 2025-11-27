@@ -33,11 +33,11 @@
 
     <!-- Primary Actions -->
     <div class="flex items-center gap-2">
-      <button *ngIf="!isReadOnly" mat-flat-button color="primary" (click)="save()">
+      <button *ngIf="!isReadOnly" mat-flat-button color="primary" (click)="run()">
         <mat-icon>play_arrow</mat-icon>
         Run Workflow
       </button>
-      <button *ngIf="!isReadOnly" mat-stroked-button (click)="save()">Save</button>
+      <button *ngIf="!isReadOnly" mat-stroked-button (click)="save()" [disabled]="workflowForm.pristine">Save</button>
       <button mat-stroked-button routerLink="/workflows">Go Back</button>
     </div>
   </header>

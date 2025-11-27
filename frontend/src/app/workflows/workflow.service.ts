@@ -145,7 +145,7 @@ export class WorkflowService implements OnDestroy {
 
   createWorkflow(
     workflowData: Omit<WorkflowCreateDto, 'workspaceId'>,
-  ): Observable<{ message: string }> {
+  ): Observable<WorkflowModel> {
     const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (!workspaceId) {
       return throwError(
@@ -154,7 +154,7 @@ export class WorkflowService implements OnDestroy {
     }
     const payload = { ...workflowData, workspaceId };
     return this.http
-      .post<{ message: string }>(`${this.API_BASE_URL}/workflows`, payload)
+      .post<WorkflowModel>(`${this.API_BASE_URL}/workflows`, payload)
       .pipe(tap(() => this.loadWorkflows(true)));
   }
 
@@ -191,5 +191,16 @@ export class WorkflowService implements OnDestroy {
           this._workflows.next(updatedWorkflows);
         }),
       );
+  }
+
+  executeWorkflow(workflowId: string, args: any): Observable<any> {
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+    if (!workspaceId) {
+      return throwError(() => new Error('No active workspace ID found.'));
+    }
+    return this.http.post(
+      `${this.API_BASE_URL}/workflows/${workflowId}/workflow-execute`,
+      { args }
+    );
   }
 }

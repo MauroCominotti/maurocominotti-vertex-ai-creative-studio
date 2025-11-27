@@ -10,8 +10,8 @@ import {
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subscription, of } from 'rxjs';
-import { switchMap, tap } from 'rxjs/operators';
+import { Observable, Subscription, interval, of } from 'rxjs';
+import { finalize, switchMap, takeWhile, tap } from 'rxjs/operators';
 import {
   NodeTypes,
   StepStatusEnum,
@@ -19,7 +19,6 @@ import {
   WorkflowCreateDto,
   WorkflowModel,
   WorkflowRunModel,
-  WorkflowStep,
   WorkflowUpdateDto
 } from '../workflow.models';
 import { WorkflowService } from '../workflow.service';
@@ -56,10 +55,23 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   isLoading = false;
   errorMessage: string | null = null;
   selectedView: 'workflow' | 'history' = 'workflow';
-  selectedStep: WorkflowStep | null = null;
+  selectedStepIndex: number | null = null;
+  get selectedStep(): any | null {
+    return this.selectedStepIndex !== null ? this.stepsArray.at(this.selectedStepIndex).value : null;
+  }
+
+  get selectedStepExecution(): any | null {
+    if (!this.selectedStep || !this.executionStepEntries) return null;
+    const entry = this.executionStepEntries.find(e => e.step_id === this.selectedStep.stepId);
+    return entry ? entry : null;
+  }
   availableOutputsPerStep: any[][] = [];
 
   private mainSubscription!: Subscription;
+  private pollingSubscription?: Subscription;
+  currentExecutionId: string | null = null;
+  currentExecutionState: string | null = null;
+  executionStepEntries: any[] = [];
 
   stepConfigs = {
     [NodeTypes.GENERATE_TEXT]: GENERATE_TEXT_STEP_CONFIG,
@@ -154,6 +166,9 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.mainSubscription) {
       this.mainSubscription.unsubscribe();
+    }
+    if (this.pollingSubscription) {
+      this.pollingSubscription.unsubscribe();
     }
   }
 
@@ -448,10 +463,19 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
+        // Immediately set status to give user feedback
+        this.currentExecutionState = 'ACTIVE';
+        // Set all steps to PENDING
+        this.stepsArray.controls.forEach(control => {
+          control.patchValue({ status: StepStatusEnum.PENDING });
+        });
+
         this.isLoading = true;
         this.workflowService.executeWorkflow(workflowId, result).subscribe({
           next: (res) => {
             console.log('Workflow execution started', res);
+            this.currentExecutionId = res.execution_id;
+            this.currentExecutionState = 'ACTIVE';
             this.isLoading = false;
             this.snackBar.open('Workflow execution started!', 'Close', {
               duration: 3000,
@@ -459,6 +483,8 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
               verticalPosition: 'top',
               panelClass: ['bg-green-600', 'text-white']
             });
+            // Start polling for execution status
+            this.startPollingExecution(workflowId, res.execution_id);
           },
           error: (err) => {
             console.error('Failed to execute workflow', err);
@@ -472,6 +498,96 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
             });
           }
         });
+      }
+    });
+  }
+
+  private startPollingExecution(workflowId: string, executionId: string): void {
+    // Poll every 5 seconds
+    this.pollingSubscription = interval(10000)
+      .pipe(
+        switchMap(() => this.workflowService.getExecutionDetails(workflowId, executionId)),
+        takeWhile((details) => {
+          // Continue polling while execution is active
+          return details.state === 'ACTIVE';
+        }, true), // inclusive: emit the final non-ACTIVE state
+        finalize(() => {
+          console.log('Polling stopped');
+          this.pollingSubscription = undefined;
+        })
+      )
+      .subscribe({
+        next: (details) => {
+          console.log('Execution details:', details);
+          this.currentExecutionState = details.state;
+          this.executionStepEntries = details.step_entries || [];
+          this.updateStepStatuses(details);
+
+          // If execution completed, show notification
+          if (details.state !== 'ACTIVE') {
+            const message = details.state === 'SUCCEEDED'
+              ? 'Workflow completed successfully!'
+              : `Workflow ${details.state.toLowerCase()}`;
+            const panelClass = details.state === 'SUCCEEDED'
+              ? ['bg-green-600', 'text-white']
+              : ['bg-red-600', 'text-white'];
+
+            this.snackBar.open(message, 'Close', {
+              duration: 5000,
+              horizontalPosition: 'end',
+              verticalPosition: 'top',
+              panelClass
+            });
+          }
+        },
+        error: (err) => {
+          console.error('Failed to get execution details', err);
+        }
+      });
+  }
+
+  private updateStepStatuses(details: any): void {
+    if (!details.step_entries || details.step_entries.length === 0) {
+      return;
+    }
+
+    // Create a map of step names to their latest status
+    const stepStatusMap = new Map<string, string>();
+    details.step_entries.forEach((entry: any) => {
+      stepStatusMap.set(entry.step_id, entry.state);
+    });
+
+    // Update form controls
+    this.stepsArray.controls.forEach((control) => {
+      const stepId = control.get('stepId')?.value;
+      if (stepId && stepStatusMap.has(stepId)) {
+        const gcpState = stepStatusMap.get(stepId);
+        let uiStatus = StepStatusEnum.IDLE;
+
+        // Map GCP state to UI status
+        switch (gcpState) {
+          case 'STATE_IN_PROGRESS':
+            uiStatus = StepStatusEnum.RUNNING;
+            break;
+          case 'STATE_SUCCEEDED':
+            uiStatus = StepStatusEnum.COMPLETED;
+            break;
+          case 'STATE_FAILED':
+            uiStatus = StepStatusEnum.FAILED;
+            break;
+        }
+
+        control.patchValue({ status: uiStatus });
+      }
+    });
+
+    // Update outputs from step entries
+    details.step_entries.forEach((entry: any) => {
+      const control = this.stepsArray.controls.find(c => c.get('stepId')?.value === entry.step_id);
+      if (control && entry.step_outputs) {
+        // We update the whole outputs object in the form control
+        // This ensures the UI sees the new outputs
+        control.patchValue({ outputs: entry.step_outputs });
       }
     });
   }
@@ -567,6 +683,34 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       case StepStatusEnum.COMPLETED:
         return 'check_circle';
       case StepStatusEnum.FAILED:
+        return 'error';
+      default:
+        return '';
+    }
+  }
+
+  getWorkflowStatusClass(state: string | null): string {
+    switch (state) {
+      case 'ACTIVE':
+        return '!bg-blue-500/20 !text-blue-300';
+      case 'SUCCEEDED':
+        return '!bg-green-500/20 !text-green-300';
+      case 'FAILED':
+      case 'CANCELLED':
+        return '!bg-red-500/20 !text-red-300';
+      default:
+        return '!bg-gray-500/20 !text-gray-300';
+    }
+  }
+
+  getWorkflowStatusIcon(state: string | null): string {
+    switch (state) {
+      case 'ACTIVE':
+        return 'hourglass_top';
+      case 'SUCCEEDED':
+        return 'check_circle';
+      case 'FAILED':
+      case 'CANCELLED':
         return 'error';
       default:
         return '';

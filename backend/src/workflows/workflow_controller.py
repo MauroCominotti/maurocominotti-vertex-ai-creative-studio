@@ -169,3 +169,25 @@ async def execute_workflow(
         workflow_id=workflow_id, args=workflow_execute_dto.args
     )
     print(f"Created execution: {response}")
+    return {"execution_id": response}
+
+
+@router.get("/{workflow_id}/executions/{execution_id}")
+def get_execution(
+    workflow_id: str,
+    execution_id: str,
+    current_user: UserModel = Depends(get_current_user),
+    workflow_service: WorkflowService = Depends(),
+):
+    """Retrieves the details of a workflow execution."""
+    # We might want to authorize against the workspace of the workflow here
+    # But for now let's just check if the user has access to the workflow
+    workflow = workflow_service.get_workflow(current_user.id, workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+        
+    execution = workflow_service.get_execution_details(workflow_id, execution_id)
+    if not execution:
+        raise HTTPException(status_code=404, detail="Execution not found")
+    
+    return execution

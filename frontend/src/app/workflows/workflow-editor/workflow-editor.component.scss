@@ -186,4 +186,46 @@
     }
   }
 }
+.hourglass-loader {
+  // --- RESET & CENTERING ---
+  // Force flex to calculate exact center regardless of font metrics
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
 
+  // Kill potential layout shifters
+  line-height: 1 !important; // Prevents the glyph from sitting "high" or "low"
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none;
+  outline: none;
+  
+  // Ensure the rotation point is exactly the center of the box
+  transform-origin: center center;
+
+  // --- ANIMATION ---
+  // 3s total loop: fast flip, wait for "sand", fast flip, wait.
+  animation: flip-hourglass 3s infinite cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+@keyframes flip-hourglass {
+  0% {
+    transform: rotate(0deg);
+  }
+  // Flip quickly (take 30% of time to flip)
+  30% {
+    transform: rotate(180deg);
+  }
+  // Stay still (let the sand fall)
+  50% {
+    transform: rotate(180deg);
+  }
+  // Flip again
+  80% {
+    transform: rotate(360deg);
+  }
+  // Stay still
+  100% {
+    transform: rotate(360deg);
+  }
+}

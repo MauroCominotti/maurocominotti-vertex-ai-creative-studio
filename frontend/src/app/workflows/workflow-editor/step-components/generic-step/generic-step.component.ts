@@ -79,4 +79,34 @@ export class GenericStepComponent implements OnInit, OnChanges {
   compareFn(o1: any, o2: any): boolean {
     return o1 && o2 ? o1.step === o2.step && o1.output === o2.output : o1 === o2;
   }
+
+  getStatusClass(status: string): string {
+    switch (status) {
+      case 'pending':
+        return '!bg-gray-500/20 !text-gray-300';
+      case 'running':
+        return '!bg-blue-500/20 !text-blue-300';
+      case 'completed':
+        return '!bg-green-500/20 !text-green-300';
+      case 'failed':
+        return '!bg-red-500/20 !text-red-300';
+      case 'skipped':
+        return '!bg-amber-500/20 !text-amber-300';
+      default:
+        return '!bg-gray-500/20 !text-gray-300';
+    }
+  }
+
+  getStatusIcon(status: string): string {
+    switch (status) {
+      case 'running':
+        return 'hourglass_top';
+      case 'completed':
+        return 'check_circle';
+      case 'failed':
+        return 'error';
+      default:
+        return '';
+    }
+  }
 }

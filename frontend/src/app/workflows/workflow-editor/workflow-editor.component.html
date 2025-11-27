@@ -24,9 +24,11 @@
         <mat-chip *ngSwitchCase="EditorMode.Edit" class="!bg-gray-500/20 !text-gray-300">
           {{ (workflow?.status || 'DRAFT') | uppercase }}
         </mat-chip>
-        <mat-chip *ngSwitchCase="EditorMode.Run" class="!bg-blue-500/20 !text-blue-300">
-          <!-- TODO: Add dynamic run status -->
-          RUNNING
+        <mat-chip *ngSwitchCase="EditorMode.Run" [ngClass]="getWorkflowStatusClass(currentExecutionState)">
+          <mat-icon *ngIf="getWorkflowStatusIcon(currentExecutionState)" class="!text-sm !w-4 !h-4 mr-1">
+            {{ getWorkflowStatusIcon(currentExecutionState) }}
+          </mat-icon>
+          {{ currentExecutionState || 'IDLE' }}
         </mat-chip>
       </ng-container>
     </div>
@@ -110,9 +112,9 @@
           <ng-container *ngFor="let step of stepsArray.controls; let i = index" [formGroupName]="i">
             <app-generic-step
               class="step-card block bg-neutral-700/50 rounded-lg transition-all duration-200 hover:bg-neutral-700"
-              [class.ring-2]="selectedStep?.stepId === step.value.stepId"
-              [class.ring-blue-500]="selectedStep?.stepId === step.value.stepId"
-              (click)="selectedStep = step.value"
+              [class.ring-2]="selectedStepIndex === i"
+              [class.ring-blue-500]="selectedStepIndex === i"
+              (click)="selectedStepIndex = i"
               cdkDrag [cdkDragDisabled]="isReadOnly"
               [stepForm]="asFormGroup(step)"
               [stepIndex]="i"
@@ -139,16 +141,66 @@
         <!-- TODO: Add tabs if a step has multiple output types -->
       </div>
       <div class="flex-grow p-4 overflow-auto">
-        <!-- Zero State -->
-        <div *ngIf="!selectedStep || !isReadOnly"
+        <!-- Zero State (No execution) -->
+        <div *ngIf="!currentExecutionId && !selectedStep"
           class="flex flex-col items-center justify-center h-full text-center text-neutral-500">
           <mat-icon class="!text-8xl !w-36 !h-36 text-neutral-600">hub</mat-icon>
           <p class="mt-4 font-medium">Run the workflow to generate results</p>
           <p class="text-sm text-neutral-600">Select a step on the left to see its outputs</p>
-            <p class="text-sm text-neutral-600">here once a run is complete.</p>
+          <p class="text-sm text-neutral-600">here once a run is complete.</p>
         </div>
 
-        <!-- TODO: Add Running and Completed states for when a step is selected in Run mode -->
+        <!-- Workflow Running State -->
+        <div *ngIf="currentExecutionId && currentExecutionState === 'ACTIVE' && !selectedStep"
+          class="flex flex-col items-center justify-center h-full text-center text-blue-300">
+          
+          <mat-icon class="hourglass-loader !text-8xl !w-36 !h-36">
+            hourglass_top
+          </mat-icon>
+
+          <p class="mt-4 font-medium">Workflow is running...</p>
+          <p class="text-sm text-neutral-400">Select a step to see its output as it completes</p>
+        </div>
+
+        <!-- Workflow Completed State (no step selected) -->
+        <div *ngIf="currentExecutionId && currentExecutionState !== 'ACTIVE' && !selectedStep"
+          class="flex flex-col items-center justify-center h-full text-center"
+          [ngClass]="currentExecutionState === 'SUCCEEDED' ? 'text-green-300' : 'text-red-300'">
+          <mat-icon class="!text-8xl !w-36 !h-36">
+            {{ currentExecutionState === 'SUCCEEDED' ? 'check_circle' : 'error' }}
+          </mat-icon>
+          <p class="mt-4 font-medium">
+            Workflow {{ currentExecutionState === 'SUCCEEDED' ? 'completed successfully' : 'failed' }}
+          </p>
+          <p class="text-sm text-neutral-400">Select a step to view its outputs</p>
+        </div>
+
+        <!-- Selected Step Outputs -->
+        <div *ngIf="selectedStep" class="step-outputs">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">{{ selectedStep.type | titlecase }} Outputs</h3>
+            <mat-chip [ngClass]="getStepStatusChipClass(selectedStep.status)">
+              <mat-icon *ngIf="getStepStatusIcon(selectedStep.status)" class="!text-sm !w-4 !h-4 mr-1">
+                {{ getStepStatusIcon(selectedStep.status) }}
+              </mat-icon>
+              {{ selectedStep.status | uppercase }}
+            </mat-chip>
+          </div>
+
+          <div *ngIf="!selectedStepExecution || (selectedStepExecution | keyvalue)?.length === 0" class="text-neutral-500 text-sm italic">
+            No outputs generated yet.
+          </div>
+          
+          <label class="block text-sm font-medium text-neutral-300 mb-2">inputs</label>
+           <div class="bg-neutral-700 p-3 rounded-lg">
+            <pre class="text-sm text-neutral-200 whitespace-pre-wrap">{{ selectedStepExecution.step_inputs | json }}</pre>
+          </div>
+
+          <label class="block text-sm font-medium text-neutral-300 mb-2">outputs</label>
+          <div class="bg-neutral-700 p-3 rounded-lg">
+            <pre class="text-sm text-neutral-200 whitespace-pre-wrap">{{ selectedStepExecution.step_outputs | json }}</pre>
+          </div>
+        </div>
       </div>
     </div>
   </div>

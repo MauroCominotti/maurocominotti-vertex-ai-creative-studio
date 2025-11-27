@@ -110,6 +110,17 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
   // Services
   private sanitizer = inject(DomSanitizer);
 
+  // Trimming state (for clip in/out adjustments)
+  trimState: {
+    active: boolean;
+    clipId: string;
+    type: 'start' | 'end';
+    startX: number;
+    initialStart: number;
+    initialDur: number;
+    initialOffset: number;
+  } | null = null;
+
   constructor(
     public matIconRegistry: MatIconRegistry,
   ) {
@@ -369,6 +380,43 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
     this.refreshTimelineLayout();
   }
 
+  // --- Split Logic ---
+  canSplit(): boolean {
+    const id = this.selectedClipId();
+    if (!id) return false;
+    const clip = this.timelineClips().find(c => c.id === id);
+    if (!clip) return false;
+    const time = this.currentTime();
+    return time > clip.startTime + 0.1 && time < clip.startTime + clip.duration - 0.1;
+  }
+
+  splitSelectedClip(): void {
+    if (!this.canSplit()) return;
+    const id = this.selectedClipId();
+    const clip = this.timelineClips().find(c => c.id === id)!;
+    const splitPoint = this.currentTime() - clip.startTime;
+
+    const clip1Duration = splitPoint;
+    const clip2Duration = clip.duration - splitPoint;
+    const clip2Offset = clip.offset + splitPoint;
+
+    const clip2: TimelineClip = {
+      ...clip,
+      id: Math.random().toString(36).substr(2, 9),
+      duration: clip2Duration,
+      offset: clip2Offset,
+      startTime: clip.startTime + splitPoint
+    };
+
+    this.timelineClips.update(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, duration: clip1Duration } : c);
+      return [...updated, clip2];
+    });
+
+    this.selectedClipId.set(clip2.id);
+    this.refreshTimelineLayout();
+  }
+
   // --- Logic: Playback Loop ---
 
   togglePlay() {
@@ -425,6 +473,68 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
       this.currentTime.set(time);
       this.selectedClipId.set(null);
   }
+
+    // --- Trimming Logic ---
+    startTrim(event: MouseEvent, clip: TimelineClip, type: 'start' | 'end') {
+      event.stopPropagation();
+      event.preventDefault();
+      this.trimState = {
+        active: true,
+        clipId: clip.id,
+        type,
+        startX: event.clientX,
+        initialStart: clip.startTime,
+        initialDur: clip.duration,
+        initialOffset: clip.offset
+      };
+      this.isPlaying.set(false);
+    }
+
+    onTrimMove(event: MouseEvent) {
+      if (!this.trimState || !this.trimState.active) return;
+
+      const deltaX = event.clientX - this.trimState.startX;
+      const deltaTime = deltaX / this.pixelsPerSecond;
+      const { clipId, type, initialDur, initialOffset } = this.trimState;
+
+      const clip = this.timelineClips().find(c => c.id === clipId);
+      if (!clip) return;
+      const asset = this.assets().find(a => a.id === clip.assetId);
+      const maxDuration = asset ? asset.duration : 9999;
+
+      this.timelineClips.update(clips => clips.map(c => {
+        if (c.id !== clipId) return c;
+
+        let newDur = c.duration;
+        let newOffset = c.offset;
+
+        if (type === 'end') {
+          newDur = Math.max(0.5, initialDur + deltaTime);
+          if (newOffset + newDur > maxDuration) newDur = maxDuration - newOffset;
+        } else {
+          const change = deltaTime;
+          if (change > initialDur - 0.5) {
+            newOffset = initialOffset + (initialDur - 0.5);
+            newDur = 0.5;
+          } else if (initialOffset + change < 0) {
+            newOffset = 0;
+            newDur = initialDur + initialOffset;
+          } else {
+            newOffset = initialOffset + change;
+            newDur = initialDur - change;
+          }
+        }
+
+        return { ...c, duration: newDur, offset: newOffset };
+      }));
+    }
+
+    onTrimEnd() {
+      if (this.trimState && this.trimState.active) {
+        this.refreshTimelineLayout();
+        this.trimState = null;
+      }
+    }
 
   // --- Utilities ---
 

@@ -1,0 +1,27 @@
+<h2 mat-dialog-title>Run Workflow</h2>
+<mat-dialog-content>
+  <p class="mb-4 text-neutral-400">Please provide the required inputs to run this workflow.</p>
+  
+  <form [formGroup]="runForm" class="flex flex-col gap-4">
+    <div *ngFor="let input of inputDefinitions">
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>{{ input.name | titlecase }}</mat-label>
+        <!-- TODO: Handle different input types (image, number, etc.) -->
+        <input matInput [formControlName]="input.name" [placeholder]="'Enter ' + input.name">
+        <mat-hint *ngIf="input.type !== 'text'">Type: {{ input.type }}</mat-hint>
+      </mat-form-field>
+    </div>
+
+    <div *ngIf="inputDefinitions.length === 0" class="text-yellow-500">
+      No user inputs defined for this workflow. You can proceed to run it directly.
+    </div>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="gap-2">
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button mat-flat-button color="primary" (click)="onRun()" [disabled]="runForm.invalid">
+    <mat-icon class="mr-2">play_arrow</mat-icon>
+    Run
+  </button>
+</mat-dialog-actions>

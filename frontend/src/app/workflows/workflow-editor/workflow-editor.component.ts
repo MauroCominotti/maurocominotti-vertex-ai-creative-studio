@@ -8,6 +8,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subscription, of } from 'rxjs';
 import { switchMap, tap } from 'rxjs/operators';
@@ -23,6 +24,7 @@ import {
 } from '../workflow.models';
 import { WorkflowService } from '../workflow.service';
 import { AddStepModalComponent } from './add-step-modal/add-step-modal.component';
+import { RunWorkflowModalComponent } from './run-workflow-modal/run-workflow-modal.component';
 import { CROP_IMAGE_STEP_CONFIG } from './step-components/step-configs/crop-image-step.config';
 import { EDIT_IMAGE_STEP_CONFIG } from './step-components/step-configs/edit-image-step.config';
 import { GENERATE_IMAGE_STEP_CONFIG } from './step-components/step-configs/generate-image-step.config';
@@ -74,6 +76,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     private router: Router,
     private workflowService: WorkflowService,
     private dialog: MatDialog,
+    private snackBar: MatSnackBar, // Inject MatSnackBar
   ) {
     this.initForm();
   }
@@ -312,28 +315,17 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   }
 
   save() {
-    console.log(this.workflowForm)
-    if (this.workflowForm.invalid) return;
+    if (this.workflowForm.invalid || this.workflowForm.pristine) return;
 
     this.isLoading = true;
     this.errorMessage = null;
 
+    const formValue = this.workflowForm.getRawValue();
+    const steps = this.prepareSteps(formValue);
+
     let request$: Observable<any>;
 
-    if (this.mode === EditorMode.Run) return;
-
-    const formValue = this.workflowForm.getRawValue();
-
-    const user_input_step = {
-      ...formValue.userInput,
-      stepId: `${NodeTypes.USER_INPUT}`,
-      type: NodeTypes.USER_INPUT,
-      status: StepStatusEnum.IDLE,
-    }
-    const steps = [user_input_step, ...formValue.steps];
-
     if (this.mode === EditorMode.Edit) {
-
       const updateDto: WorkflowUpdateDto = {
         name: formValue.name,
         description: formValue.description || '',
@@ -341,7 +333,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         status: formValue.status,
         workspaceId: formValue.workspaceId,
       };
-
       request$ = this.workflowService.updateWorkflow(formValue.id, updateDto);
     } else {
       const createDto: WorkflowCreateDto = {
@@ -354,15 +345,134 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     }
 
     request$.subscribe({
-      next: () => {
+      next: (response) => {
         this.isLoading = false;
-        this.router.navigate(['/workflows']);
+        this.workflowForm.markAsPristine();
+
+        // If we were in Create mode, switch to Edit mode with the new ID
+        if (this.mode === EditorMode.Create && response && response.id) {
+          this.mode = EditorMode.Edit;
+          this.workflowId = response.id;
+          this.workflowForm.patchValue({ id: response.id });
+          // Update URL without reloading
+          this.router.navigate(['/workflows', 'edit', response.id], { replaceUrl: true });
+        }
       },
       error: err => {
         console.error('Failed to save workflow', err);
         this.errorMessage = err.error?.message || 'Failed to save workflow.';
         this.isLoading = false;
       },
+    });
+  }
+
+  run() {
+    if (this.workflowForm.invalid) return;
+
+    const formValue = this.workflowForm.getRawValue();
+    const steps = this.prepareSteps(formValue);
+    const userInputStep = steps.find(s => s.type === NodeTypes.USER_INPUT);
+
+    // If form is pristine and we have an ID, just run it
+    if (this.workflowForm.pristine && this.workflowId) {
+      this.openRunModal(this.workflowId, userInputStep);
+      return;
+    }
+
+    // Otherwise save first (or create if new)
+    this.isLoading = true;
+    this.errorMessage = null;
+
+    let saveRequest$: Observable<any>;
+
+    if (this.mode === EditorMode.Edit) {
+      const updateDto: WorkflowUpdateDto = {
+        name: formValue.name,
+        description: formValue.description || '',
+        steps: steps,
+        status: formValue.status,
+        workspaceId: formValue.workspaceId,
+      };
+      saveRequest$ = this.workflowService.updateWorkflow(formValue.id, updateDto);
+    } else {
+      const createDto: WorkflowCreateDto = {
+        name: formValue.name,
+        description: formValue.description || '',
+        steps: steps,
+        workspaceId: formValue.workspaceId,
+      };
+      saveRequest$ = this.workflowService.createWorkflow(createDto);
+    }
+
+    saveRequest$.subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        this.workflowForm.markAsPristine();
+
+        let workflowId = this.workflowId;
+        if (this.mode === EditorMode.Create && response && response.id) {
+          this.mode = EditorMode.Edit;
+          this.workflowId = response.id;
+          workflowId = response.id;
+          this.workflowForm.patchValue({ id: response.id });
+          this.router.navigate(['/workflows', 'edit', response.id], { replaceUrl: true });
+        }
+
+        if (workflowId) {
+          this.openRunModal(workflowId, userInputStep);
+        }
+      },
+      error: err => {
+        console.error('Failed to save before run', err);
+        this.errorMessage = 'Failed to save workflow before running.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private prepareSteps(formValue: any): any[] {
+    const user_input_step = {
+      ...formValue.userInput,
+      stepId: `${NodeTypes.USER_INPUT}`,
+      type: NodeTypes.USER_INPUT,
+      status: StepStatusEnum.IDLE,
+    }
+    return [user_input_step, ...formValue.steps];
+  }
+
+  openRunModal(workflowId: string, userInputStep: any) {
+    const dialogRef = this.dialog.open(RunWorkflowModalComponent, {
+      width: '600px',
+      data: { userInputStep }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.isLoading = true;
+        this.workflowService.executeWorkflow(workflowId, result).subscribe({
+          next: (res) => {
+            console.log('Workflow execution started', res);
+            this.isLoading = false;
+            this.snackBar.open('Workflow execution started!', 'Close', {
+              duration: 3000,
+              horizontalPosition: 'end',
+              verticalPosition: 'top',
+              panelClass: ['bg-green-600', 'text-white']
+            });
+          },
+          error: (err) => {
+            console.error('Failed to execute workflow', err);
+            this.errorMessage = 'Failed to execute workflow';
+            this.isLoading = false;
+            this.snackBar.open('Failed to execute workflow', 'Close', {
+              duration: 3000,
+              horizontalPosition: 'end',
+              verticalPosition: 'top',
+              panelClass: ['bg-red-600', 'text-white']
+            });
+          }
+        });
+      }
     });
   }
 

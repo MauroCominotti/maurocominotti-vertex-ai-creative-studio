@@ -32,6 +32,7 @@ from src.images.imagen_service import ImagenService
 from src.users.user_model import UserModel
 from src.workflows.dto.workflow_search_dto import WorkflowSearchDto
 from src.workflows.repository.workflow_repository import WorkflowRepository
+from google.auth.transport.requests import AuthorizedSession
 from src.workflows.schema.workflow_model import (
     NodeTypes,
     WorkflowCreateDto,
@@ -338,14 +339,12 @@ class WorkflowService:
         # Fetch step entries using REST API
         step_entries = []
         try:
-            credentials, project = google.auth.default()
-            if credentials.expired and credentials.refresh_token:
-                credentials.refresh(Request())
-            
-            headers = {"Authorization": f"Bearer {credentials.token}"}
+            credentials, project = google.auth.default(
+                scopes=['https://www.googleapis.com/auth/cloud-platform']
+            )
+            authed_session = AuthorizedSession(credentials)
             url = f"https://workflowexecutions.googleapis.com/v1/{execution_name}/stepEntries"
-            
-            response = requests.get(url, headers=headers)
+            response = authed_session.get(url)
             if response.status_code == 200:
                 step_entries = response.json().get("stepEntries", [])
             else:

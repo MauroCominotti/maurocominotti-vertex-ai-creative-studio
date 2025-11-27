@@ -15,7 +15,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile, Request, HTTPException
 from google.cloud import speech
 
 from src.audios.audio_service import AudioService
@@ -23,6 +23,7 @@ from src.audios.dto.create_audio_dto import CreateAudioDto
 from src.auth.auth_guard import RoleChecker, get_current_user
 from src.galleries.dto.gallery_response_dto import MediaItemResponse
 from src.users.user_model import UserModel, UserRoleEnum
+from src.workspaces.workspace_auth_guard import workspace_auth_service
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +47,35 @@ router = APIRouter(
 @router.post("/generate", response_model=MediaItemResponse)
 async def generate_audio(
     create_audio_dto: CreateAudioDto,
+    request: Request,
     current_user: UserModel = Depends(get_current_user),
     audio_service: AudioService = Depends(),
 ):
     """
     Generates audio based on the selected model (Lyria for music, Chirp/Gemini for speech).
     """
-    return await audio_service.generate_audio(create_audio_dto, current_user)
+    workspace_auth_service.authorize(
+        workspace_id=create_audio_dto.workspace_id, user=current_user
+    )
+    executor = request.app.state.process_pool
+    return audio_service.start_audio_generation_job(
+        create_audio_dto, current_user, executor
+    )
+
+
+@router.get("/{media_id}", response_model=MediaItemResponse)
+async def get_media_item(
+    media_id: str,
+    audio_service: AudioService = Depends(),
+):
+    """
+    Retrieves a single media item by its unique ID, including its current status
+    and presigned URLs for viewing. This is the endpoint to use for polling.
+    """
+    media_item = await audio_service.get_media_item_with_presigned_urls(media_id)
+    if not media_item:
+        raise HTTPException(status_code=404, detail="Media item not found")
+    return media_item
 
 
 @router.post("/transcribe")
@@ -77,3 +100,4 @@ async def audio_chat(audio_file: UploadFile = File()):
     for result in response.results:
         text = result.alternatives[0].transcript
     return text, 200
+

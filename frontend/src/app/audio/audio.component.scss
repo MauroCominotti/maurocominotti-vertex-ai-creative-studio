@@ -37,7 +37,7 @@
 
 .header-section {
     position: absolute;
-    top: 25vh;
+    top: 10vh;
     left: 50%;
     transform: translateX(-50%);
     text-align: center;
@@ -52,6 +52,14 @@
         margin: 0;
         text-shadow: 0 2px 4px rgba(0,0,0,0.5);
     }
+}
+
+.close-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 101;
+  color: white;
 }
 
 // 3. CUSTOM AUDIO PLAYER STYLES

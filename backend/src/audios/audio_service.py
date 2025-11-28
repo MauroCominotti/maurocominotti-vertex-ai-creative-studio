@@ -114,6 +114,7 @@ def _process_audio_in_background(
             error_update_data = {
                 "status": JobStatusEnum.FAILED,
                 "error_message": str(e),
+                "internal_state": {"step": "ERROR", "status": "failed"},
             }
             media_repo.update(media_item_id, error_update_data)
 
@@ -318,6 +319,7 @@ class AudioService:
             seed=request_dto.seed,
             aspect_ratio=AspectRatioEnum.RATIO_16_9,  # Add default aspect ratio
             gcs_uris=[],
+            internal_state={"step": "GENERATING", "status": "processing"},
         )
         self.media_repo.save(placeholder_item)
 

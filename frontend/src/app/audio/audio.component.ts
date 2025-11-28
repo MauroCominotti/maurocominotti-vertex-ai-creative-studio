@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, ViewChild, OnInit } from '@angular/core';
 import {
   AudioService,
   CreateAudioDto,
@@ -6,7 +6,7 @@ import {
 } from '../services/audio/audio.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
@@ -15,9 +15,7 @@ import { AddVoiceDialogComponent } from '../components/add-voice-dialog/add-voic
 import { MatIconRegistry } from '@angular/material/icon';
 import {LanguageEnum, VoiceEnum} from './audio.constants';
 import { handleErrorSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
-
-// UI Helper type
-type UiModelType = 'lyria' | 'chirp' | 'gemini-tts';
+import { AudioState, AudioStateService, UiModelType } from '../services/audio/audio-state.service';
 
 interface VoiceOption {
   id: VoiceEnum | string; // Allow string for custom cloned voices later
@@ -35,25 +33,16 @@ interface LanguageOption {
   templateUrl: './audio.component.html',
   styleUrls: ['./audio.component.scss'],
 })
-export class AudioComponent {
+export class AudioComponent implements OnInit, OnDestroy {
   // UI State
   isLoading = false;
-  selectedModel: UiModelType = 'lyria';
+  state: AudioState;
   audioUrl: SafeResourceUrl | null = null;
   showErrorOverlay = true;
   activeAudioJob$: Observable<MediaItem | null>;
   public readonly JobStatus = JobStatus;
   mediaItem: MediaItem | null = null;
-
-  // Lyria Specific Inputs
-  prompt = '';
-  negativePrompt = '';
-  seed: number | undefined;
-  sampleCount = 4;
-
-  // TTS & Chirp Specific Inputs
-  selectedLanguage: LanguageEnum = LanguageEnum.EN_US;
-  selectedVoice: VoiceEnum | string = VoiceEnum.PUCK;
+  private stateSubscription: Subscription;
 
   // --- Audio Player State ---
   @ViewChild('audioPlayer') audioPlayerRef!: ElementRef<HTMLAudioElement>;
@@ -147,17 +136,38 @@ export class AudioComponent {
 
   constructor(
     private audioService: AudioService,
+    private audioStateService: AudioStateService,
     private snackBar: MatSnackBar,
     private workspaceStateService: WorkspaceStateService,
     private dialog: MatDialog,
     private sanitizer: DomSanitizer,
     public matIconRegistry: MatIconRegistry
   ) {
+    this.state = this.audioStateService.getState();
+    this.stateSubscription = this.audioStateService.state$.subscribe(
+      (state: AudioState) => (this.state = state)
+    );
     this.activeAudioJob$ = this.audioService.activeAudioJob$;
     this.matIconRegistry.addSvgIcon(
       'white-gemini-spark-icon',
       this.setPath(`${this.path}/white-gemini-spark-icon.svg`)
     );
+  }
+
+  ngOnInit(): void {
+    this.restoreAudioState();
+
+    this.activeAudioJob$.subscribe(audioJob => {
+      if (audioJob && audioJob.status === JobStatus.COMPLETED) {
+        this.mediaItem = audioJob;
+      } else if (!audioJob) {
+        this.clearAudioState();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.stateSubscription.unsubscribe();
   }
 
   private path = '../../assets/images';
@@ -166,12 +176,36 @@ export class AudioComponent {
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 
+  onSelectedModelChange(model: UiModelType) {
+    this.audioStateService.updateState({ selectedModel: model });
+  }
+
+  onPromptChange(prompt: string) {
+    this.audioStateService.updateState({ prompt });
+  }
+
+  onNegativePromptChange(negativePrompt: string) {
+    this.audioStateService.updateState({ negativePrompt });
+  }
+
+  onSeedChange(seed: number) {
+    this.audioStateService.updateState({ seed });
+  }
+
+  onSampleCountChange(sampleCount: number) {
+    this.audioStateService.updateState({ sampleCount });
+  }
+
+  onSelectedLanguageChange(language: LanguageEnum) {
+    this.audioStateService.updateState({ selectedLanguage: language });
+  }
+
   onVoiceSelectionChange(value: string) {
     if (value === 'add-new-voice') {
+      this.audioStateService.updateState({ selectedVoice: '' });
       this.openAddVoiceDialog();
-      this.selectedVoice = '';
     } else {
-      this.selectedVoice = value;
+      this.audioStateService.updateState({ selectedVoice: value });
     }
   }
 
@@ -192,7 +226,7 @@ export class AudioComponent {
           type: 'custom',
         };
         this.voices = [newVoice, ...this.voices];
-        this.selectedVoice = newVoice.id;
+        this.audioStateService.updateState({ selectedVoice: newVoice.id });
         handleSuccessSnackbar(this.snackBar, 'Voice cloned successfully!');
       }
     });
@@ -203,6 +237,7 @@ export class AudioComponent {
   }
 
   generate() {
+    this.saveAudioState();
     this.isLoading = true;
     this.showErrorOverlay = true;
     const activeWorkspaceId = this.workspaceStateService.getActiveWorkspaceId();
@@ -214,9 +249,9 @@ export class AudioComponent {
     // 1. Determine specific backend model based on UI selection
     let backendModel: GenerationModelEnum;
 
-    if (this.selectedModel === 'lyria') {
+    if (this.state.selectedModel === 'lyria') {
       backendModel = GenerationModelEnum.LYRIA_002;
-    } else if (this.selectedModel === 'chirp') {
+    } else if (this.state.selectedModel === 'chirp') {
       backendModel = GenerationModelEnum.CHIRP_3;
     } else {
       // Default to Flash TTS for Gemini selection
@@ -226,20 +261,20 @@ export class AudioComponent {
     // 2. Construct the generic DTO
     const request: CreateAudioDto = {
       model: backendModel,
-      prompt: this.prompt,
+      prompt: this.state.prompt,
       workspaceId: activeWorkspaceId,
       // Optional fields (backend ignores them if not relevant to the specific model)
       negativePrompt:
-        this.selectedModel === 'lyria' ? this.negativePrompt : undefined,
-      seed: this.selectedModel === 'lyria' ? this.seed : undefined,
-      sampleCount: this.sampleCount,
+        this.state.selectedModel === 'lyria' ? this.state.negativePrompt : undefined,
+      seed: this.state.selectedModel === 'lyria' ? this.state.seed : undefined,
+      sampleCount: this.state.sampleCount,
       languageCode:
-        this.selectedModel !== 'lyria'
-          ? (this.selectedLanguage as LanguageEnum)
+        this.state.selectedModel !== 'lyria'
+          ? (this.state.selectedLanguage as LanguageEnum)
           : undefined,
       voiceName:
-        this.selectedModel !== 'lyria'
-          ? (this.selectedVoice as VoiceEnum)
+        this.state.selectedModel !== 'lyria'
+          ? (this.state.selectedVoice as VoiceEnum)
           : undefined,
     };
 
@@ -256,6 +291,21 @@ export class AudioComponent {
           console.error('Generation failed:', error);
         },
       });
+  }
+
+  private saveAudioState(): void {
+    this.audioStateService.updateState(this.state);
+  }
+
+  private restoreAudioState(): void {
+    const state = this.audioStateService.getState();
+    if (state) {
+      this.audioStateService.updateState(state);
+    }
+  }
+
+  private clearAudioState(): void {
+    this.audioStateService.resetState();
   }
 
   // --- Player Logic ---

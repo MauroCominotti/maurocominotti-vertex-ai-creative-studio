@@ -27,6 +27,7 @@ import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './login/login.component';
 import { VideoComponent } from './video/video.component';
 import { VtoComponent } from './vto/vto.component';
+import { ExecutionHistoryComponent } from './workflows/execution-history/execution-history.component';
 import { WorkflowEditorComponent } from './workflows/workflow-editor/workflow-editor.component';
 import { WorkflowListComponent } from './workflows/workflow-list/workflow-list.component';
 
@@ -72,6 +73,7 @@ const routes: Routes = [
       { path: 'new', component: WorkflowEditorComponent },
       // Match the parameter names used in your WorkflowEditorComponent
       { path: 'edit/:workflowId', component: WorkflowEditorComponent },
+      { path: ':id/executions', component: ExecutionHistoryComponent },
     ],
   },
 ];

@@ -1,0 +1,116 @@
+<div class="workflow-list-container p-4 h-full flex flex-col bg-neutral-900 text-white">
+  <!-- Header -->
+  <div class="header flex justify-between items-center mb-4">
+    <div class="flex items-center gap-4">
+      <button mat-icon-button routerLink="/workflows">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div>
+        <h1 class="text-3xl font-semibold">Execution History</h1>
+        <p class="text-sm text-neutral-400" *ngIf="workflowId">Workflow ID: {{ workflowId }}</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button mat-stroked-button (click)="loadExecutions(true)" [disabled]="isLoading">
+        <mat-icon class="mr-2">refresh</mat-icon>
+        Refresh
+      </button>
+      <button mat-flat-button color="primary" [routerLink]="['/workflows/edit', workflowId]">
+        <mat-icon class="mr-2">edit</mat-icon>
+        Open in Editor
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="mb-4">
+    <mat-form-field appearance="outline" class="w-64">
+      <mat-label>Filter by Status</mat-label>
+      <mat-select [(value)]="selectedStatus" (selectionChange)="onStatusChange()">
+        <mat-option value="ALL">All Statuses</mat-option>
+        <mat-option value="SUCCEEDED">Succeeded</mat-option>
+        <mat-option value="FAILED">Failed</mat-option>
+        <mat-option value="ACTIVE">Active</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <!-- Content -->
+  <div class="flex-grow overflow-auto">
+    <!-- Loading State -->
+    <div *ngIf="isLoading && executions.length === 0" class="flex justify-center items-center h-64">
+      <mat-spinner diameter="50"></mat-spinner>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!isLoading && executions.length === 0" class="flex flex-col items-center justify-center h-64 text-neutral-500">
+      <mat-icon class="text-6xl mb-4">history</mat-icon>
+      <p class="text-lg">No executions found.</p>
+    </div>
+
+    <!-- Data Table -->
+    <div *ngIf="executions.length > 0" class="mat-elevation-z8 rounded-lg overflow-hidden border border-neutral-700">
+      <table mat-table [dataSource]="executions" class="w-full bg-neutral-800">
+
+        <!-- Status Column -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef class="bg-neutral-900 text-neutral-300"> Status </th>
+          <td mat-cell *matCellDef="let exec" class="text-neutral-300">
+            <mat-chip [ngClass]="getStatusClass(exec.state)" class="!flex !items-center !justify-center !w-fit">
+              <mat-icon class="!text-sm !w-4 !h-4 mr-1">{{ getStatusIcon(exec.state) }}</mat-icon>
+              {{ exec.state }}
+            </mat-chip>
+          </td>
+        </ng-container>
+
+        <!-- ID Column -->
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef class="bg-neutral-900 text-neutral-300"> Execution ID </th>
+          <td mat-cell *matCellDef="let exec" class="text-neutral-300 font-mono text-xs">
+            <span [title]="exec.id">{{ exec.id | slice:0:8 }}...{{ exec.id | slice:-8 }}</span>
+            <button mat-icon-button class="!w-6 !h-6 ml-2" [cdkCopyToClipboard]="exec.id" matTooltip="Copy ID">
+              <mat-icon class="!text-sm">content_copy</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!-- Start Time Column -->
+        <ng-container matColumnDef="startTime">
+          <th mat-header-cell *matHeaderCellDef class="bg-neutral-900 text-neutral-300"> Start Time </th>
+          <td mat-cell *matCellDef="let exec" class="text-neutral-300">
+            {{ exec.start_time | date:'medium' }}
+          </td>
+        </ng-container>
+
+        <!-- Duration Column -->
+        <ng-container matColumnDef="duration">
+          <th mat-header-cell *matHeaderCellDef class="bg-neutral-900 text-neutral-300"> Duration </th>
+          <td mat-cell *matCellDef="let exec" class="text-neutral-300">
+            {{ exec.duration ? exec.duration + 's' : '-' }}
+          </td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="bg-neutral-900 text-neutral-300 text-right"> Actions </th>
+          <td mat-cell *matCellDef="let exec" class="text-right">
+            <button mat-stroked-button color="primary" (click)="openDetails(exec.id)">
+              <mat-icon class="mr-1">visibility</mat-icon>
+              View Details
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="hover:bg-neutral-700 transition-colors"></tr>
+      </table>
+      
+      <!-- Load More -->
+      <div *ngIf="nextPageToken" class="p-4 flex justify-center bg-neutral-800 border-t border-neutral-700">
+        <button mat-stroked-button (click)="loadMore()" [disabled]="isLoading">
+          Load More
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

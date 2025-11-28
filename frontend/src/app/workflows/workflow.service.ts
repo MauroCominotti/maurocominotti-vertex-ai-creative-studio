@@ -211,4 +211,23 @@ export class WorkflowService implements OnDestroy {
       `${this.API_BASE_URL}/workflows/${workflowId}/executions/${encodeURIComponent(executionId)}`
     );
   }
+
+  getExecutions(
+    workflowId: string,
+    limit: number = 10,
+    pageToken?: string,
+    status?: string,
+  ): Observable<{ executions: any[]; next_page_token: string }> {
+    let params: any = { limit };
+    if (pageToken) {
+      params['page_token'] = pageToken;
+    }
+    if (status && status !== 'ALL') {
+      params['status'] = status;
+    }
+    return this.http.get<{ executions: any[]; next_page_token: string }>(
+      `${this.API_BASE_URL}/workflows/${workflowId}/executions`,
+      { params },
+    );
+  }
 }

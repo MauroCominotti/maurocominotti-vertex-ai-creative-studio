@@ -54,7 +54,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   workflowForm!: FormGroup;
   isLoading = false;
   errorMessage: string | null = null;
-  selectedView: 'workflow' | 'history' = 'workflow';
   selectedStepIndex: number | null = null;
   get selectedStep(): any | null {
     return this.selectedStepIndex !== null ? this.stepsArray.at(this.selectedStepIndex).value : null;
@@ -498,6 +497,41 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
             });
           }
         });
+      }
+    });
+  }
+
+  onExecutionSelected(executionId: string): void {
+    if (!this.workflowId) return;
+
+    // Stop any existing polling
+    if (this.pollingSubscription) {
+      this.pollingSubscription.unsubscribe();
+      this.pollingSubscription = undefined;
+    }
+
+    this.currentExecutionId = executionId;
+    this.isLoading = true;
+
+    this.workflowService.getExecutionDetails(this.workflowId, executionId).subscribe({
+      next: (details) => {
+        this.currentExecutionState = details.state;
+        this.executionStepEntries = details.step_entries || [];
+        this.updateStepStatuses(details);
+        this.isLoading = false;
+
+        // If the selected execution is active, start polling
+        if (details.state === 'ACTIVE') {
+          this.startPollingExecution(this.workflowId!, executionId);
+        }
+      },
+      error: (err) => {
+        console.error('Failed to load execution details', err);
+        this.snackBar.open('Failed to load execution details', 'Close', {
+          duration: 3000,
+          panelClass: ['bg-red-600', 'text-white']
+        });
+        this.isLoading = false;
       }
     });
   }

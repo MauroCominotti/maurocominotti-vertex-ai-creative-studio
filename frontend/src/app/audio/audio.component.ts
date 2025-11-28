@@ -13,8 +13,8 @@ import { WorkspaceStateService } from '../services/workspace/workspace-state.ser
 import { JobStatus, MediaItem } from '../common/models/media-item.model';
 import { AddVoiceDialogComponent } from '../components/add-voice-dialog/add-voice-dialog.component';
 import { MatIconRegistry } from '@angular/material/icon';
-import { LanguageEnum, VoiceEnum } from './audio.constants';
-import { handleErrorSnackbar } from '../utils/handleErrorSnackbar';
+import {LanguageEnum, VoiceEnum} from './audio.constants';
+import { handleErrorSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
 
 // UI Helper type
 type UiModelType = 'lyria' | 'chirp' | 'gemini-tts';
@@ -43,6 +43,7 @@ export class AudioComponent {
   showErrorOverlay = true;
   activeAudioJob$: Observable<MediaItem | null>;
   public readonly JobStatus = JobStatus;
+  mediaItem: MediaItem | null = null;
 
   // Lyria Specific Inputs
   prompt = '';
@@ -192,9 +193,7 @@ export class AudioComponent {
         };
         this.voices = [newVoice, ...this.voices];
         this.selectedVoice = newVoice.id;
-        this.snackBar.open('Voice cloned successfully!', 'Close', {
-          duration: 3000,
-        });
+        handleSuccessSnackbar(this.snackBar, 'Voice cloned successfully!');
       }
     });
   }
@@ -208,9 +207,7 @@ export class AudioComponent {
     this.showErrorOverlay = true;
     const activeWorkspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (!activeWorkspaceId) {
-      this.snackBar.open('Please select a workspace first.', 'Close', {
-        duration: 3000,
-      });
+      handleErrorSnackbar(this.snackBar, { message: 'Please select a workspace first.' }, 'Workspace');
       return;
     }
 
@@ -250,7 +247,14 @@ export class AudioComponent {
       .generateAudio(request)
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
-        error: err => handleErrorSnackbar(this.snackBar, err, 'Generate audio'),
+        next: (response: MediaItem) => {
+          this.mediaItem = response;
+          // The Lightbox will handle displaying the first item automatically via inputs
+        },
+        error: (error: any) => {
+          handleErrorSnackbar(this.snackBar, error, 'Generation');
+          console.error('Generation failed:', error);
+        },
       });
   }
 

@@ -191,3 +191,27 @@ def get_execution(
         raise HTTPException(status_code=404, detail="Execution not found")
     
     return execution
+
+
+@router.get("/{workflow_id}/executions")
+def list_executions(
+    workflow_id: str,
+    limit: int = 10,
+    page_token: str = None,
+    status: str = None,
+    current_user: UserModel = Depends(get_current_user),
+    workflow_service: WorkflowService = Depends(),
+):
+    """Lists executions for a workflow."""
+    # Check access
+    workflow = workflow_service.get_workflow(current_user.id, workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    filter_str = None
+    if status and status != "ALL":
+        filter_str = f'state="{status}"'
+
+    return workflow_service.list_executions(
+        workflow_id=workflow_id, limit=limit, page_token=page_token, filter_str=filter_str
+    )

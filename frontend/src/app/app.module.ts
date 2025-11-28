@@ -32,6 +32,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { BrowserModule, provideClientHydration } from '@angular/platform-browser';
 import { environment } from '../environments/environment';
 
+import { ClipboardModule } from '@angular/cdk/clipboard';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { NgOptimizedImage } from '@angular/common';
@@ -88,6 +89,8 @@ import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './login/login.component';
 import { VideoComponent } from './video/video.component';
 import { VtoComponent } from './vto/vto.component';
+import { ExecutionDetailsModalComponent } from './workflows/execution-history/execution-details-modal/execution-details-modal.component';
+import { ExecutionHistoryComponent } from './workflows/execution-history/execution-history.component';
 import { AddStepModalComponent } from './workflows/workflow-editor/add-step-modal/add-step-modal.component';
 import { RunWorkflowModalComponent } from './workflows/workflow-editor/run-workflow-modal/run-workflow-modal.component';
 import { GenericStepComponent } from './workflows/workflow-editor/step-components/generic-step/generic-step.component';
@@ -120,6 +123,8 @@ import { WorkflowListComponent } from './workflows/workflow-list/workflow-list.c
     AddStepModalComponent,
     GenericStepComponent,
     RunWorkflowModalComponent,
+    ExecutionHistoryComponent,
+    ExecutionDetailsModalComponent,
   ],
   imports: [
     BrowserModule,
@@ -156,7 +161,8 @@ import { WorkflowListComponent } from './workflows/workflow-list/workflow-list.c
     MatButtonToggleModule,
     MatSliderModule,
     DragDropModule,
-    MatPaginatorModule
+    MatPaginatorModule,
+    ClipboardModule
   ],
   providers: [
     provideClientHydration(),

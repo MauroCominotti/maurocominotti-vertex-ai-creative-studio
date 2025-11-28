@@ -187,19 +187,20 @@
             </mat-chip>
           </div>
 
-          <div *ngIf="!selectedStepExecution || (selectedStepExecution | keyvalue)?.length === 0" class="text-neutral-500 text-sm italic">
+          <div *ngIf="!selectedStepExecution || (selectedStepExecution | keyvalue)?.length === 0; else elseBlock" class="text-neutral-500 text-sm italic">
             No outputs generated yet.
           </div>
-          
-          <label class="block text-sm font-medium text-neutral-300 mb-2">inputs</label>
-           <div class="bg-neutral-700 p-3 rounded-lg">
-            <pre class="text-sm text-neutral-200 whitespace-pre-wrap">{{ selectedStepExecution.step_inputs | json }}</pre>
-          </div>
-
-          <label class="block text-sm font-medium text-neutral-300 mb-2">outputs</label>
-          <div class="bg-neutral-700 p-3 rounded-lg">
-            <pre class="text-sm text-neutral-200 whitespace-pre-wrap">{{ selectedStepExecution.step_outputs | json }}</pre>
-          </div>
+          <ng-template #elseBlock>
+            <label class="block text-sm font-medium text-neutral-300 mb-2">inputs</label>
+              <div class="bg-neutral-700 p-3 rounded-lg">
+              <pre class="text-sm text-neutral-200 whitespace-pre-wrap">{{ selectedStepExecution.step_inputs | json }}</pre>
+            </div>
+  
+            <label class="block text-sm font-medium text-neutral-300 mb-2">outputs</label>
+            <div class="bg-neutral-700 p-3 rounded-lg">
+              <pre class="text-sm text-neutral-200 whitespace-pre-wrap">{{ selectedStepExecution.step_outputs | json }}</pre>
+            </div>
+          </ng-template>
         </div>
       </div>
     </div>

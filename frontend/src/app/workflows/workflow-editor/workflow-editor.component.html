@@ -49,22 +49,13 @@
     <!-- Left Panel (Workflow Graph / History) -->
     <div class="w-2/3 flex flex-col">
       <div class="p-4 border-b border-neutral-700 flex justify-between items-center">
-        <h5 class="text-lg font-semibold">{{ selectedView === 'workflow' ? 'Workflow Graph' : 'Past Runs' }}</h5>
+        <h5 class="text-lg font-semibold">Workflow Graph</h5>
         <div class="flex items-center gap-2">
-          <button *ngIf="!isReadOnly && selectedView === 'workflow'" mat-stroked-button color="accent"
+          <button *ngIf="!isReadOnly" mat-stroked-button color="accent"
             (click)="openAddStepModal()">
             <mat-icon>add</mat-icon>
             Add Step
           </button>
-          <!-- B. Global Navigation ("The Switch") -->
-          <mat-button-toggle-group [(ngModel)]="selectedView">
-            <mat-button-toggle value="workflow">
-              <mat-icon class="mr-2">schema</mat-icon>Workflow
-            </mat-button-toggle>
-            <mat-button-toggle value="history" [disabled]="mode === EditorMode.Create">
-              <mat-icon class="mr-2">history</mat-icon>Past Runs
-            </mat-button-toggle>
-          </mat-button-toggle-group>
         </div>
       </div>
       <div class="flex-grow p-4 overflow-auto" [formGroup]="workflowForm">
@@ -108,7 +99,7 @@
         </div>
 
         <!-- Steps Section -->
-        <div *ngIf="selectedView === 'workflow'" cdkDropList formArrayName="steps" (cdkDropListDropped)="dropStep($event)" class="space-y-4">
+        <div cdkDropList formArrayName="steps" (cdkDropListDropped)="dropStep($event)" class="space-y-4">
           <ng-container *ngFor="let step of stepsArray.controls; let i = index" [formGroupName]="i">
             <app-generic-step
               class="step-card block bg-neutral-700/50 rounded-lg transition-all duration-200 hover:bg-neutral-700"
@@ -123,10 +114,6 @@
               (delete)="deleteStep(i)">
             </app-generic-step>
           </ng-container>
-        </div>
-        <!-- History View Content -->
-        <div *ngIf="selectedView === 'history'">
-          <p class="text-neutral-500">A list of past workflow runs will appear here.</p>
         </div>
       </div>
     </div>

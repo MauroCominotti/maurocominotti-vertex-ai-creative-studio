@@ -398,3 +398,55 @@ class WorkflowService:
             "error": execution.error.context if execution.error else None,
             "step_entries": formatted_step_entries
         }
+
+    def list_executions(
+        self, workflow_id: str, limit: int = 10, page_token: str = None, filter_str: str = None
+    ):
+        """Lists executions for a given workflow."""
+        client = executions_v1.ExecutionsClient()
+        parent = client.workflow_path(PROJECT_ID, LOCATION, workflow_id)
+
+        request = executions_v1.ListExecutionsRequest(
+            parent=parent,
+            page_size=limit,
+            page_token=page_token,
+            filter=filter_str
+        )
+
+        response = client.list_executions(request=request)
+        pages_iterator = response.pages
+        
+        try:
+            current_page = next(pages_iterator)
+        except StopIteration:
+            print("No executions found.")
+            return None
+
+        executions = []
+        for execution in current_page.executions:
+            # Calculate duration
+            duration = 0.0
+            if execution.start_time:
+                start_timestamp = execution.start_time.timestamp()
+                if execution.end_time:
+                    end_timestamp = execution.end_time.timestamp()
+                    duration = end_timestamp - start_timestamp
+                else:
+                    import time
+                    duration = time.time() - start_timestamp
+
+            executions.append(
+                {
+                    "id": execution.name.split("/")[-1],
+                    "state": execution.state.name,
+                    "start_time": execution.start_time,
+                    "end_time": execution.end_time,
+                    "duration": round(duration, 2),
+                    "error": execution.error.context if execution.error else None,
+                }
+            )
+
+        return {
+            "executions": executions,
+            "next_page_token": current_page.next_page_token,
+        }

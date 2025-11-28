@@ -375,11 +375,11 @@ class WorkflowService:
             # Extract inputs and outputs from the call details
             variable_data = entry.get("variableData", {})
             variables = variable_data.get("variables", {})
-            step_inputs = variables.get("args", None)
+            step_inputs = variables.get("args", {})
             # Magic to remove the user_auth_header from the inputs
             step_inputs.pop('user_auth_header', None)
             step_results = variables.get(f"{step_id}_result", {})
-            step_outputs = step_results.get("body", None)
+            step_outputs = step_results.get("body", {})
 
             formatted_step_entries.append({
                 "step_id": step_id,

@@ -57,7 +57,7 @@ async def generate_audio(
     workspace_auth_service.authorize(
         workspace_id=create_audio_dto.workspace_id, user=current_user
     )
-    executor = request.app.state.process_pool
+    executor = request.app.state.executor
     return audio_service.start_audio_generation_job(
         create_audio_dto, current_user, executor
     )

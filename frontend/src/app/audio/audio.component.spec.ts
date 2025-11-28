@@ -1,56 +1,71 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AudioComponent } from './audio.component';
-import { AudioService } from '../services/audio/audio.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialog } from '@angular/material/dialog';
-import { of, throwError } from 'rxjs';
-import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
-import { CUSTOM_ELEMENTS_SCHEMA, NO_ERRORS_SCHEMA } from '@angular/core';
-import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialogModule } from '@angular/material/dialog';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { AudioService, CreateAudioDto, GenerationModelEnum } from '../services/audio/audio.service';
+import { of } from 'rxjs';
+import { JobStatus, MediaItem } from '../common/models/media-item.model';
+import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
 import { FormsModule } from '@angular/forms';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MediaLightboxComponent } from '../common/components/media-lightbox/media-lightbox.component';
 
 describe('AudioComponent', () => {
   let component: AudioComponent;
   let fixture: ComponentFixture<AudioComponent>;
   let audioService: jasmine.SpyObj<AudioService>;
-  let snackBar: jasmine.SpyObj<MatSnackBar>;
-  let dialog: jasmine.SpyObj<MatDialog>;
   let workspaceStateService: jasmine.SpyObj<WorkspaceStateService>;
 
+  const mockMediaItem: MediaItem = {
+    id: '123',
+    status: JobStatus.COMPLETED,
+    originalPrompt: 'test prompt',
+    presignedUrls: ['http://example.com/audio.mp3'],
+    presignedThumbnailUrls: [],
+    gcsUris: []
+  };
+
   beforeEach(async () => {
-    const audioServiceSpy = jasmine.createSpyObj('AudioService', ['generateAudio', 'activeAudioJob$']);
-    const snackBarSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
-    const dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    const audioServiceSpy = jasmine.createSpyObj('AudioService', ['generateAudio', 'clearActiveAudioJob']);
     const workspaceStateServiceSpy = jasmine.createSpyObj('WorkspaceStateService', ['getActiveWorkspaceId']);
 
     await TestBed.configureTestingModule({
-      declarations: [AudioComponent],
+      declarations: [AudioComponent, MediaLightboxComponent],
       imports: [
-        NoopAnimationsModule,
         HttpClientTestingModule,
+        MatSnackBarModule,
+        MatDialogModule,
+        NoopAnimationsModule,
         FormsModule,
-        MatButtonToggleModule
+        MatButtonToggleModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSelectModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
       ],
       providers: [
         { provide: AudioService, useValue: audioServiceSpy },
-        { provide: MatSnackBar, useValue: snackBarSpy },
-        { provide: MatDialog, useValue: dialogSpy },
-        { provide: WorkspaceStateService, useValue: workspaceStateServiceSpy }
-      ],
-      schemas: [CUSTOM_ELEMENTS_SCHEMA, NO_ERRORS_SCHEMA]
-    })
-      .compileComponents();
+        { provide: WorkspaceStateService, useValue: workspaceStateServiceSpy },
+      ]
+    }).compileComponents();
 
+    audioService = TestBed.inject(AudioService) as jasmine.SpyObj<AudioService>;
+    workspaceStateService = TestBed.inject(WorkspaceStateService) as jasmine.SpyObj<WorkspaceStateService>;
+  });
+
+  beforeEach(() => {
     fixture = TestBed.createComponent(AudioComponent);
     component = fixture.componentInstance;
-    audioService = TestBed.inject(AudioService) as jasmine.SpyObj<AudioService>;
-    snackBar = TestBed.inject(MatSnackBar) as jasmine.SpyObj<MatSnackBar>;
-    dialog = TestBed.inject(MatDialog) as jasmine.SpyObj<MatDialog>;
-    workspaceStateService = TestBed.inject(WorkspaceStateService) as jasmine.SpyObj<WorkspaceStateService>;
-
-    audioService.activeAudioJob$ = of(null);
+    audioService.activeAudioJob$ = of(null); // Default to no active job
+    fixture.detectChanges();
   });
 
   it('should create', () => {
@@ -58,32 +73,85 @@ describe('AudioComponent', () => {
   });
 
   describe('generate', () => {
-    beforeEach(() => {
-      workspaceStateService.getActiveWorkspaceId.and.returnValue('test-workspace');
-      audioService.generateAudio.and.returnValue(of({ id: '123', status: 'processing' } as any));
+    it('should call audioService.generateAudio with the correct parameters for Lyria', () => {
+      // Arrange
+      const workspaceId = 'ws-123';
+      workspaceStateService.getActiveWorkspaceId.and.returnValue(workspaceId);
+      audioService.generateAudio.and.returnValue(of(mockMediaItem));
+
+      component.selectedModel = 'lyria';
+      component.prompt = 'a beautiful song';
+      component.negativePrompt = 'heavy metal';
+      component.seed = 12345;
+      component.sampleCount = 2;
+
+      const expectedRequest: CreateAudioDto = {
+        model: GenerationModelEnum.LYRIA_002,
+        prompt: 'a beautiful song',
+        workspaceId: workspaceId,
+        negativePrompt: 'heavy metal',
+        seed: 12345,
+        sampleCount: 2,
+        languageCode: undefined,
+        voiceName: undefined
+      };
+
+      // Act
+      component.generate();
+
+      // Assert
+      expect(audioService.generateAudio).toHaveBeenCalledWith(expectedRequest);
     });
 
-    it('should set isLoading to true when generate is called', () => {
+    it('should call audioService.generateAudio with the correct parameters for Chirp', () => {
+      // Arrange
+      const workspaceId = 'ws-123';
+      workspaceStateService.getActiveWorkspaceId.and.returnValue(workspaceId);
+      audioService.generateAudio.and.returnValue(of(mockMediaItem));
+
+      component.selectedModel = 'chirp';
+      component.prompt = 'hello world';
+      component.selectedLanguage = 'en-US' as any;
+      component.selectedVoice = 'puck' as any;
+      component.sampleCount = 1;
+
+      const expectedRequest: CreateAudioDto = {
+        model: GenerationModelEnum.CHIRP_3,
+        prompt: 'hello world',
+        workspaceId: workspaceId,
+        negativePrompt: undefined,
+        seed: undefined,
+        sampleCount: 1,
+        languageCode: 'en-US' as any,
+        voiceName: 'puck' as any,
+      };
+
+      // Act
       component.generate();
-      expect(component.isLoading).toBeTrue();
+
+      // Assert
+      expect(audioService.generateAudio).toHaveBeenCalledWith(expectedRequest);
     });
 
-    it('should call audioService.generateAudio with the correct parameters', () => {
-      component.generate();
-      expect(audioService.generateAudio).toHaveBeenCalled();
-    });
+    it('should not call audioService.generateAudio if no workspace is selected', () => {
+      // Arrange
+      workspaceStateService.getActiveWorkspaceId.and.returnValue(null);
 
-    it('should set isLoading to false when generate is finished', () => {
+      // Act
       component.generate();
-      fixture.detectChanges();
-      expect(component.isLoading).toBeFalse();
-    });
 
-    it('should show an error snackbar if audioService.generateAudio fails', () => {
-      const error = { message: 'error' };
-      audioService.generateAudio.and.returnValue(throwError(() => error));
-      component.generate();
-      expect(snackBar.open).toHaveBeenCalled();
+      // Assert
+      expect(audioService.generateAudio).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('closeLightbox', () => {
+    it('should call audioService.clearActiveAudioJob', () => {
+      // Act
+      component.closeLightbox();
+
+      // Assert
+      expect(audioService.clearActiveAudioJob).toHaveBeenCalled();
     });
   });
 });

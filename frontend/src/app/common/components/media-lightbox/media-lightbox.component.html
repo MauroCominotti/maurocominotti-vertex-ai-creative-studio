@@ -21,7 +21,7 @@
     [ngClass]="[
       aspectRatioClass,
       (!isVideo && !isAudio) ? 'zoomable' : '',
-      isAudio ? '!bg-transparent !shadow-none !h-auto' : ''
+      isAudio ? '!bg-transparent !shadow-none' : ''
     ]"
     (click)="(!isVideo && !isAudio) && openPhotoSwipe(selectedIndex)"
   >

@@ -134,17 +134,6 @@ class WorkflowService:
                 output_name: f"{step_name}_result.{output_name}"
                 for output_name in step.outputs
             }
-        
-        # Add a return step to the workflow to output all step results
-        return_step = {
-            "return": {
-                "step_outputs": {
-                    step_name: f"${{{step_name}_result.body}}"
-                    for step_name in step_outputs.keys()
-                }
-            }
-        }
-        gcp_steps.append(return_step)
 
         gcp_workflow = {"main": {"params": ["args"], "steps": gcp_steps}}
 

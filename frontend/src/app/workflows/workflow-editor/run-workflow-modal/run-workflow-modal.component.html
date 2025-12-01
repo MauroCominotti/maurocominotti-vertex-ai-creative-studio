@@ -6,7 +6,6 @@
     <div *ngFor="let input of inputDefinitions">
       <mat-form-field appearance="outline" class="w-full">
         <mat-label>{{ input.name | titlecase }}</mat-label>
-        <!-- TODO: Handle different input types (image, number, etc.) -->
         <input matInput [formControlName]="input.name" [placeholder]="'Enter ' + input.name">
         <mat-hint *ngIf="input.type !== 'text'">Type: {{ input.type }}</mat-hint>
       </mat-form-field>

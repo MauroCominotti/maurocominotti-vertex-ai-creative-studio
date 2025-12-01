@@ -36,7 +36,7 @@ from google.auth.transport.requests import AuthorizedSession
 from src.workflows.schema.workflow_model import (
     NodeTypes,
     WorkflowCreateDto,
-    WorkflowDefinitionStatusEnum,
+
     WorkflowModel,
 )
 
@@ -222,7 +222,7 @@ class WorkflowService:
                 name=workflow_dto.name,
                 description=workflow_dto.description,
                 workspace_id=workflow_dto.workspace_id,
-                status=WorkflowDefinitionStatusEnum.DRAFT,
+
                 user_id=user.id,
                 steps=workflow_dto.steps,
             )
@@ -370,6 +370,8 @@ class WorkflowService:
         formatted_step_entries = []
         for entry in step_entries:
             step_id = entry.get("step")
+            if step_id == "end":
+                continue
             step_state = entry.get("state")
             
             # Extract inputs and outputs from the call details

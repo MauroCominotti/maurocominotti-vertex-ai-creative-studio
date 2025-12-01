@@ -15,7 +15,7 @@
 from typing import Optional
 
 from src.common.dto.base_search_dto import BaseSearchDto
-from src.workflows.schema.workflow_model import WorkflowDefinitionStatusEnum
+
 
 
 class WorkflowSearchDto(BaseSearchDto):
@@ -23,4 +23,4 @@ class WorkflowSearchDto(BaseSearchDto):
 
     workspace_id: str
     name: Optional[str] = None
-    status: Optional[WorkflowDefinitionStatusEnum] = None
+    name: Optional[str] = None

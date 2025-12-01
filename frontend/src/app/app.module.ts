@@ -91,6 +91,7 @@ import { VideoComponent } from './video/video.component';
 import { VtoComponent } from './vto/vto.component';
 import { ExecutionDetailsModalComponent } from './workflows/execution-history/execution-details-modal/execution-details-modal.component';
 import { ExecutionHistoryComponent } from './workflows/execution-history/execution-history.component';
+import { StepExecutionDetailsComponent } from './workflows/shared/step-execution-details/step-execution-details.component';
 import { AddStepModalComponent } from './workflows/workflow-editor/add-step-modal/add-step-modal.component';
 import { RunWorkflowModalComponent } from './workflows/workflow-editor/run-workflow-modal/run-workflow-modal.component';
 import { GenericStepComponent } from './workflows/workflow-editor/step-components/generic-step/generic-step.component';
@@ -124,7 +125,9 @@ import { WorkflowListComponent } from './workflows/workflow-list/workflow-list.c
     GenericStepComponent,
     RunWorkflowModalComponent,
     ExecutionHistoryComponent,
+    ExecutionHistoryComponent,
     ExecutionDetailsModalComponent,
+    StepExecutionDetailsComponent,
   ],
   imports: [
     BrowserModule,

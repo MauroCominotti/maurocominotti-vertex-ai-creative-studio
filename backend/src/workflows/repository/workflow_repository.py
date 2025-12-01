@@ -61,10 +61,7 @@ class WorkflowRepository(BaseRepository[WorkflowModel]):
             base_query = base_query.where(
                 filter=FieldFilter("name", "==", search_dto.name)
             )
-        if search_dto.status:
-            base_query = base_query.where(
-                filter=FieldFilter("status", "==", search_dto.status.value)
-            )
+
 
         count_query = base_query.count(alias="total")
         aggregation_result = count_query.get()

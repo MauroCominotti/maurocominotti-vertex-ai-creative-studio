@@ -250,13 +250,6 @@ WorkflowStep = Annotated[WorkflowStepUnion, Field(discriminator="type")]
 # =========================================
 
 
-class WorkflowDefinitionStatusEnum(str, Enum):
-    """Defines the states for a workflow *definition*."""
-
-    DRAFT = "draft"
-    PUBLISHED = "published"  # e.g., "Active"
-
-
 class WorkflowRunStatusEnum(str, Enum):
     """Defines the states for a long-running generation Workflow *run*."""
 
@@ -267,9 +260,8 @@ class WorkflowRunStatusEnum(str, Enum):
     SCHEDULED = "scheduled"
 
 
-class WorkflowBase(BaseDto):
+class WorkflowBase(BaseModel):
     """Base model with fields common to both creating and representing a workflow."""
-
     name: str
     description: str
     workspace_id: str
@@ -281,14 +273,10 @@ class WorkflowModel(BaseDocument, WorkflowBase):
     The editable workflow *definition* (template).
     This is what the user edits in the UI.
     """
-
-    status: WorkflowDefinitionStatusEnum = Field(
-        default=WorkflowDefinitionStatusEnum.DRAFT
-    )
     user_id: str
 
 
-class WorkflowCreateDto(WorkflowBase):
+class WorkflowCreateDto(WorkflowBase, BaseDto):
     """DTO for creating a new workflow. Inherits fields from WorkflowBase."""
 
     pass

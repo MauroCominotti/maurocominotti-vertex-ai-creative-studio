@@ -1,11 +1,15 @@
 import {
-  Component,
-  OnInit,
-  OnDestroy,
-  ViewChild,
   AfterViewInit,
+  Component,
+  OnDestroy,
+  OnInit,
+  ViewChild,
 } from '@angular/core';
-import {WorkflowService} from '../workflow.service';
+import { MatDialog } from '@angular/material/dialog';
+import { MatPaginator, PageEvent } from '@angular/material/paginator';
+import { MatSort } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
+import { Router } from '@angular/router';
 import {
   debounceTime,
   distinctUntilChanged,
@@ -13,17 +17,12 @@ import {
   Subscription,
   takeUntil,
 } from 'rxjs';
+import { ConfirmationDialogComponent } from '../../common/components/confirmation-dialog/confirmation-dialog.component';
 import {
-  WorkflowDefinitionStatusEnum,
   WorkflowModel,
   WorkflowRunStatusEnum,
 } from '../workflow.models';
-import {Router} from '@angular/router';
-import {MatTableDataSource} from '@angular/material/table';
-import {MatPaginator, PageEvent} from '@angular/material/paginator';
-import {MatSort} from '@angular/material/sort';
-import {MatDialog} from '@angular/material/dialog';
-import {ConfirmationDialogComponent} from '../../common/components/confirmation-dialog/confirmation-dialog.component';
+import { WorkflowService } from '../workflow.service';
 
 @Component({
   selector: 'app-workflow-list',
@@ -35,7 +34,7 @@ export class WorkflowListComponent implements OnInit, OnDestroy, AfterViewInit {
   displayedColumns: string[] = [
     'name',
     'description',
-    'status',
+
     'createdAt',
     'updatedAt',
     'actions',
@@ -133,31 +132,7 @@ export class WorkflowListComponent implements OnInit, OnDestroy, AfterViewInit {
     this.subscriptions.unsubscribe();
   }
 
-  public getStatusChipClass(status: string): string {
-    const statusLower = status.toLowerCase();
 
-    switch (statusLower) {
-      case WorkflowDefinitionStatusEnum.PUBLISHED.toLowerCase():
-        return '!bg-blue-500/20 !text-blue-300';
-      case WorkflowDefinitionStatusEnum.DRAFT.toLowerCase():
-        return '!bg-gray-500/20 !text-gray-300';
-      default:
-        return '!bg-gray-500/20 !text-gray-300';
-    }
-  }
-
-  public getStatusIcon(status: string): string {
-    const statusLower = status.toLowerCase();
-
-    switch (statusLower) {
-      case WorkflowDefinitionStatusEnum.PUBLISHED.toLowerCase():
-        return 'publish';
-      case WorkflowDefinitionStatusEnum.DRAFT.toLowerCase():
-        return 'edit_note';
-      default:
-        return 'help_outline';
-    }
-  }
 
   public getWorkflowRunStatusChipClass(status: WorkflowRunStatusEnum): string {
     const statusLower = status.toLowerCase();

@@ -7,12 +7,7 @@ import { ExecutionDetailsModalComponent } from './execution-details-modal/execut
 @Component({
     selector: 'app-execution-history',
     templateUrl: './execution-history.component.html',
-    styles: [`
-    :host {
-      display: block;
-      height: 100%;
-    }
-  `]
+    styleUrls: ['./execution-history.component.scss']
 })
 export class ExecutionHistoryComponent implements OnInit {
     workflowId: string | null = null;
@@ -80,7 +75,7 @@ export class ExecutionHistoryComponent implements OnInit {
                 workflowId: this.workflowId,
                 executionId: executionId
             },
-            panelClass: 'bg-neutral-800'
+            panelClass: 'execution-details-modal'
         });
     }
 

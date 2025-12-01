@@ -20,10 +20,6 @@
     <!-- Status Badge -->
     <div class="mx-6">
       <ng-container [ngSwitch]="mode">
-        <mat-chip *ngSwitchCase="EditorMode.Create" class="!bg-gray-500/20 !text-gray-300">DRAFT</mat-chip>
-        <mat-chip *ngSwitchCase="EditorMode.Edit" class="!bg-gray-500/20 !text-gray-300">
-          {{ (workflow?.status || 'DRAFT') | uppercase }}
-        </mat-chip>
         <mat-chip *ngSwitchCase="EditorMode.Run" [ngClass]="getWorkflowStatusClass(currentExecutionState)">
           <mat-icon *ngIf="getWorkflowStatusIcon(currentExecutionState)" class="!text-sm !w-4 !h-4 mr-1">
             {{ getWorkflowStatusIcon(currentExecutionState) }}
@@ -35,12 +31,12 @@
 
     <!-- Primary Actions -->
     <div class="flex items-center gap-2">
-      <button *ngIf="!isReadOnly" mat-flat-button color="primary" (click)="run()">
+      <button *ngIf="!isReadOnly" mat-raised-button color="primary" (click)="run()">
         <mat-icon>play_arrow</mat-icon>
         Run Workflow
       </button>
-      <button *ngIf="!isReadOnly" mat-stroked-button (click)="save()" [disabled]="workflowForm.pristine">Save</button>
-      <button mat-stroked-button routerLink="/workflows">Go Back</button>
+      <button *ngIf="!isReadOnly" mat-raised-button color="primary" (click)="save()" [disabled]="workflowForm.pristine">Save</button>
+      <button mat-raised-button color="primary" routerLink="/workflows">Go Back</button>
     </div>
   </header>
 
@@ -178,15 +174,13 @@
             No outputs generated yet.
           </div>
           <ng-template #elseBlock>
-            <label class="block text-sm font-medium text-neutral-300 mb-2">inputs</label>
-              <div class="bg-neutral-700 p-3 rounded-lg">
-              <pre class="text-sm text-neutral-200 whitespace-pre-wrap">{{ selectedStepExecution.step_inputs | json }}</pre>
-            </div>
-  
-            <label class="block text-sm font-medium text-neutral-300 mb-2">outputs</label>
-            <div class="bg-neutral-700 p-3 rounded-lg">
-              <pre class="text-sm text-neutral-200 whitespace-pre-wrap">{{ selectedStepExecution.step_outputs | json }}</pre>
-            </div>
+            <app-step-execution-details
+              [stepId]="selectedStep.stepId"
+              [stepType]="selectedStep.type"
+              [inputs]="selectedStepExecution.step_inputs"
+              [outputs]="selectedStepExecution.step_outputs"
+              [mediaUrlMap]="mediaUrlMap">
+            </app-step-execution-details>
           </ng-template>
         </div>
       </div>

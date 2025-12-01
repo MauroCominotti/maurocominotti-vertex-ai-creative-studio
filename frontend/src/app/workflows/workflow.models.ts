@@ -94,10 +94,7 @@ export type WorkflowStep =
   | GenerateImageStep
   | EditImageStep;
 
-export enum WorkflowDefinitionStatusEnum {
-  DRAFT = "draft",
-  PUBLISHED = "published",
-}
+
 
 export enum WorkflowRunStatusEnum {
   RUNNING = 'running',
@@ -117,14 +114,14 @@ export interface WorkflowModel extends WorkflowBase {
   id: string;
   createdAt: string;
   updatedAt: string;
-  status: WorkflowDefinitionStatusEnum;
+
   userId: string;
 }
 
 export interface WorkflowCreateDto extends WorkflowBase { }
 
 export interface WorkflowUpdateDto extends WorkflowBase {
-  status: WorkflowDefinitionStatusEnum;
+
 }
 
 export interface WorkflowSearchDto {
@@ -132,7 +129,7 @@ export interface WorkflowSearchDto {
   limit?: number;
   startAfter?: string;
   name?: string;
-  status?: WorkflowDefinitionStatusEnum;
+
 }
 
 export interface PaginatedWorkflowsResponse {

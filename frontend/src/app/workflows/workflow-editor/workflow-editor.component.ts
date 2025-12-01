@@ -32,6 +32,8 @@ import { GENERATE_VIDEO_STEP_CONFIG } from './step-components/step-configs/gener
 import { VIRTUAL_TRY_ON_STEP_CONFIG } from './step-components/step-configs/virtual-try-on-step.config';
 
 
+import { GalleryService } from '../../gallery/gallery.service';
+
 @Component({
   selector: 'app-workflow-editor',
   templateUrl: './workflow-editor.component.html',
@@ -71,6 +73,8 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   currentExecutionId: string | null = null;
   currentExecutionState: string | null = null;
   executionStepEntries: any[] = [];
+  mediaUrlMap = new Map<string, string>();
+  loadedMedia = new Set<string>();
 
   stepConfigs = {
     [NodeTypes.GENERATE_TEXT]: GENERATE_TEXT_STEP_CONFIG,
@@ -87,7 +91,8 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     private router: Router,
     private workflowService: WorkflowService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar, // Inject MatSnackBar
+    private snackBar: MatSnackBar,
+    private galleryService: GalleryService
   ) {
     this.initForm();
   }
@@ -149,6 +154,66 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     // Initialize and subscribe to user input changes
     this.syncOutputs();
     this.outputDefinitionsArray.valueChanges.subscribe(() => this.syncOutputs());
+  }
+
+  resolveMediaUrls(details: any): void {
+    if (!details || !details.step_entries) return;
+
+    const mediaIdsToFetch = new Set<string>();
+
+    details.step_entries.forEach((step: any) => {
+      if (this.isImageOutput(step.step_id) && step.step_outputs) {
+        Object.values(step.step_outputs).forEach((val: any) => {
+          if (typeof val === 'string' && val.length > 0) {
+            mediaIdsToFetch.add(val);
+          }
+        });
+      }
+      // Also check inputs for Edit Image steps
+      if (this.isImageOutput(step.step_id) && step.step_inputs) {
+        Object.entries(step.step_inputs).forEach(([key, val]: [string, any]) => {
+          if ((key === 'input_images' || key === 'image') && typeof val === 'string' && val.length > 0) {
+            mediaIdsToFetch.add(val);
+          } else if ((key === 'input_images' || key === 'image') && Array.isArray(val)) {
+            val.forEach((v: any) => {
+              if (typeof v === 'string' && v.length > 0) {
+                mediaIdsToFetch.add(v);
+              }
+            });
+          }
+        });
+      }
+    });
+
+    mediaIdsToFetch.forEach(id => {
+      if (!this.mediaUrlMap.has(id)) {
+        this.galleryService.getMedia(id).subscribe({
+          next: (mediaItem) => {
+            if (mediaItem.presignedUrls && mediaItem.presignedUrls.length > 0) {
+              this.mediaUrlMap.set(id, mediaItem.presignedUrls[0]);
+            }
+          },
+          error: (err) => console.error(`Failed to resolve media ID ${id}`, err)
+        });
+      }
+    });
+  }
+
+  isImageOutput(stepId: string): boolean {
+    const type = this.getStepType(stepId);
+    return type === NodeTypes.GENERATE_IMAGE ||
+      type === NodeTypes.EDIT_IMAGE ||
+      type === NodeTypes.CROP_IMAGE ||
+      type === NodeTypes.VIRTUAL_TRY_ON;
+  }
+
+  getStepType(stepId: string): NodeTypes | undefined {
+    // Check if it's the user input step
+    if (stepId === NodeTypes.USER_INPUT) return NodeTypes.USER_INPUT;
+
+    // Find in steps array
+    const step = this.stepsArray.controls.find(c => c.get('stepId')?.value === stepId);
+    return step ? step.get('type')?.value : undefined;
   }
 
   // ... (rest of the component logic will be updated in subsequent steps)
@@ -344,7 +409,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         name: formValue.name,
         description: formValue.description || '',
         steps: steps,
-        status: formValue.status,
+
         workspaceId: formValue.workspaceId,
       };
       request$ = this.workflowService.updateWorkflow(formValue.id, updateDto);
@@ -404,7 +469,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         name: formValue.name,
         description: formValue.description || '',
         steps: steps,
-        status: formValue.status,
+
         workspaceId: formValue.workspaceId,
       };
       saveRequest$ = this.workflowService.updateWorkflow(formValue.id, updateDto);
@@ -518,6 +583,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         this.currentExecutionState = details.state;
         this.executionStepEntries = details.step_entries || [];
         this.updateStepStatuses(details);
+        this.resolveMediaUrls(details); // Resolve media URLs
         this.isLoading = false;
 
         // If the selected execution is active, start polling
@@ -556,6 +622,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
           this.currentExecutionState = details.state;
           this.executionStepEntries = details.step_entries || [];
           this.updateStepStatuses(details);
+          this.resolveMediaUrls(details); // Resolve media URLs
 
           // If execution completed, show notification
           if (details.state !== 'ACTIVE') {

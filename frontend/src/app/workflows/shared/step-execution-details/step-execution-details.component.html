@@ -1,0 +1,111 @@
+<label class="block text-sm font-medium text-neutral-300 mb-2">inputs</label>
+<div class="bg-neutral-700 p-3 rounded-lg mb-4">
+  <!-- Image Input (e.g. Edit Image) -->
+  <div *ngIf="isImageOutput(); else defaultInput" class="grid grid-cols-2 gap-2">
+     <ng-container *ngFor="let input of inputs | keyvalue">
+        <div *ngIf="input.key === 'input_images' || input.key === 'image'" class="col-span-2">
+            <div *ngIf="input.value" class="relative group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900">
+                <!-- Handle array of images or single image -->
+                <ng-container *ngIf="isArray(input.value); else singleImage">
+                    <div class="grid grid-cols-2 gap-1">
+                        <div *ngFor="let img of $any(input.value)" 
+                             class="relative cursor-pointer"
+                             (dblclick)="navigateToGallery(img)">
+                            <!-- Loading Spinner -->
+                            <div *ngIf="!loadedMedia.has($any(img))" class="absolute inset-0 flex items-center justify-center bg-neutral-800 z-10">
+                                <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                            <img [src]="getMediaUrl(img)" 
+                                 class="w-full h-auto object-cover transition-opacity duration-300" 
+                                 [class.opacity-0]="!loadedMedia.has($any(img))"
+                                 [class.opacity-100]="loadedMedia.has($any(img))"
+                                 (load)="onMediaLoaded(img)"
+                                 alt="Input Image">
+                        </div>
+                    </div>
+                </ng-container>
+                <ng-template #singleImage>
+                    <div class="relative cursor-pointer" (dblclick)="navigateToGallery(input.value)">
+                        <!-- Loading Spinner -->
+                        <div *ngIf="!loadedMedia.has($any(input.value))" class="absolute inset-0 flex items-center justify-center bg-neutral-800 z-10">
+                            <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                        <img [src]="getMediaUrl(input.value)" 
+                             class="w-full h-auto object-cover transition-opacity duration-300" 
+                             [class.opacity-0]="!loadedMedia.has($any(input.value))"
+                             [class.opacity-100]="loadedMedia.has($any(input.value))"
+                             (load)="onMediaLoaded(input.value)"
+                             alt="Input Image">
+                    </div>
+                </ng-template>
+                <div class="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[10px] text-white truncate px-2">
+                    {{ input.key }}
+                </div>
+            </div>
+        </div>
+        <div *ngIf="input.key !== 'input_images' && input.key !== 'image'" class="bg-neutral-900 p-2 rounded border border-neutral-800 mb-2">
+            <span class="text-xs text-neutral-500 block mb-1">{{ input.key }}</span>
+            <p class="text-xs text-neutral-300 font-mono whitespace-pre-wrap">{{ input.value | json }}</p>
+        </div>
+     </ng-container>
+  </div>
+  <ng-template #defaultInput>
+      <pre class="text-sm text-neutral-200 whitespace-pre-wrap">{{ inputs | json }}</pre>
+  </ng-template>
+</div>
+
+<label class="block text-sm font-medium text-neutral-300 mb-2">outputs</label>
+<div class="bg-neutral-700 p-3 rounded-lg">
+   <!-- Image Output -->
+   <div *ngIf="isImageOutput()" class="grid grid-cols-2 gap-2">
+    <ng-container *ngFor="let output of outputs | keyvalue">
+       <div *ngIf="output.value" 
+            class="relative group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900 cursor-pointer"
+            (dblclick)="navigateToGallery(output.value)">
+          
+          <!-- Loading Spinner -->
+          <div *ngIf="!loadedMedia.has($any(output.value))" class="absolute inset-0 flex items-center justify-center bg-neutral-800 z-10">
+              <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+
+          <img [src]="getMediaUrl(output.value)" 
+               class="w-full h-auto object-cover transition-opacity duration-300" 
+               [class.opacity-0]="!loadedMedia.has($any(output.value))"
+               [class.opacity-100]="loadedMedia.has($any(output.value))"
+               (load)="onMediaLoaded(output.value)"
+               alt="Generated Image">
+          
+          <div class="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[10px] text-white truncate px-2">
+            {{ output.key }}
+          </div>
+       </div>
+    </ng-container>
+  </div>
+
+  <!-- Text Output -->
+  <div *ngIf="isTextOutput()" class="bg-neutral-900 p-3 rounded border border-neutral-800">
+    <ng-container *ngFor="let output of outputs | keyvalue">
+      <div class="mb-2 last:mb-0">
+        <span class="text-xs text-neutral-500 block mb-1">{{ output.key }}</span>
+        <p class="text-sm text-neutral-200 whitespace-pre-wrap font-mono">{{ output.value }}</p>
+      </div>
+    </ng-container>
+  </div>
+
+   <!-- Video Output -->
+   <div *ngIf="isVideoOutput()" class="grid grid-cols-1 gap-2">
+    <ng-container *ngFor="let output of outputs | keyvalue">
+       <div *ngIf="output.value" class="relative group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900">
+          <video [src]="getMediaUrl(output.value)" controls class="w-full h-auto" alt="Generated Video"></video>
+          <div class="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[10px] text-white truncate px-2">
+            {{ output.key }}
+          </div>
+       </div>
+    </ng-container>
+  </div>
+
+  <!-- Fallback for other types -->
+  <div *ngIf="!isImageOutput() && !isTextOutput() && !isVideoOutput()">
+     <pre class="text-sm text-neutral-200 whitespace-pre-wrap">{{ outputs | json }}</pre>
+  </div>
+</div>

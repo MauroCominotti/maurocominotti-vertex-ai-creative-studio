@@ -61,4 +61,12 @@ export class StepExecutionDetailsComponent implements OnInit {
   isVideoOutput(): boolean {
     return this.stepType === NodeTypes.GENERATE_VIDEO;
   }
+
+  get inputCount(): number {
+    return this.inputs ? Object.keys(this.inputs).length : 0;
+  }
+
+  get outputCount(): number {
+    return this.outputs ? Object.keys(this.outputs).length : 0;
+  }
 }

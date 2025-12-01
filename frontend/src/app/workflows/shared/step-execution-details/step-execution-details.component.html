@@ -1,13 +1,13 @@
 <label class="block text-sm font-medium text-neutral-300 mb-2">inputs</label>
 <div class="bg-neutral-700 p-3 rounded-lg mb-4">
   <!-- Image Input (e.g. Edit Image) -->
-  <div *ngIf="isImageOutput(); else defaultInput" class="grid grid-cols-2 gap-2">
+  <div *ngIf="isImageOutput(); else defaultInput" class="grid gap-2" [ngClass]="{'grid-cols-1': inputCount === 1, 'grid-cols-2': inputCount > 1}">
      <ng-container *ngFor="let input of inputs | keyvalue">
         <div *ngIf="input.key === 'input_images' || input.key === 'image'" class="col-span-2">
             <div *ngIf="input.value" class="relative group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900">
                 <!-- Handle array of images or single image -->
                 <ng-container *ngIf="isArray(input.value); else singleImage">
-                    <div class="grid grid-cols-2 gap-1">
+                    <div class="grid gap-1" [ngClass]="{'grid-cols-1': $any(input.value).length === 1, 'grid-cols-2': $any(input.value).length > 1}">
                         <div *ngFor="let img of $any(input.value)" 
                              class="relative cursor-pointer"
                              (dblclick)="navigateToGallery(img)">
@@ -57,7 +57,7 @@
 <label class="block text-sm font-medium text-neutral-300 mb-2">outputs</label>
 <div class="bg-neutral-700 p-3 rounded-lg">
    <!-- Image Output -->
-   <div *ngIf="isImageOutput()" class="grid grid-cols-2 gap-2">
+   <div *ngIf="isImageOutput()" class="grid gap-2" [ngClass]="{'grid-cols-1': outputCount === 1, 'grid-cols-2': outputCount > 1}">
     <ng-container *ngFor="let output of outputs | keyvalue">
        <div *ngIf="output.value" 
             class="relative group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900 cursor-pointer"

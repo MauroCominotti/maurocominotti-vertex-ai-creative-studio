@@ -342,7 +342,7 @@ class WorkflowService:
             logger.error(f"Error fetching step entries: {e}")
 
         logger.info("Step entries:")
-        logger.info(step_entries)
+        logger.info(json.dumps(step_entries))
 
         # Calculate duration
         duration = 0.0

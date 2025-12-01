@@ -133,7 +133,12 @@ class WorkflowsExecutorService:
              logger.error(f"Backend error: {response.text}")
              raise HTTPException(status_code=response.status_code, detail=f"Backend error: {response.text}")
              
-        return response.json()
+        dict_response = response.json()
+        image_id = dict_response.get("id", None)
+        if not image_id:
+            raise HTTPException(status_code=500, detail="Couldn't edit image")
+        
+        return {"edited_image": image_id}
 
     async def generate_video(self, request: GenerateVideoRequest):
         # logic here

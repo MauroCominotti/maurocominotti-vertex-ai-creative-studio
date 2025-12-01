@@ -17,67 +17,32 @@
 <div class="lg:container lg:mx-auto">
   <div class="home-margin grid grid-cols-1">
     <!-- Video Homepage -->
-    <ng-container *ngIf="isLoading && !isImageGenerating; else videoOrGallery">
+    <ng-container *ngIf="isLoading; else videoOrGallery">
       <div class="video-container">
         <div class="w-full h-full flex justify-center items-center">
-          <mat-progress-spinner
-            color="primary"
-            mode="indeterminate"
-          ></mat-progress-spinner>
+          <mat-progress-spinner color="primary" mode="indeterminate"></mat-progress-spinner>
         </div>
       </div>
     </ng-container>
     <ng-template #videoOrGallery>
-      <!-- Loading Overlay for Image Generation -->
-      <div *ngIf="isImageGenerating"
-        class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black bg-opacity-70 rounded-xl">
-        <mat-progress-spinner mode="indeterminate" [diameter]="50" color="primary"></mat-progress-spinner>
-        <p class="!mt-6 text-white text-lg">
-          Generating Images...
-        </p>
-        <p class="text-gray-400 text-sm">
-          This may take a few moments. You can safely navigate away.
-        </p>
-      </div>
-
-      <ng-container
-        *ngIf="
+      <ng-container *ngIf="
           (imagenDocuments?.presignedUrls?.length || 0) === 0;
           else imageGallery
-        "
-      >
+        ">
         <div class="video-container">
           <!-- Text for Tablet and beyond -->
-          <div
-            class="hidden md:flex justify-center items-center w-full h-full absolute"
-          >
-            <mat-icon
-              svgIcon="white-gemini-spark-icon"
-              class="!w-12 !h-12 mr-2 md:mr-[1rem] !z-[50]"
-            ></mat-icon>
-            <h1
-              class="text-center justify-center text-white text-2xl font-bold !m-0 !z-[50]"
-            >
+          <div class="hidden md:flex justify-center items-center w-full h-full absolute">
+            <mat-icon svgIcon="white-gemini-spark-icon" class="!w-12 !h-12 mr-2 md:mr-[1rem] !z-[50]"></mat-icon>
+            <h1 class="text-center justify-center text-white text-2xl font-bold !m-0 !z-[50]">
               Welcome to Creative Studio
             </h1>
           </div>
-          <div
-            class="gradient-bg hidden md:block !relative !w-full !h-full !z-[10]"
-          >
+          <div class="gradient-bg hidden md:block !relative !w-full !h-full !z-[10]">
             <svg xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <filter id="goo">
-                  <feGaussianBlur
-                    in="SourceGraphic"
-                    stdDeviation="10"
-                    result="blur"
-                  />
-                  <feColorMatrix
-                    in="blur"
-                    mode="matrix"
-                    values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8"
-                    result="goo"
-                  />
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+                  <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo" />
                   <feBlend in="SourceGraphic" in2="goo" />
                 </filter>
               </defs>
@@ -95,13 +60,8 @@
           <!-- Text for mobile -->
           <div class="flex justify-center items-center w-full h-full md:hidden">
             <!-- As this svg uses a gradient, it needs to have a different fill id, therefore we have one for mobile and other for larger devices -->
-            <mat-icon
-              svgIcon="mobile-white-gemini-spark-icon"
-              class="!w-6 !h-6 mr-2 md:mr-[1rem]"
-            ></mat-icon>
-            <div
-              class="text-center justify-center text-white title-font font-bold"
-            >
+            <mat-icon svgIcon="mobile-white-gemini-spark-icon" class="!w-6 !h-6 mr-2 md:mr-[1rem]"></mat-icon>
+            <div class="text-center justify-center text-white title-font font-bold">
               Welcome to Creative Studio
             </div>
           </div>
@@ -110,202 +70,118 @@
       <!-- Image Gallery -->
       <ng-template #imageGallery>
         <div class="grid grid-cols-1 gap-4">
-          <app-media-lightbox
-            *ngIf="imagenDocuments"
-            [mediaItem]="imagenDocuments"
-            [initialIndex]="0"
-            [showSeeMoreInfoButton]="true"
-            [showEditButton]="true"
-            [showGenerateVideoButton]="true"
-            [showVtoButton]="true"
-            (editClicked)="editResultImage($event)"
-            (generateVideoClicked)="generateVideoWithImage($event)"
-            (sendToVtoClicked)="sendToVto($event)"
-            style="max-height: 60vh"
-          ></app-media-lightbox>
+          <app-media-lightbox *ngIf="imagenDocuments" [mediaItem]="imagenDocuments" [initialIndex]="0"
+            [showSeeMoreInfoButton]="true" [showEditButton]="true" [showGenerateVideoButton]="true" [showVtoButton]="true"
+            (editClicked)="editResultImage($event)" (generateVideoClicked)="generateVideoWithImage($event)"
+            (sendToVtoClicked)="sendToVto($event)" style="max-height: 60vh"></app-media-lightbox>
         </div>
       </ng-template>
     </ng-template>
 
     <!-- Control Options -->
     <div
-      class="control-options inline-flex justify-center items-start grid grid-cols-2 md:grid-cols-3 lg:flex gap-4 mt-8 place-items-center"
-    >
-      <div
-        matTooltip="Select Aspect Ratio"
-        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center"
-      >
-        <button
-          mat-fab
-          [matMenuTriggerFor]="aspectRatioMenu"
-          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300"
-        >
+      class="control-options inline-flex justify-center items-start grid grid-cols-2 md:grid-cols-3 lg:flex gap-4 mt-8 place-items-center">
+      <div matTooltip="Select Aspect Ratio" class="cursor-pointer w-32 inline-flex flex-col justify-start items-center">
+        <button mat-fab [matMenuTriggerFor]="aspectRatioMenu"
+          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300">
           <mat-icon>aspect_ratio</mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
           {{ selectedAspectRatio }}
         </div>
         <mat-menu #aspectRatioMenu="matMenu">
-          <button
-            *ngFor="let ratio of aspectRatioOptions"
-            [disabled]="ratio.disabled"
-            mat-menu-item
-            [ngClass]="{
+          <button *ngFor="let ratio of aspectRatioOptions" [disabled]="ratio.disabled" mat-menu-item [ngClass]="{
               'menu-item-selected': searchRequest.aspectRatio === ratio.value,
-            }"
-            (click)="selectAspectRatio(ratio)"
-          >
+            }" (click)="selectAspectRatio(ratio)">
             <mat-icon>{{ ratio.icon }}</mat-icon>
             <span>{{ ratio.viewValue }}</span>
           </button>
         </mat-menu>
       </div>
 
-      <div
-        matTooltip="Select Model"
-        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center"
-      >
-        <button
-          mat-fab
-          [matMenuTriggerFor]="modelMenu"
-          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300"
-        >
+      <div matTooltip="Select Model" class="cursor-pointer w-32 inline-flex flex-col justify-start items-center">
+        <button mat-fab [matMenuTriggerFor]="modelMenu"
+          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300">
           @if (selectedGenerationModelObject.isImage) {
-            <img
-              [src]="selectedGenerationModelObject.imageSrc"
-              class="w-8 h-8"
-              alt="model icon"
-            />
+          <img [src]="selectedGenerationModelObject.imageSrc" class="w-8 h-8" alt="model icon" />
           } @else {
-            <mat-icon svgIcon="content-type-icon"></mat-icon>
+          <mat-icon svgIcon="content-type-icon"></mat-icon>
           }
         </button>
-        <div
-          class="text-center justify-center text-neutral-200 text-base mt-2 inline-flex items-center"
-        >
+        <div class="text-center justify-center text-neutral-200 text-base mt-2 inline-flex items-center">
           {{ selectedGenerationModel }}
         </div>
         <mat-menu #modelMenu="matMenu">
-          <button
-            *ngFor="let model of generationModels"
-            mat-menu-item
-            [ngClass]="{
+          <button *ngFor="let model of generationModels" mat-menu-item [ngClass]="{
               'menu-item-selected':
                 searchRequest.generationModel === model.value,
-            }"
-            (click)="selectModel(model)"
-          >
-            <img
-              *ngIf="model.isImage"
-              [src]="model.imageSrc"
-              class="menu-image-icon"
-              alt="model icon"
-            />
+            }" (click)="selectModel(model)">
+            <img *ngIf="model.isImage" [src]="model.imageSrc" class="menu-image-icon" alt="model icon" />
             <mat-icon *ngIf="!model.isImage && !model.isSvg">{{
               model.icon
-            }}</mat-icon>
-            <mat-icon
-              *ngIf="!model.isImage && model.isSvg"
-              [svgIcon]="model.icon"
-            ></mat-icon>
+              }}</mat-icon>
+            <mat-icon *ngIf="!model.isImage && model.isSvg" [svgIcon]="model.icon"></mat-icon>
             <span>{{ model.viewValue }}</span>
           </button>
         </mat-menu>
       </div>
 
-      <div
-        matTooltip="Select Style"
-        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center"
-      >
-        <button
-          mat-fab
-          [matMenuTriggerFor]="imageStylingMenu"
-          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300"
-        >
+      <div matTooltip="Select Style" class="cursor-pointer w-32 inline-flex flex-col justify-start items-center">
+        <button mat-fab [matMenuTriggerFor]="imageStylingMenu"
+          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300">
           <mat-icon>style</mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
           {{ searchRequest.style ? searchRequest.style : 'Style' }}
         </div>
         <mat-menu #imageStylingMenu="matMenu">
-          <button
-            *ngFor="let style of imageStyles"
-            mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.style === style}"
-            (click)="selectImageStyle(style)"
-          >
+          <button *ngFor="let style of imageStyles" mat-menu-item
+            [ngClass]="{'menu-item-selected': searchRequest.style === style}" (click)="selectImageStyle(style)">
             <span>{{ style }}</span>
           </button>
         </mat-menu>
       </div>
 
-      <div
-        matTooltip="Select Color & Tone"
-        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center"
-      >
-        <button
-          mat-fab
-          [matMenuTriggerFor]="colorMenu"
-          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300"
-        >
+      <div matTooltip="Select Color & Tone" class="cursor-pointer w-32 inline-flex flex-col justify-start items-center">
+        <button mat-fab [matMenuTriggerFor]="colorMenu"
+          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300">
           <mat-icon>palette</mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
           {{
-            searchRequest.colorAndTone
-              ? searchRequest.colorAndTone
-              : 'Color & Tone'
+          searchRequest.colorAndTone
+          ? searchRequest.colorAndTone
+          : 'Color & Tone'
           }}
         </div>
         <mat-menu #colorMenu="matMenu">
-          <button
-            *ngFor="let color of colorsAndTones"
-            mat-menu-item
-            [ngClass]="{
+          <button *ngFor="let color of colorsAndTones" mat-menu-item [ngClass]="{
               'menu-item-selected': searchRequest.colorAndTone === color,
-            }"
-            (click)="selectColor(color)"
-          >
+            }" (click)="selectColor(color)">
             <span>{{ color }}</span>
           </button>
         </mat-menu>
       </div>
 
-      <div
-        matTooltip="Select Lighting"
-        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center"
-      >
-        <button
-          mat-fab
-          [matMenuTriggerFor]="lightingMenu"
-          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300"
-        >
+      <div matTooltip="Select Lighting" class="cursor-pointer w-32 inline-flex flex-col justify-start items-center">
+        <button mat-fab [matMenuTriggerFor]="lightingMenu"
+          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300">
           <mat-icon svgIcon="lighting-icon"></mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
           {{ searchRequest.lighting ? searchRequest.lighting : 'Lighting' }}
         </div>
         <mat-menu #lightingMenu="matMenu">
-          <button
-            *ngFor="let light of lightings"
-            mat-menu-item
-            [ngClass]="{'menu-item-selected': searchRequest.lighting === light}"
-            (click)="selectLighting(light)"
-          >
+          <button *ngFor="let light of lightings" mat-menu-item
+            [ngClass]="{'menu-item-selected': searchRequest.lighting === light}" (click)="selectLighting(light)">
             <span>{{ light }}</span>
           </button>
         </mat-menu>
       </div>
 
-      <div
-        matTooltip="Select Number of Images"
-        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center"
-      >
-        <button
-          mat-fab
-          [matMenuTriggerFor]="numImagesMenu"
-          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300"
-        >
+      <div matTooltip="Select Number of Images" class="cursor-pointer w-32 inline-flex flex-col justify-start items-center">
+        <button mat-fab [matMenuTriggerFor]="numImagesMenu"
+          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300">
           <mat-icon svgIcon="number-of-images-icon" color="primary"></mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
@@ -313,60 +189,39 @@
           Image(s)
         </div>
         <mat-menu #numImagesMenu="matMenu">
-          <button
-            *ngFor="let num of numberOfImagesOptions"
-            mat-menu-item
-            [ngClass]="{
+          <button *ngFor="let num of numberOfImagesOptions" mat-menu-item [ngClass]="{
               'menu-item-selected': searchRequest.numberOfMedia === num,
-            }"
-            (click)="selectNumberOfImages(num)"
-          >
+            }" (click)="selectNumberOfImages(num)">
             <span>{{ num }}</span>
           </button>
         </mat-menu>
       </div>
 
-      <div
-        matTooltip="Select Composition"
-        class="cursor-pointer w-32 rounded-lg inline-flex flex-col justify-start items-center"
-      >
-        <button
-          mat-fab
-          [matMenuTriggerFor]="compositionMenu"
-          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300"
-        >
+      <div matTooltip="Select Composition"
+        class="cursor-pointer w-32 rounded-lg inline-flex flex-col justify-start items-center">
+        <button mat-fab [matMenuTriggerFor]="compositionMenu"
+          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300">
           <mat-icon>movie_edit</mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
           {{
-            searchRequest.composition
-              ? searchRequest.composition
-              : 'Composition'
+          searchRequest.composition
+          ? searchRequest.composition
+          : 'Composition'
           }}
         </div>
         <mat-menu #compositionMenu="matMenu">
-          <button
-            *ngFor="let comp of compositions"
-            mat-menu-item
-            [ngClass]="{
+          <button *ngFor="let comp of compositions" mat-menu-item [ngClass]="{
               'menu-item-selected': searchRequest.composition === comp,
-            }"
-            (click)="selectComposition(comp)"
-          >
+            }" (click)="selectComposition(comp)">
             <span>{{ comp }}</span>
           </button>
         </mat-menu>
       </div>
 
-      <div
-        matTooltip="Select Negative Phrases"
-        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center"
-      >
-        <button
-          mat-fab
-          [matMenuTriggerFor]="negativePhrasesMenu"
-          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300"
-        >
+      <div matTooltip="Select Negative Phrases" class="cursor-pointer w-32 inline-flex flex-col justify-start items-center">
+        <button mat-fab [matMenuTriggerFor]="negativePhrasesMenu"
+          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300">
           <mat-icon>block</mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
@@ -377,75 +232,40 @@
             <mat-form-field class="w-full">
               <mat-label>Things to avoid...</mat-label>
               <mat-chip-grid #chipGrid aria-label="Enter negative phrases">
-                <mat-chip-row
-                  *ngFor="let phrase of negativePhrases"
-                  (removed)="removeNegativePhrase(phrase)"
-                  matTooltipPosition="below"
-                  class="negative-prompt-chips"
-                >
+                <mat-chip-row *ngFor="let phrase of negativePhrases" (removed)="removeNegativePhrase(phrase)" matTooltipPosition="below"
+                  class="negative-prompt-chips">
                   {{ phrase }}
                   <button matChipRemove [matTooltip]="'Remove ' + phrase">
                     <mat-icon>cancel</mat-icon>
                   </button>
                 </mat-chip-row>
               </mat-chip-grid>
-              <input
-                placeholder="New phrase..."
-                [matChipInputFor]="chipGrid"
-                (matChipInputTokenEnd)="addNegativePhrase($event)"
-              />
+              <input placeholder="New phrase..." [matChipInputFor]="chipGrid" (matChipInputTokenEnd)="addNegativePhrase($event)" />
             </mat-form-field>
           </div>
         </mat-menu>
       </div>
 
-      <div
-        matTooltip="Select Watermark"
-        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center"
-      >
-        <button
-          mat-fab
-          [matMenuTriggerFor]="watermarkMenu"
-          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300"
-        >
+      <div matTooltip="Select Watermark" class="cursor-pointer w-32 inline-flex flex-col justify-start items-center">
+        <button mat-fab [matMenuTriggerFor]="watermarkMenu"
+          class="!w-16 !h-16 !shadow-none text-center justify-center text-stone-300">
           <mat-icon>branding_watermark</mat-icon>
         </button>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
           {{ selectedWatermark }}
         </div>
         <mat-menu #watermarkMenu="matMenu">
-          <button
-            *ngFor="let option of watermarkOptions"
-            mat-menu-item
-            [ngClass]="{
+          <button *ngFor="let option of watermarkOptions" mat-menu-item [ngClass]="{
               'menu-item-selected': searchRequest.addWatermark === option.value,
-            }"
-            (click)="selectWatermark(option)"
-          >
+            }" (click)="selectWatermark(option)">
             <span>{{ option.viewValue }}</span>
           </button>
         </mat-menu>
       </div>
 
-      <div *ngIf="searchRequest.generationModel === 'gemini-3-pro-image-preview'" matTooltip="Enable Google Search"
-        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center">
-        <mat-slide-toggle [(ngModel)]="searchRequest.googleSearch" (ngModelChange)="saveState()"
+      <div matTooltip="Enable Brand Guidelines" class="cursor-pointer w-32 inline-flex flex-col justify-start items-center">
+        <mat-slide-toggle [(ngModel)]="searchRequest.useBrandGuidelines"
           class="!w-16 !h-16 !shadow-none text-center !flex justify-center items-center text-stone-300">
-        </mat-slide-toggle>
-        <div class="text-center justify-center text-neutral-200 text-base mt-2">
-          Google Search
-        </div>
-      </div>
-
-      <div
-        matTooltip="Enable Brand Guidelines"
-        class="cursor-pointer w-32 inline-flex flex-col justify-start items-center"
-      >
-        <mat-slide-toggle
-          [(ngModel)]="searchRequest.useBrandGuidelines"
-          (ngModelChange)="saveState()"
-          class="!w-16 !h-16 !shadow-none text-center !flex justify-center items-center text-stone-300"
-        >
         </mat-slide-toggle>
         <div class="text-center justify-center text-neutral-200 text-base mt-2">
           Brand Guidelines
@@ -464,97 +284,75 @@
       </div> -->
     </div>
 
-    <div
-      class="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-5"
-      [ngClass]="
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-5" [ngClass]="
         (imagenDocuments?.presignedUrls?.length || 0) > 0 ? 'mb-8' : ''
-      "
-    >
-      <div class="lg:col-span-3 flex flex-col justify-start items-start gap-4">
+      ">
+      <div class="lg:col-span-4 flex flex-col justify-start items-start gap-4">
+        <!-- Main Input Container -->
         <div
-          class="justify-center text-neutral-200 text-base font-bold leading-7"
-        >
-          Prompt:
-        </div>
-        <textarea
-          id="promptId"
-          [(ngModel)]="searchRequest.prompt"
-          class="self-stretch w-full h-48 p-4 bg-transparent md:bg-zinc-700 rounded-2xl text-stone-300 text-base font-normal leading-7 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-          placeholder="Enter your prompt here..."
-          (ngModelChange)="service.imagePrompt = $event; saveState()"
-        ></textarea>
-        <div
-          class="inline-flex justify-between items-center grid grid-cols-1 md:flex gap-4"
-        >
-          <div class="flex justify-start items-center gap-4">
-            <!-- <button mat-raised-button color="primary" (click)="getRandomPrompt()" [disabled]="isLoading">
-              <mat-icon>shuffle</mat-icon>
-              Random
-            </button> -->
-            <button
-              mat-raised-button
-              color="primary"
-              (click)="rewritePrompt()"
-              [disabled]="isLoading || isImageGenerating"
-            >
-              <mat-icon>drive_file_rename_outline</mat-icon>
-              Rewrite
-            </button>
-            <button
-              mat-raised-button
-              class="!bg-white"
-              (click)="searchTerm()"
-              [disabled]="isLoading || isImageGenerating"
-            >
-              <mat-icon svgIcon="gemini-spark-icon"></mat-icon>
-              <span
-                class="font-bold bg-gradient-to-r from-blue-500 via-violet-500 to-red-400 bg-clip-text text-transparent"
-              >
-                Generate
-              </span>
-            </button>
-          </div>
-          <button
-            mat-stroked-button
-            class="!text-white"
-            (click)="resetAllFilters()"
-            [disabled]="isLoading || isImageGenerating"
-          >
-            Clear All
-          </button>
-        </div>
-      </div>
-      <div class="lg:col-span-1">
-        <!-- Reference Images Section -->
-        <div class="reference-images-container" [class.disabled]="searchRequest.generationModel.startsWith('imagen-4')">
-          <div class="section-header">
-            <span class="section-title">Reference Images</span>
-            <span class="section-subtitle" *ngIf="searchRequest.generationModel === 'gemini-3-pro-image-preview'">(Up to
-              14)</span>
-            <span class="section-subtitle"
-              *ngIf="!searchRequest.generationModel.startsWith('imagen-4') && searchRequest.generationModel !== 'gemini-3-pro-image-preview'">(Up
-              to 2)</span>
-            <span class="section-subtitle" *ngIf="searchRequest.generationModel.startsWith('imagen-4')">(Not supported)</span>
-          </div>
-          <div class="reference-images-list" *ngIf="!searchRequest.generationModel.startsWith('imagen-4')">
-            <div *ngFor="let img of referenceImages; let i = index" class="reference-image-item">
-              <img [src]="img.previewUrl" alt="Reference Image" />
-              <button mat-icon-button class="clear-btn" (click)="clearImage(i, $event)">
-                <mat-icon>close</mat-icon>
+          class="w-full bg-[#1e1f20] rounded-[2rem] p-4 relative flex flex-col gap-2 min-h-[160px] border border-[#444]">
+
+          <!-- Image Stack Area -->
+          <div class="flex flex-wrap gap-2 mb-2" *ngIf="selectedImages.length > 0">
+            <!-- Stack View -->
+            <div class="relative w-16 h-16 cursor-pointer" *ngIf="!isStackExpanded" (click)="toggleStack()">
+              <div *ngFor="let img of selectedImages; let i = index"
+                class="absolute top-0 left-0 w-full h-full rounded-lg overflow-hidden border border-white/20 shadow-lg transition-transform duration-300"
+                [style.transform]="'rotate(' + (i * 5 - 5) + 'deg) translate(' + (i * 2) + 'px, ' + (i * 2) + 'px)'"
+                [style.z-index]="i">
+                <img [src]="img.preview" class="w-full h-full object-cover">
+              </div>
+              <div
+                class="absolute -top-2 -right-2 bg-zinc-800 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center border border-white/20 z-10">
+                {{selectedImages.length}}
+              </div>
+            </div>
+
+            <!-- Expanded View -->
+            <ng-container *ngIf="isStackExpanded">
+              <div *ngFor="let img of selectedImages" class="relative w-16 h-16 group">
+                <img [src]="img.preview" class="w-full h-full object-cover rounded-lg border border-white/20">
+                <button (click)="removeImage(img.id)"
+                  class="absolute -top-2 -right-2 bg-zinc-800 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/20">
+                  <mat-icon class="!w-3 !h-3 !text-[12px] flex items-center justify-center">close</mat-icon>
+                </button>
+              </div>
+              <!-- Collapse Button -->
+              <button mat-icon-button (click)="toggleStack()" matTooltip="Collapse stack"
+                class="!w-8 !h-8 !text-stone-400 hover:!text-stone-200 self-center ml-2">
+                <mat-icon>keyboard_arrow_left</mat-icon>
               </button>
-            </div>
-            <div class="add-image-btn" (click)="openImageSelector()" (drop)="onDrop($event)" (dragover)="$event.preventDefault()"
-              *ngIf="referenceImages.length < (searchRequest.generationModel === 'gemini-3-pro-image-preview' ? 14 : 2)">
-              <mat-icon>add</mat-icon>
-              <span>Add Image</span>
-            </div>
+            </ng-container>
           </div>
-          <div class="reference-images-disabled-message" *ngIf="searchRequest.generationModel.startsWith('imagen-4')">
-            <mat-icon>block</mat-icon>
-            <span>This model does not support reference images.</span>
-          </div>
+<!-- Textarea -->
+<textarea id="promptId" [(ngModel)]="searchRequest.prompt"
+  class="w-full bg-transparent text-stone-200 text-lg font-normal focus:outline-none resize-none flex-grow placeholder:text-stone-500"
+  placeholder="Enter a prompt for Gemini" rows="3"></textarea>
+<!-- Bottom Action Bar -->
+<div class="flex justify-between items-center mt-2">
+  <div class="flex items-center gap-2">
+    <button mat-icon-button class="!text-stone-400 hover:!text-stone-200 transition-colors"
+      (click)="nextAvailableSlot && openImageSelector(nextAvailableSlot)" [disabled]="!nextAvailableSlot"
+      matTooltip="Add Image">
+      <mat-icon>add_circle_outline</mat-icon>
+    </button>
+  </div>
+<div class="flex items-center gap-4">
+  <button mat-icon-button (click)="searchTerm()" [disabled]="isLoading || !searchRequest.prompt"
+    class="!text-white !bg-white/10 hover:!bg-white/20 transition-colors !w-10 !h-10 flex items-center justify-center rounded-full">
+    <mat-icon>send</mat-icon>
+  </button>
+</div>
+</div>
+        </div>
+<!-- Old Action Buttons (Hidden or Repurposed? Keeping "Clear All" outside for now) -->
+<div class="w-full flex justify-end">
+  <button mat-stroked-button class="!text-white" (click)="resetAllFilters()" [disabled]="isLoading">
+    Clear All
+  </button>
         </div>
       </div>
     </div>
   </div>
 </div>
+>

@@ -43,7 +43,7 @@
                 </div>
             </div>
         </div>
-        <div *ngIf="input.key !== 'input_images' && input.key !== 'image'" class="bg-neutral-900 p-2 rounded border border-neutral-800 mb-2">
+        <div *ngIf="input.key !== 'input_images' && input.key !== 'image'" class="col-span-2 bg-neutral-900 p-2 rounded border border-neutral-800 mb-2">
             <span class="text-xs text-neutral-500 block mb-1">{{ input.key }}</span>
             <p class="text-xs text-neutral-300 font-mono whitespace-pre-wrap">{{ input.value | json }}</p>
         </div>

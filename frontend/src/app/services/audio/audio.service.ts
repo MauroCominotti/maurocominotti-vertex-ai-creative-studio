@@ -17,23 +17,12 @@ import {
 import { environment } from '../../../environments/environment';
 import { LanguageEnum, VoiceEnum } from '../../audio/audio.constants'; 
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar'; 
 
 /**
  * Minimal in-file replacements for the missing utils so this service can compile.
  * These mirror the expected behavior: show a snackbar and log errors to console.
  */
-function handleSuccessSnackbar(snackBar: MatSnackBar, message: string, duration = 3000): void {
-  snackBar.open(message, 'Close', { duration });
-}
-
-function handleErrorSnackbar(snackBar: MatSnackBar, error: any, message?: string, duration = 6000): void {
-  const msg =
-    message ||
-    (error && (error.message || (typeof error === 'string' ? error : JSON.stringify(error)))) ||
-    'An error occurred';
-  console.error('Error snackbar:', error);
-  snackBar.open(msg, 'Close', { duration });
-}
 
 // 1. Define the Enum to match Backend exactly
 export enum GenerationModelEnum {

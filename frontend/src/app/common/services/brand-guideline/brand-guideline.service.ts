@@ -71,15 +71,17 @@ export class BrandGuidelineService {
 
   private finalizeUpload(
     workspaceId: string,
-    gcsObjectName: string,
+    gcsUri: string,
     name: string,
+    original_filename: string,
   ): Observable<BrandGuidelineModel> {
     return this.http.post<BrandGuidelineModel>(
       `${this.apiUrl}/finalize-upload`,
       {
-        workspaceId,
-        gcsObjectName,
+        workspace_id: workspaceId,
+        gcs_uri: gcsUri,
         name,
+        original_filename,
       },
     );
   }
@@ -96,13 +98,10 @@ export class BrandGuidelineService {
       file.type,
       file.size,
     ).pipe(
-      switchMap(({uploadUrl, gcsUri}) => {
-        // Extract the object name from the full GCS URI
-        const gcsObjectName = gcsUri.substring(gcsUri.indexOf('/', 5) + 1);
-
+      switchMap(({ uploadUrl, gcsUri }) => {
         return this.uploadFileToGCS(uploadUrl, file).pipe(
           switchMap(() =>
-            this.finalizeUpload(workspaceId, gcsObjectName, name),
+            this.finalizeUpload(workspaceId, gcsUri, name, file.name),
           ),
         );
       }),

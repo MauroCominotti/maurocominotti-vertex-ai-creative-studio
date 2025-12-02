@@ -14,45 +14,45 @@
  * limitations under the License.
  */
 
-import { HttpClient } from '@angular/common/http';
 import {
-  AfterViewInit,
   Component,
-  ElementRef,
-  HostListener,
-  Inject,
-  OnDestroy,
   OnInit,
+  OnDestroy,
+  AfterViewInit,
+  ElementRef,
+  Inject,
   ViewChild,
+  HostListener,
 } from '@angular/core';
-import { MatChipInputEvent } from '@angular/material/chips';
-import { MatDialog } from '@angular/material/dialog';
-import { MatIconRegistry } from '@angular/material/icon';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { NavigationExtras, Router } from '@angular/router';
-import { finalize, Observable } from 'rxjs';
-import { AssetTypeEnum } from '../admin/source-assets-management/source-asset.model';
-import { ImageCropperDialogComponent } from '../common/components/image-cropper-dialog/image-cropper-dialog.component';
-import {
-  ImageSelectorComponent,
-  MediaItemSelection,
-} from '../common/components/image-selector/image-selector.component';
-import { MediaItem } from '../common/models/media-item.model';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { MatIconRegistry } from '@angular/material/icon';
+import { finalize, Observable, of } from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
+import { SearchService } from '../services/search/search.service';
 import {
   ImagenRequest,
-  ReferenceImage,
   SourceMediaItemLink,
 } from '../common/models/search.model';
-import { SourceAssetResponseDto } from '../common/services/source-asset.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   EnrichedSourceAsset,
   GenerationParameters,
 } from '../fun-templates/media-template.model';
-import { SearchService } from '../services/search/search.service';
+import { handleErrorSnackbar } from '../utils/handleErrorSnackbar';
+import { MediaItem } from '../common/models/media-item.model';
+import {
+  ImageSelectorComponent,
+  MediaItemSelection,
+} from '../common/components/image-selector/image-selector.component';
+import { HttpClient } from '@angular/common/http';
+import { MatChipInputEvent } from '@angular/material/chips';
+import { SourceAssetResponseDto } from '../common/services/source-asset.service';
+import { environment } from '../../environments/environment';
+import { ToastMessageComponent } from '../common/components/toast-message/toast-message.component';
 import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
-import { ImageStateService } from '../services/image-state.service';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
+import { AssetTypeEnum } from '../admin/source-assets-management/source-asset.model';
+import { ImageCropperDialogComponent } from '../common/components/image-cropper-dialog/image-cropper-dialog.component';
 
 @Component({
   selector: 'app-home',
@@ -63,12 +63,41 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   // --- Component State ---
   imagenDocuments: MediaItem | null = null;
   isLoading = false;
-  isImageGenerating = false;
   templateParams: GenerationParameters | undefined;
   showDefaultDocuments = false;
-  referenceImages: ReferenceImage[] = [];
-  sourceMediaItems: (SourceMediaItemLink | null)[] = [];
+
+  // Unified storage for selected images (both uploaded and gallery)
+  selectedAssets: {
+    id: string; // unique UI identifier
+    preview: string;
+    type: 'UPLOADED' | 'GALLERY';
+    assetId?: string;
+    mediaItemId?: string;
+    mediaIndex?: number;
+  }[] = [];
+
   activeWorkspaceId$: Observable<string | null>;
+
+  // --- Stack State ---
+  isStackExpanded = false;
+
+  get selectedImages() {
+    return this.selectedAssets;
+  }
+
+  get nextAvailableSlot(): number | null {
+    return this.selectedAssets.length < 10 ? this.selectedAssets.length + 1 : null;
+  }
+
+  toggleStack() {
+    if (this.selectedImages.length > 0) {
+      this.isStackExpanded = !this.isStackExpanded;
+    }
+  }
+
+  removeImage(id: string) {
+    this.clearImage(id, new MouseEvent('click'));
+  }
 
   @HostListener('window:keydown.control.enter', ['$event'])
   handleCtrlEnter(event: KeyboardEvent) {
@@ -82,7 +111,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   // This object holds the current state of all user selections.
   searchRequest: ImagenRequest = {
     prompt: '',
-    generationModel: 'gemini-3-pro-image-preview',
+    generationModel: 'gemini-2.5-flash-image-preview',
     aspectRatio: '1:1',
     numberOfMedia: 4,
     style: null,
@@ -92,8 +121,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     addWatermark: false,
     negativePrompt: '',
     useBrandGuidelines: false,
-    googleSearch: false,
-    resolution: '4K',
   };
 
   // --- Negative Prompt Chips ---
@@ -101,12 +128,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // --- Dropdown Options ---
   generationModels = [
-    {
-      value: 'gemini-3-pro-image-preview',
-      viewValue: 'Nano Banana Pro',
-      isImage: true,
-      imageSrc: 'assets/images/banana-peel.png',
-    },
     {
       value: 'gemini-2.5-flash-image-preview',
       viewValue: 'Nano Banana',
@@ -180,36 +201,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         disabled: false,
         icon: 'crop_landscape',
       },
-      {
-        value: '2:3',
-        viewValue: '2:3 \n Portrait',
-        disabled: false,
-        icon: 'crop_portrait',
-      },
-      {
-        value: '3:2',
-        viewValue: '3:2 \n Landscape',
-        disabled: false,
-        icon: 'crop_landscape',
-      },
-      {
-        value: '4:5',
-        viewValue: '4:5 \n Portrait',
-        disabled: false,
-        icon: 'crop_portrait',
-      },
-      {
-        value: '5:4',
-        viewValue: '5:4 \n Landscape',
-        disabled: false,
-        icon: 'crop_landscape',
-      },
-      {
-        value: '21:9',
-        viewValue: '21:9 \n Wide',
-        disabled: false,
-        icon: 'crop_16_9',
-      },
     ];
   selectedAspectRatio = this.aspectRatioOptions[0].viewValue;
   imageStyles = [
@@ -280,13 +271,12 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     public router: Router,
     private sanitizer: DomSanitizer,
     public matIconRegistry: MatIconRegistry,
-    public service: SearchService,
+    private service: SearchService,
     private _snackBar: MatSnackBar,
     public dialog: MatDialog,
     private http: HttpClient,
     @Inject(WorkspaceStateService)
     private workspaceStateService: WorkspaceStateService,
-    private imageStateService: ImageStateService,
   ) {
     this.matIconRegistry
       .addSvgIcon(
@@ -333,18 +323,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.activeWorkspaceId$ = this.workspaceStateService.activeWorkspaceId$;
-
-    // Subscribe to the active image job to update the UI
-    this.service.activeImageJob$.subscribe(job => {
-      if (job) {
-        this.processSearchResults(job);
-        if (job.status === 'completed' || job.status === 'failed') {
-          this.isImageGenerating = false;
-        } else {
-          this.isImageGenerating = true;
-        }
-      }
-    });
   }
 
   private path = '../../assets/images';
@@ -380,104 +358,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     if (typeof window !== 'undefined')
       window.addEventListener('mousemove', this.onMouseMove);
 
-    // Load persisted state
-    this.restoreState();
-  }
-
-  public saveState() {
-    this.imageStateService.updateState({
-      prompt: this.searchRequest.prompt,
-      negativePrompt: this.searchRequest.negativePrompt || '',
-      aspectRatio: this.searchRequest.aspectRatio,
-      model: this.searchRequest.generationModel,
-      lighting: this.searchRequest.lighting,
-      watermark: this.searchRequest.addWatermark,
-      googleSearch: this.searchRequest.googleSearch,
-      resolution: this.searchRequest.resolution,
-      style: this.searchRequest.style,
-      colorAndTone: this.searchRequest.colorAndTone,
-      numberOfMedia: this.searchRequest.numberOfMedia,
-      composition: this.searchRequest.composition,
-      useBrandGuidelines: this.searchRequest.useBrandGuidelines,
-    });
-  }
-
-  private restoreState() {
-    const state = this.imageStateService.getState();
-    this.searchRequest.prompt = state.prompt;
-    this.searchRequest.negativePrompt = state.negativePrompt;
-    this.searchRequest.aspectRatio = state.aspectRatio;
-    this.searchRequest.generationModel = state.model;
-    this.searchRequest.lighting = state.lighting === 'none' ? null : state.lighting;
-    this.searchRequest.addWatermark = state.watermark;
-    this.searchRequest.googleSearch = state.googleSearch;
-    this.searchRequest.resolution = state.resolution as '4K' | '1K' | '2K' | undefined;
-    this.searchRequest.style = state.style;
-    this.searchRequest.colorAndTone = state.colorAndTone;
-    this.searchRequest.numberOfMedia = state.numberOfMedia;
-    this.searchRequest.composition = state.composition;
-    this.searchRequest.useBrandGuidelines = state.useBrandGuidelines;
-
-    this.negativePhrases = state.negativePrompt
-      ? state.negativePrompt.split(', ').filter(Boolean)
-      : [];
-    
-    // Update selected options for UI
-    const modelOption = this.generationModels.find(m => m.value === state.model);
-    if (modelOption) {
-      this.selectedGenerationModel = modelOption.viewValue;
-      this.selectedGenerationModelObject = modelOption;
-    }
-    const ratioOption = this.aspectRatioOptions.find(r => r.value === state.aspectRatio);
-    if (ratioOption) {
-      this.selectedAspectRatio = ratioOption.viewValue;
-    }
-    const watermarkOption = this.watermarkOptions.find(o => o.value === state.watermark);
-    if (watermarkOption) {
-      this.selectedWatermark = watermarkOption.viewValue;
-    }
-
-    // Run selectModel logic to set up aspect ratios and other model-specific settings
-    // but don't save state again to avoid infinite loop, and don't overwrite restored state
-    if (modelOption) {
-      this.applyModelSettings(modelOption);
-    }
-  }
-
-  private applyModelSettings(model: any) {
-    if (model.value === 'gemini-3-pro-image-preview') {
-      // Enable all aspect ratios for Gemini 3 Pro
-      this.aspectRatioOptions.forEach(r => (r.disabled = false));
-    } else if (model.value === 'gemini-2.5-flash-image-preview') {
-      // Nano Banana only supports 1:1 aspect ratio for now.
-      const oneToOneRatio = this.aspectRatioOptions.find(
-        r => r.value === '1:1',
-      );
-      if (oneToOneRatio) {
-        // Only set if not already set by restoreState or if invalid
-        if (this.searchRequest.aspectRatio !== '1:1') {
-          this.selectAspectRatio(oneToOneRatio);
-        }
-      }
-      // Disable other aspect ratios
-      this.aspectRatioOptions.forEach(r => {
-        r.disabled = r.value !== '1:1';
-      });
-    } else {
-      // Imagen models support standard aspect ratios
-      const imagenRatios = ['1:1', '16:9', '9:16', '3:4', '4:3'];
-      this.aspectRatioOptions.forEach(r => {
-        r.disabled = !imagenRatios.includes(r.value);
-      });
-      if (!imagenRatios.includes(this.searchRequest.aspectRatio)) {
-        const oneToOneRatio = this.aspectRatioOptions.find(
-          r => r.value === '1:1',
-        );
-        if (oneToOneRatio) {
-          this.selectAspectRatio(oneToOneRatio);
-        }
-      }
-    }
+    // Since we start with Nano Banana, apply its restrictions by default.
+    this.selectModel(this.selectedGenerationModelObject);
   }
 
   private applyTemplateParameters(): void {
@@ -563,91 +445,82 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.searchRequest.generationModel = model.value;
     this.selectedGenerationModel = model.viewValue;
     this.selectedGenerationModelObject = model;
-    this.applyModelSettings(model);
 
-    if (model.value !== 'gemini-3-pro-image-preview') {
-      // Enforce image limit (max 2 for non-Gemini 3 Pro models)
-      if (this.referenceImages.length > 2) {
-        this.referenceImages = this.referenceImages.slice(0, 2);
+    // Nano Banana only supports 1:1 aspect ratio for now.
+    if (model.value === 'gemini-2.5-flash-image-preview') {
+      const oneToOneRatio = this.aspectRatioOptions.find(
+        r => r.value === '1:1',
+      );
+      if (oneToOneRatio) {
+        this.selectAspectRatio(oneToOneRatio);
       }
-      // Clear images for Imagen 4 as it doesn't support them
-      if (model.value.startsWith('imagen-4')) {
-        this.referenceImages = [];
-      }
-      // Reset Google Search for non-Gemini 3 Pro models
-      this.searchRequest.googleSearch = false;
+      // Disable other aspect ratios
+      this.aspectRatioOptions.forEach(r => {
+        r.disabled = r.value !== '1:1';
+      });
+    } else {
+      // Re-enable all aspect ratios for other models
+      this.aspectRatioOptions.forEach(r => (r.disabled = false));
     }
-    this.saveState();
   }
 
   selectAspectRatio(ratio: { value: string; viewValue: string }): void {
     this.searchRequest.aspectRatio = ratio.value;
     this.selectedAspectRatio = ratio.viewValue;
-    this.saveState();
   }
 
   selectImageStyle(style: string): void {
     this.searchRequest.style === style
       ? (this.searchRequest.style = null)
       : (this.searchRequest.style = style);
-    this.saveState();
   }
 
   selectLighting(lighting: string): void {
     this.searchRequest.lighting === lighting
       ? (this.searchRequest.lighting = null)
       : (this.searchRequest.lighting = lighting);
-    this.saveState();
   }
 
   selectColor(color: string): void {
     this.searchRequest.colorAndTone === color
       ? (this.searchRequest.colorAndTone = null)
       : (this.searchRequest.colorAndTone = color);
-    this.saveState();
   }
 
   selectNumberOfImages(num: number): void {
     this.searchRequest.numberOfMedia === num
       ? (this.searchRequest.numberOfMedia = 4)
       : (this.searchRequest.numberOfMedia = num);
-    this.saveState();
   }
 
   selectComposition(composition: string): void {
     this.searchRequest.composition === composition
       ? (this.searchRequest.composition = null)
       : (this.searchRequest.composition = composition);
-    this.saveState();
   }
 
   selectWatermark(option: { value: boolean; viewValue: string }): void {
     this.searchRequest.addWatermark = option.value;
     this.selectedWatermark = option.viewValue;
-    this.saveState();
   }
 
   addNegativePhrase(event: MatChipInputEvent): void {
     const value = (event.value || '').trim();
     if (value) this.negativePhrases.push(value);
-    this.searchRequest.negativePrompt = this.negativePhrases.join(', ');
 
     // Clear the input value
     event.chipInput!.clear();
-    this.saveState();
   }
 
   removeNegativePhrase(phrase: string): void {
     const index = this.negativePhrases.indexOf(phrase);
     if (index >= 0) this.negativePhrases.splice(index, 1);
-    this.searchRequest.negativePrompt = this.negativePhrases.join(', ');
-    this.saveState();
   }
 
   searchTerm() {
     if (!this.searchRequest.prompt) return;
 
-    const hasSourceAssets = this.referenceImages.length > 0;
+    const hasSourceAssets = this.selectedAssets.length > 0;
     const isImagen4 = [
       'imagen-4.0-generate-001',
       'imagen-4.0-ultra-generate-001',
@@ -660,19 +533,31 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       );
       if (imagen3Model) {
         this.selectModel(imagen3Model);
-        handleSuccessSnackbar(this._snackBar, "Imagen 4 doesn't support images as input, so we've switched to Imagen 3 for you!");
+        this._snackBar.openFromComponent(ToastMessageComponent, {
+          panelClass: ['green-toast'],
+          duration: 8000,
+          data: {
+            text: "Imagen 4 doesn't support images as input, so we've switched to Imagen 3 for you!",
+            matIcon: 'info_outline',
+          },
+        });
         return;
       }
     }
 
+    // Construct sourceMediaItems and sourceAssetIds from selectedAssets
     const validSourceMediaItems: SourceMediaItemLink[] = [];
     const sourceAssetIds: string[] = [];
 
-    this.referenceImages.forEach(img => {
-      if (img.sourceMediaItem) {
-        validSourceMediaItems.push(img.sourceMediaItem);
-      } else if (img.sourceAssetId) {
-        sourceAssetIds.push(img.sourceAssetId);
+    this.selectedAssets.forEach((asset, index) => {
+      if (asset.type === 'GALLERY' && asset.mediaItemId) {
+        validSourceMediaItems.push({
+          mediaItemId: asset.mediaItemId,
+          mediaIndex: asset.mediaIndex || 0,
+          role: 'input',
+        });
+      } else if (asset.type === 'UPLOADED' && asset.assetId) {
+        sourceAssetIds.push(asset.assetId);
       }
     });
 
@@ -683,19 +568,22 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       sourceMediaItems: validSourceMediaItems.length
         ? validSourceMediaItems
         : undefined,
-      sourceAssetIds: sourceAssetIds.length ? sourceAssetIds : undefined,
       workspaceId: activeWorkspaceId ?? undefined,
     };
 
-    this.isImageGenerating = true;
+    if (sourceAssetIds.length > 0) {
+      payload.sourceAssetIds = sourceAssetIds;
+    }
+
+    this.isLoading = true;
     this.imagenDocuments = null;
 
     this.service
-      .startImagenGeneration(payload)
+      .searchImagen(payload)
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
-        next: (initialResponse: MediaItem) => {
-          console.log('Image generation job started:', initialResponse);
+        next: (searchResponse: MediaItem) => {
+          this.processSearchResults(searchResponse);
         },
         error: error => {
           handleErrorSnackbar(this._snackBar, error, 'Search');
@@ -718,7 +606,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       .subscribe({
         next: (response: { prompt: string }) => {
           this.searchRequest.prompt = response.prompt;
-          this.saveState();
         },
         error: error => {
           handleErrorSnackbar(this._snackBar, error, 'Rewrite prompt');
@@ -735,7 +622,6 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       .subscribe({
         next: (response: { prompt: string }) => {
           this.searchRequest.prompt = response.prompt;
-          this.saveState();
         },
         error: error => {
           handleErrorSnackbar(this._snackBar, error, 'Get random prompt');
@@ -746,7 +632,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   resetAllFilters() {
     this.searchRequest = {
       prompt: '',
-      generationModel: 'gemini-3-pro-image-preview',
+      generationModel: 'gemini-2.5-flash-image-preview',
       aspectRatio: '1:1',
       numberOfMedia: 4,
       style: null,
@@ -756,78 +642,8 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       addWatermark: false,
       negativePrompt: '',
       useBrandGuidelines: false,
-      googleSearch: false,
-      resolution: '4K',
     };
-    this.negativePhrases = [];
-    this.referenceImages = [];
-    this.sourceMediaItems = [];
-    this.selectedGenerationModel = this.generationModels[0].viewValue;
-    this.selectedGenerationModelObject = this.generationModels[0];
-    this.selectedAspectRatio = this.aspectRatioOptions[0].viewValue;
-    this.imageStateService.resetState();
-  }
-
-  editResultImage(index: number) {
-    if (!this.imagenDocuments || !this.imagenDocuments.presignedUrls) return;
-    const imageUrl = this.imagenDocuments.presignedUrls[index];
-    const mediaItemId = this.imagenDocuments.id;
-
-    // Add to reference images
-    const refImage: ReferenceImage = {
-      previewUrl: imageUrl,
-      sourceMediaItem: {
-        mediaItemId: mediaItemId,
-        mediaIndex: index,
-        role: 'input',
-      },
-    };
-    this.referenceImages.push(refImage);
-
-    // Scroll to top to show the input
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  applyRemixState(state: any) {
-    this.searchRequest.prompt = state.prompt;
-    this.searchRequest.aspectRatio = state.aspectRatio;
-    this.searchRequest.generationModel = state.generationModel;
-    this.searchRequest.style = state.style;
-    this.searchRequest.lighting = state.lighting;
-    this.searchRequest.colorAndTone = state.colorAndTone;
-    this.searchRequest.composition = state.composition;
-    this.searchRequest.negativePrompt = state.negativePrompt;
-    this.negativePhrases = state.negativePrompt
-      ? state.negativePrompt.split(', ')
-      : [];
-
-    if (state.sourceAssetIds && state.sourceAssetIds.length > 0) {
-      // This is a simplification, we might need to fetch the actual assets to get preview URLs
-      // For now, we just set the IDs, but preview won't work until we have URLs
-      state.sourceAssetIds.forEach((id: string, index: number) => {
-        this.referenceImages.push({
-          previewUrl: (state.previewUrls && state.previewUrls[index]) || state.previewUrl || '',
-          sourceAssetId: id,
-        });
-      });
-    }
-
-    if (state.sourceMediaItems && state.sourceMediaItems.length > 0) {
-      state.sourceMediaItems.forEach((item: SourceMediaItemLink, index: number) => {
-        this.referenceImages.push({
-          previewUrl: (state.previewUrls && state.previewUrls[index]) || state.previewUrl || '',
-          sourceMediaItem: item,
-        });
-      });
-    }
-
-    this.selectModel(
-      this.generationModels.find(m => m.value === state.generationModel) ||
-      this.generationModels[0],
-    );
-    this.selectedAspectRatio =
-      this.aspectRatioOptions.find(r => r.value === state.aspectRatio)
-        ?.viewValue || this.aspectRatioOptions[0].viewValue;
+    this.selectedAssets = [];
   }
 
   private onMouseMove = (event: MouseEvent) => {
@@ -846,7 +662,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     this.animationFrameId = requestAnimationFrame(this.move);
   };
 
-  openImageSelector(index?: number) {
+  openImageSelector(slotIndex: number) {
     const dialogRef = this.dialog.open(ImageSelectorComponent, {
       width: '90vw',
       height: '80vh',
@@ -861,12 +677,45 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
       .afterClosed()
       .subscribe((result: MediaItemSelection | SourceAssetResponseDto) => {
         if (result) {
-          this.processInput(result, index);
+          this.handleImageResult(result, slotIndex);
         }
       });
   }
 
-  openCropperDialog(file: File, index?: number) {
+  private handleImageResult(result: MediaItemSelection | SourceAssetResponseDto, slotIndex: number) {
+    console.log('handleImageResult called', result, slotIndex);
+    const newAsset: typeof this.selectedAssets[0] = {
+      id: `asset-${Date.now()}-${Math.random()}`, // Generate a unique ID for the UI
+      preview: '',
+      type: 'UPLOADED'
+    };
+
+    if ('gcsUri' in result) {
+      // Uploaded image (SourceAssetResponseDto)
+      newAsset.type = 'UPLOADED';
+      newAsset.assetId = result.id;
+      newAsset.preview = result.presignedUrl || '';
+    } else {
+      // Gallery image (MediaItem)
+      const selection = result as MediaItemSelection;
+      newAsset.type = 'GALLERY';
+      newAsset.mediaItemId = selection.mediaItem.id;
+      newAsset.mediaIndex = selection.selectedIndex;
+      newAsset.preview = selection.mediaItem.presignedUrls?.[selection.selectedIndex || 0] || '';
+    }
+
+    // Update selectedAssets immutably to trigger change detection
+    if (slotIndex <= this.selectedAssets.length) {
+      const newAssets = [...this.selectedAssets];
+      newAssets[slotIndex - 1] = newAsset;
+      this.selectedAssets = newAssets;
+    } else {
+      this.selectedAssets = [...this.selectedAssets, newAsset];
+    }
+    console.log('selectedAssets updated', this.selectedAssets);
+  }
+
+  openCropperDialog(file: File, slotIndex: number) {
     const dialogRef = this.dialog.open(ImageCropperDialogComponent, {
       data: {
         imageFile: file,
@@ -877,68 +726,87 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
     dialogRef.afterClosed().subscribe((result: SourceAssetResponseDto) => {
       if (result && result.id) {
-        this.processInput(result, index);
+        this.handleImageResult(result, slotIndex);
       }
     });
   }
 
-  private processInput(
-    result: MediaItemSelection | SourceAssetResponseDto,
-    index?: number,
-  ) {
-    const isGalleryImage = !('gcsUri' in result);
-    let previewUrl: string | null = null;
-    let sourceAssetId: string | null = null;
-    let sourceMediaItem: SourceMediaItemLink | null = null;
-
-    if (isGalleryImage) {
-      const selection = result as MediaItemSelection;
-      previewUrl =
-        selection.mediaItem.presignedUrls?.[selection.selectedIndex || 0] || null;
-      sourceMediaItem = {
-        mediaItemId: selection.mediaItem.id,
-        mediaIndex: selection.selectedIndex,
-        role: 'input',
-      };
-    } else {
-      const asset = result as SourceAssetResponseDto;
-      previewUrl = asset.presignedUrl || null;
-      sourceAssetId = asset.id;
-    }
-
-    if (previewUrl) {
-      const refImage: ReferenceImage = {
-        previewUrl,
-        sourceAssetId: sourceAssetId || undefined,
-        sourceMediaItem: sourceMediaItem || undefined,
-      };
-
-      if (index !== undefined && index < this.referenceImages.length) {
-        this.referenceImages[index] = refImage;
-      } else {
-        this.referenceImages.push(refImage);
-      }
-    }
-  }
-
-  onDrop(event: DragEvent, index?: number) {
+  onDrop(event: DragEvent, slotIndex: number) {
     event.preventDefault();
-    const files = event.dataTransfer?.files;
-    if (files && files.length > 0) {
-      // Handle multiple files if dropped
-      for (let i = 0; i < files.length; i++) {
-        this.openCropperDialog(files[i], index !== undefined ? index + i : undefined);
+    const file = event.dataTransfer?.files[0];
+    if (file) {
+      // Instead of uploading directly, just open the cropper dialog
+      this.openCropperDialog(file, slotIndex);
+    }
+  }
+
+  clearImage(id: number | string, event: MouseEvent) {
+    event.stopPropagation();
+    // If id is a number (1-based index from legacy calls) or string (unique ID)
+    // We should filter by the unique ID if possible, or index if passed.
+    // The new stack view passes the unique ID (string) or we can adapt.
+    // Let's assume for now we might receive an index or an ID.
+
+    if (typeof id === 'number') {
+      // Legacy index based removal (careful with indices shifting)
+      // But wait, the new UI passes `image.id` which is a string in my new definition?
+      // Actually, in the template I might be passing the index or the object.
+      // Let's check the template. The template uses `image.id`.
+      // My new `selectedAssets` has `id: string`.
+      // But `removeImage` in step 124 was taking `id: number`.
+      // I need to update `removeImage` signature too.
+    }
+
+    this.selectedAssets = this.selectedAssets.filter(asset => asset.id !== id);
+  }
+
+  editResultImage(index: number) {
+    if (!this.imagenDocuments || !this.imagenDocuments.presignedUrls) {
+      return;
+    }
+
+    // Clear existing inputs and set the new one
+    this.selectedAssets = [];
+
+    this.selectedAssets.push({
+      id: `generated-${Date.now()}`,
+      preview: this.imagenDocuments.presignedUrls[index],
+      type: 'GALLERY',
+      mediaItemId: this.imagenDocuments.id,
+      mediaIndex: index
+    });
+
+
+    // Switch to Nano Banana model for editing
+    const nanoBananaModel = this.generationModels.find(
+      m => m.value === 'gemini-2.5-flash-image-preview',
+    );
+    if (nanoBananaModel) this.selectModel(nanoBananaModel);
+  }
+
+  // clearSourceMediaItem is no longer needed
+
+
+  private applyRemixState(remixState: {
+    sourceMediaItems: SourceMediaItemLink[];
+    prompt?: string;
+    previewUrl?: string;
+  }): void {
+    if (remixState.sourceMediaItems?.length > 0) {
+      this.selectedAssets = [];
+      // For now, just use the first one for preview if available
+      if (remixState.previewUrl) {
+        this.selectedAssets.push({
+          id: `remix-${Date.now()}`,
+          preview: remixState.previewUrl,
+          type: 'GALLERY',
+          mediaItemId: remixState.sourceMediaItems[0].mediaItemId,
+          mediaIndex: remixState.sourceMediaItems[0].mediaIndex
+        });
       }
     }
+    if (remixState.prompt) this.searchRequest.prompt = remixState.prompt;
   }
-
-  clearImage(index: number, event: MouseEvent) {
-    event.stopPropagation();
-    if (index >= 0 && index < this.referenceImages.length) {
-      this.referenceImages.splice(index, 1);
-    }
-  }
-
 
   generateVideoWithImage(event: { role: 'start' | 'end'; index: number }) {
     if (!this.imagenDocuments) {
@@ -994,13 +862,14 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     // Clear any existing inputs
-    this.referenceImages = [];
-    this.sourceMediaItems = [];
+    this.selectedAssets = [];
 
     sourceAssets.forEach(asset => {
-      this.referenceImages.push({
-        previewUrl: asset.presignedUrl || '',
-        sourceAssetId: asset.assetId,
+      this.selectedAssets.push({
+        id: `source-${asset.assetId}`,
+        preview: asset.presignedUrl,
+        type: 'UPLOADED',
+        assetId: asset.assetId
       });
     });
   }

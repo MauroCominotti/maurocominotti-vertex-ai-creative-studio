@@ -35,7 +35,7 @@
       class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black bg-opacity-70 rounded-xl text-center p-4"
     >
       <mat-icon class="text-red-500 !w-16 !h-16 !text-6xl"
-        >error_outline</mat-icon
+        >error_outline</mat-icon>
       >
       <p class="mt-4 text-white text-lg">Audio Generation Failed</p>
       <p class="text-gray-400 text-sm max-w-md">
@@ -106,7 +106,7 @@
             <textarea
               matInput
               [ngModel]="state.prompt"
-              (input)="onPromptChange($event.target.value)"
+              (input)="onPromptChange($any($event.target).value)"
               placeholder="Describe the music..."
             ></textarea>
           </mat-form-field>
@@ -116,7 +116,7 @@
             <input
               matInput
               [ngModel]="state.negativePrompt"
-              (change)="onNegativePromptChange($event.target.value)"
+              (change)="onNegativePromptChange($any($event.target).value)"
               placeholder="What to avoid"
             />
           </mat-form-field>
@@ -125,7 +125,7 @@
             <mat-label>Seed</mat-label>
             <input matInput type="number"
               [ngModel]="state.seed"
-              (change)="onSeedChange($event.target.value)"
+              (change)="onSeedChange($any($event.target).value)"
             />
           </mat-form-field>
 
@@ -148,7 +148,7 @@
             <textarea
               matInput
               [ngModel]="state.prompt"
-              (input)="onPromptChange($event.target.value)"
+              (input)="onPromptChange($any($event.target).value)"
               placeholder="Enter text to speak..."
             ></textarea>
           </mat-form-field>

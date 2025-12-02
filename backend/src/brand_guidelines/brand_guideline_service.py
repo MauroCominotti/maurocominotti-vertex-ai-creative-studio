@@ -1,3 +1,17 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import asyncio
 import datetime
 import io
@@ -20,17 +34,13 @@ from google.cloud.logging import Client as LoggerClient
 from google.cloud.logging.handlers import CloudLoggingHandler
 from pypdf import PdfReader, PdfWriter
 
+from src.workspaces.schema.workspace_model import WorkspaceScopeEnum
 from src.auth.iam_signer_credentials_service import IamSignerCredentials
 from src.brand_guidelines.dto.brand_guideline_response_dto import (
     BrandGuidelineResponseDto,
 )
 from src.brand_guidelines.dto.brand_guideline_search_dto import (
     BrandGuidelineSearchDto,
-)
-from src.brand_guidelines.dto.finalize_upload_dto import FinalizeUploadDto
-from src.brand_guidelines.dto.generate_upload_url_dto import (
-    GenerateUploadUrlDto,
-    GenerateUploadUrlResponseDto,
 )
 from src.brand_guidelines.repository.brand_guideline_repository import (
     BrandGuidelineRepository,
@@ -40,6 +50,7 @@ from src.brand_guidelines.schema.brand_guideline_model import (
 )
 from src.common.schema.media_item_model import JobStatusEnum
 from src.common.storage_service import GcsService
+from src.common.vector_search_service import VectorSearchService
 from src.multimodal.gemini_service import GeminiService
 from src.users.user_model import UserModel, UserRoleEnum
 from src.workspaces.repository.workspace_repository import WorkspaceRepository
@@ -53,8 +64,8 @@ GEMINI_PDF_LIMIT_BYTES = 50 * 1024 * 1024
 def _process_brand_guideline_in_background(
     guideline_id: str,
     name: str,
+    file_contents: bytes,
     original_filename: str,
-    source_gcs_uri: str,
     workspace_id: Optional[str],
 ):
     """
@@ -78,7 +89,7 @@ def _process_brand_guideline_in_background(
         else:
             handler = logging.StreamHandler(sys.stdout)
             formatter = logging.Formatter(
-                "%(asctime)s - [BG_WORKER] - %(levelname)s - %(message)s"
+                "%(asctime)s - [BRAND_GUIDELINE_WORKER] - %(levelname)s - %(message)s"
             )
             handler.setFormatter(formatter)
             worker_logger.addHandler(handler)
@@ -87,17 +98,14 @@ def _process_brand_guideline_in_background(
         repo = BrandGuidelineRepository()
         gcs_service = GcsService()
         gemini_service = GeminiService()
+        vector_search_service = VectorSearchService()
 
         try:
-            # 0. Download the source PDF from GCS
-            worker_logger.info(f"Downloading source PDF from {source_gcs_uri}")
-            file_contents = gcs_service.download_bytes_from_gcs(source_gcs_uri)
-
             # 1. Split if necessary and upload file(s) to GCS
             gcs_uris = asyncio.run(
                 BrandGuidelineService._split_and_upload_pdf(
                     gcs_service,
-                    file_contents or b"",
+                    file_contents,
                     workspace_id,
                     original_filename,
                 )
@@ -148,7 +156,30 @@ def _process_brand_guideline_in_background(
                     "AI processing failed to extract data from the PDF."
                 )
 
-            # 4. Update the final, fully-populated Firestore document
+            # 4. Index extracted rules into Vector Search
+            if extracted_data.brand_rules:
+                worker_logger.info(f"Indexing {len(extracted_data.brand_rules)} rules for guideline {guideline_id}")
+                vectors = []
+                for i, rule in enumerate(extracted_data.brand_rules):
+                    try:
+                        embedding = gemini_service.generate_embedding(rule)
+                        if embedding:
+                            vectors.append({
+                                "id": f"{guideline_id}_rule_{i}",
+                                "embedding": embedding,
+                                "restricts": [
+                                    {"namespace": "scope", "allow_list": [workspace_id or "Global"]},
+                                    {"namespace": "type", "allow_list": ["text"]},
+                                    {"namespace": "guideline_id", "allow_list": [guideline_id]},
+                                ]
+                            })
+                    except Exception as e:
+                        worker_logger.error(f"Failed to embed rule '{rule}': {e}")
+
+                if vectors:
+                    vector_search_service.upsert_vectors(vectors)
+
+            # 5. Update the final, fully-populated Firestore document
             update_data = {
                 "status": JobStatusEnum.COMPLETED,
                 "source_pdf_gcs_uris": gcs_uris,
@@ -156,6 +187,7 @@ def _process_brand_guideline_in_background(
                 "tone_of_voice_summary": extracted_data.tone_of_voice_summary,
                 "visual_style_summary": extracted_data.visual_style_summary,
                 "guideline_text": extracted_data.guideline_text,
+                "brand_rules": extracted_data.brand_rules,
             }
             repo.update(guideline_id, update_data)
             worker_logger.info(
@@ -305,47 +337,11 @@ class BrandGuidelineService:
             **guideline.model_dump(), presigned_source_pdf_urls=presigned_urls
         )
 
-    async def generate_signed_upload_url(
-        self, request_dto: GenerateUploadUrlDto, current_user: UserModel
-    ) -> GenerateUploadUrlResponseDto:
-        """
-        Generates a GCS v4 signed URL for a client-side upload.
-        """
-        # Authorize the user for the workspace before generating a URL
-        if request_dto.workspace_id:
-            workspace = self.workspace_repo.get_by_id(request_dto.workspace_id)
-            if not workspace:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Workspace with ID '{request_dto.workspace_id}' not found.",
-                )
-
-        file_uuid = uuid.uuid4()
-        destination_blob_name = f"brand-guidelines/{request_dto.workspace_id or 'global'}/uploads/{file_uuid}/{request_dto.filename}"
-
-        signed_url, gcs_uri = await asyncio.to_thread(
-            self.iam_signer_credentials.generate_v4_upload_signed_url,
-            destination_blob_name,
-            request_dto.content_type,
-            self.gcs_service.bucket_name,
-        )
-
-        if not signed_url or not gcs_uri:
-            raise HTTPException(
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "Could not generate upload URL.",
-            )
-
-        return GenerateUploadUrlResponseDto(
-            upload_url=signed_url, gcs_uri=gcs_uri
-        )
-
     async def start_brand_guideline_processing_job(
         self,
         name: str,
+        file: UploadFile,
         workspace_id: Optional[str],
-        gcs_uri: str,
-        original_filename: str,
         current_user: UserModel,
         executor: ProcessPoolExecutor,
     ) -> BrandGuidelineResponseDto:
@@ -391,6 +387,9 @@ class BrandGuidelineService:
                     existing_guidelines_response.data[0]
                 )
 
+        # 3. Read file contents into memory for the background process
+        file_contents = await file.read()
+
         # 4. Create and save a placeholder document
         guideline_id = str(uuid.uuid4())
         placeholder_guideline = BrandGuidelineModel(
@@ -398,7 +397,6 @@ class BrandGuidelineService:
             name=name,
             workspace_id=workspace_id,
             status=JobStatusEnum.PROCESSING,
-            source_pdf_gcs_uris=[gcs_uri],  # Store the initial upload URI
         )
         self.repo.save(placeholder_guideline)
 
@@ -407,9 +405,9 @@ class BrandGuidelineService:
             _process_brand_guideline_in_background,
             guideline_id=guideline_id,
             name=name,
-            original_filename=original_filename,
+            file_contents=file_contents,
+            original_filename=file.filename or "guideline.pdf",
             workspace_id=workspace_id,
-            source_gcs_uri=gcs_uri,
         )
 
         logger.info(
@@ -473,12 +471,16 @@ class BrandGuidelineService:
                 detail=f"Workspace with ID '{workspace_id}' not found.",
             )
 
-        is_system_admin = UserRoleEnum.ADMIN in current_user.roles
-        if not is_system_admin and current_user.id not in workspace.member_ids:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not a member of this workspace.",
-            )
+        if not workspace.scope == WorkspaceScopeEnum.PUBLIC:
+            is_system_admin = UserRoleEnum.ADMIN in current_user.roles
+            if (
+                not is_system_admin
+                and current_user.id not in workspace.member_ids
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You are not a member of this workspace.",
+                )
 
         search_dto = BrandGuidelineSearchDto(workspace_id=workspace_id, limit=1)
         workspace_filter = FieldFilter("workspace_id", "==", workspace_id)

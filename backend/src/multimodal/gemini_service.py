@@ -28,11 +28,15 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.brand_guidelines.dto.brand_guideline_search_dto import BrandGuidelineSearchDto
+from src.brand_guidelines.dto.brand_guideline_search_dto import (
+    BrandGuidelineSearchDto,
+)
 from src.brand_guidelines.repository.brand_guideline_repository import (
     BrandGuidelineRepository,
 )
-from src.brand_guidelines.schema.brand_guideline_model import BrandGuidelineModel
+from src.brand_guidelines.schema.brand_guideline_model import (
+    BrandGuidelineModel,
+)
 from src.common.base_dto import GenerationModelEnum
 from src.config.config_service import config_service
 from src.images.dto.create_imagen_dto import CreateImagenDto
@@ -55,6 +59,7 @@ logger = logging.getLogger(__name__)
 class PromptTargetEnum(str, Enum):
     IMAGE = "image"
     VIDEO = "video"
+    AUDIO = "audio"
 
 
 class ResponseMimeTypeEnum(str, Enum):
@@ -172,6 +177,31 @@ class GeminiService:
             logger.error(f"Failed to generate random prompt: {e}")
             raise
 
+    def validate_image(self, image_uri: str, prompt: str) -> str:
+        """
+        Validates an image against a prompt using Gemini Vision.
+
+        Args:
+            image_uri: GCS URI of the image.
+            prompt: The validation prompt/checklist.
+
+        Returns:
+            The model's response text.
+        """
+        try:
+            image_part = types.Part.from_uri(
+                file_uri=image_uri, mime_type="image/png" # Assuming PNG for now, could be dynamic
+            )
+            
+            response = self.client.models.generate_content(
+                model=self.cfg.GEMINI_MODEL_ID,
+                contents=[image_part, prompt],
+            )
+            return response.text or ""
+        except Exception as e:
+            logger.error(f"Failed to validate image {image_uri}: {e}")
+            raise
+
     def _convert_dto_to_string(self, dto: BaseModel) -> str:
         """
         Private helper to convert a DTO into a formatted string for prompting.
@@ -227,7 +257,10 @@ class GeminiService:
         is_gemini_i2i = (
             isinstance(dto, CreateImagenDto)
             and dto.generation_model
-            == GenerationModelEnum.GEMINI_2_5_FLASH_IMAGE_PREVIEW
+            in [
+                GenerationModelEnum.GEMINI_2_5_FLASH_IMAGE_PREVIEW,
+                GenerationModelEnum.GEMINI_3_PRO_IMAGE_PREVIEW,
+            ]
             and (dto.source_asset_ids or dto.source_media_items)
         )
 
@@ -381,6 +414,7 @@ class GeminiService:
         1.  "colorPalette": A list of the primary brand colors as hex codes (e.g., ["#RRGGBB", ...]).
         2.  "toneOfVoiceSummary": A detailed and comprehensive summary of the brand's tone of voice, approximately 200-250 words, formatted in Markdown. This summary should be suitable for use as a prefix in a text generation prompt, capturing nuances like personality, vocabulary, and attitude.
         3.  "visualStyleSummary": A detailed and comprehensive summary of the brand's visual style, aesthetics, and imagery, approximately 5000-6000 words, formatted in Markdown. This summary should be suitable for use as a prefix in an image generation prompt, covering aspects like photography style, graphic elements, and overall mood.
+        4.  "brand_rules": A list of specific, actionable branding rules or constraints found in the text (e.g., "Logo must always be in the top right corner", "Use only the primary color palette for backgrounds"). Extract as many distinct rules as possible.
 
         Your response MUST be a single, valid JSON object and nothing else.
         """
@@ -451,6 +485,11 @@ class GeminiService:
             for r in partial_results
             if r.get("visualStyleSummary")
         ]
+        
+        all_rules = []
+        for r in partial_results:
+            if "brand_rules" in r and r["brand_rules"]:
+                all_rules.extend(r["brand_rules"])
 
         # --- Step 2: AI-powered Aggregation for Summaries ---
         # Ask Gemini to synthesize the text fields into final summaries.
@@ -466,10 +505,14 @@ class GeminiService:
         3.  **Visual Style Summaries**: Here are the partial summaries describing the brand's visual style:
             {json.dumps(visual_summaries, indent=2)}
 
+        4.  **Brand Rules**: Here is a list of all specific branding rules found. Consolidate duplicates and refine them into a clear, actionable list.
+            {json.dumps(all_rules, indent=2)}
+
         Please generate a final, consolidated JSON object with three keys:
         -   "color_palette": A list of hex strings representing the final, curated brand colors, chosen from the list provided.
         -   "tone_of_voice_summary": A single, comprehensive, and well-written summary of approximately 200-250 words that synthesizes all aspects of the brand's voice from the partial summaries, formatted in Markdown.
         -   "visual_style_summary": A single, comprehensive, and well-written summary of approximately 5000-6000 words that synthesizes all aspects of the brand's visual identity from the partial summaries, formatted in Markdown.
+        -   "brand_rules": A list of strings, where each string is a specific, actionable branding rule.
 
         Your response MUST be a single, valid JSON object and nothing else.
         """

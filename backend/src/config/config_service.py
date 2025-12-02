@@ -1,3 +1,17 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from typing import Any, Set
 
 import google.auth
@@ -64,6 +78,11 @@ class ConfigService(BaseSettings):
     IMAGEN_GENERATED_SUBFOLDER: str = "generated_images"
     IMAGEN_EDITED_SUBFOLDER: str = "edited_images"
     IMAGEN_RECONTEXT_SUBFOLDER: str = "recontext_images"
+
+    # --- Vector Search ---
+    VECTOR_SEARCH_INDEX_ID: str = ""
+    VECTOR_SEARCH_INDEX_ENDPOINT_ID: str = ""
+    VECTOR_SEARCH_DEPLOYED_INDEX_ID: str = "creative_studio_deployed_index"
 
     # --- Email Service ---
     SENDER_EMAIL: str = (

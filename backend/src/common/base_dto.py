@@ -55,6 +55,10 @@ class GenerationModelEnum(str, Enum):
     VEO_2_QUALITY = "veo-2.0-fast-generate-001"
     VEO_2_GENERATE_EXP = "veo-2.0-generate-exp"
 
+    # Audio-Specific Models
+    LYRIA_002 = "lyria-002"
+    GEMINI_2_5_FLASH_TTS = "gemini-2.5-flash-tts"
+
 class AspectRatioEnum(str, Enum):
     """Enum representing the supported aspect ratios."""
 

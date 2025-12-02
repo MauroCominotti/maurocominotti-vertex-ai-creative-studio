@@ -18,7 +18,7 @@ from src.config.logger_config import setup_logging
 setup_logging()
 
 import logging
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from os import getenv
 
@@ -26,6 +26,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.agents.agent_controller import router as agent_router
 from src.audios.audio_controller import router as audio_router
 from src.auth import firebase_client_service
 from src.brand_guidelines.brand_guideline_controller import (
@@ -40,7 +41,9 @@ from src.media_templates.media_templates_controller import (
     router as media_template_router,
 )
 from src.multimodal.gemini_controller import router as gemini_router
-from src.source_assets.source_asset_controller import router as source_asset_router
+from src.source_assets.source_asset_controller import (
+    router as source_asset_router,
+)
 from src.users.user_controller import router as user_router
 from src.videos.veo_controller import router as video_router
 from src.workspaces.workspace_controller import router as workspace_router
@@ -91,17 +94,17 @@ async def lifespan(app: FastAPI):
         }"""
     )
 
-    logger.info("Creating ProcessPoolExecutor...")
+    logger.info("Creating ThreadPoolExecutor...")
     # Create the pool and attach it to the app's state
-    app.state.process_pool = ProcessPoolExecutor(max_workers=4)
+    app.state.executor = ThreadPoolExecutor(max_workers=4)
 
     yield
 
     # Code here runs on shutdown
     logger.info("Application shutdown terminating")
 
-    logger.info("Closing ProcessPoolExecutor...")
-    app.state.process_pool.shutdown(wait=True)
+    logger.info("Closing ThreadPoolExecutor...")
+    app.state.executor.shutdown(wait=True)
     # Your shutdown logic here, e.g., closing database connections
 
 
@@ -155,3 +158,4 @@ app.include_router(media_template_router)
 app.include_router(source_asset_router)
 app.include_router(workspace_router)
 app.include_router(brand_guideline_router)
+app.include_router(agent_router)

@@ -165,7 +165,7 @@ class WorkflowService:
         client = workflows_v1.WorkflowsClient()
 
         # Initialize request argument(s)
-        workflow = workflows_v1.Workflow()
+        workflow = workflows_v1.Workflow(name = f"projects/{PROJECT_ID}/locations/{LOCATION}/workflows/{workflow_id}")
         workflow.source_contents = source_contents
         workflow.execution_history_level = (
             workflows_v1.ExecutionHistoryLevel.EXECUTION_HISTORY_DETAILED
@@ -173,7 +173,6 @@ class WorkflowService:
 
         request = workflows_v1.UpdateWorkflowRequest(
             workflow=workflow,
-            name=f"projects/{PROJECT_ID}/locations/{LOCATION}/workflows/{workflow_id}",
         )
 
         operation = client.update_workflow(request=request)
@@ -315,7 +314,6 @@ class WorkflowService:
 
         try:
             execution = client.get_execution(name=execution_name)
-            logger.info(f"Execution: {execution}")
         except NotFound:
             return None
 
@@ -351,7 +349,6 @@ class WorkflowService:
                 import time
                 duration = time.time() - start_timestamp
 
-        # Format step entries
         # Fetch workflow definition for input resolution
         workflow_model = self.get_by_id(workflow_id)
         user_input_step_id = workflow_model.steps[0].step_id
@@ -360,14 +357,13 @@ class WorkflowService:
         formatted_step_entries = []
         for entry in step_entries:
             step_id = entry.get("step")
-            logger.info(f"Step ID: {step_id}")
             if step_id == "end":
                 continue
 
-            current_step = [step for step in workflow_model.steps if step.step_id == step_id][0]
-            
+            current_step = [step for step in workflow_model.steps if step.step_id == step_id][0]            
             step_state = entry.get("state")
-            # Extract inputs from the call details
+            
+            # Extract inputs from step
             step_inputs = {}
             for inp_name, inp_value in current_step.inputs:
                 if isinstance(inp_value, StepOutputReference):

@@ -1,6 +1,12 @@
 
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
+import { AssetTypeEnum } from '../../../../admin/source-assets-management/source-asset.model';
+import { ImageCropperDialogComponent } from '../../../../common/components/image-cropper-dialog/image-cropper-dialog.component';
+import { ImageSelectorComponent, MediaItemSelection } from '../../../../common/components/image-selector/image-selector.component';
+import { ReferenceImage } from '../../../../common/models/search.model';
+import { SourceAssetResponseDto } from '../../../../common/services/source-asset.service';
 import { StepConfig } from './step.model';
 
 @Component({
@@ -18,9 +24,13 @@ export class GenericStepComponent implements OnInit, OnChanges {
 
   isCollapsed = true;
   inputModes: { [key: string]: 'fixed' | 'linked' } = {};
+  referenceImages: { [key: string]: ReferenceImage[] } = {};
   compatibleOutputs: { [key: string]: any[] } = {};
 
-  constructor(private fb: FormBuilder) { }
+  constructor(
+    private fb: FormBuilder,
+    public dialog: MatDialog,
+  ) { }
 
   ngOnInit(): void {
     const inputs = this.stepForm.get('inputs') as FormGroup;
@@ -29,10 +39,24 @@ export class GenericStepComponent implements OnInit, OnChanges {
         inputs.addControl(input.name, this.fb.control(''));
       }
       const value = inputs.get(input.name)?.value;
-      if (typeof value === 'object' && value !== null) {
+
+      // Determine if the input is linked (StepOutputReference)
+      // It must be an object, not an array, and have 'step' and 'output' properties
+      const isLinked = value && typeof value === 'object' && !Array.isArray(value) && 'step' in value && 'output' in value;
+
+      if (isLinked) {
         this.inputModes[input.name] = 'linked';
       } else {
         this.inputModes[input.name] = 'fixed';
+        // If the value is an array, it's likely a list of ReferenceImages
+        if (Array.isArray(value)) {
+          this.referenceImages[input.name] = value;
+        }
+      }
+
+      // Initialize reference images array for this input if it doesn't exist
+      if (!this.referenceImages[input.name]) {
+        this.referenceImages[input.name] = [];
       }
     });
 
@@ -108,5 +132,94 @@ export class GenericStepComponent implements OnInit, OnChanges {
       default:
         return '';
     }
+  }
+
+  openImageSelectorForReference(inputName: string): void {
+    if ((this.referenceImages[inputName]?.length || 0) >= 3) return;
+    const dialogRef = this.dialog.open(ImageSelectorComponent, {
+      width: '90vw',
+      height: '80vh',
+      maxWidth: '90vw',
+      data: {
+        mimeType: 'image/*', // Only allow images for references
+      },
+      panelClass: 'image-selector-dialog',
+    });
+
+    dialogRef
+      .afterClosed()
+      .subscribe((result: MediaItemSelection | SourceAssetResponseDto) => {
+        if (result && (this.referenceImages[inputName]?.length || 0) < 3) {
+          if (!this.referenceImages[inputName]) this.referenceImages[inputName] = [];
+
+          let newImage: ReferenceImage | null = null;
+
+          if ('gcsUri' in result) {
+            newImage = {
+              sourceAssetId: result.id,
+              previewUrl: result.presignedUrl || '',
+            };
+          } else {
+            const previewUrl =
+              result.mediaItem.presignedUrls?.[result.selectedIndex];
+            if (previewUrl) {
+              newImage = {
+                previewUrl: previewUrl,
+                sourceMediaItem: {
+                  mediaItemId: result.mediaItem.id,
+                  mediaIndex: result.selectedIndex,
+                  role: 'image_reference_asset', // Role is now set dynamically in searchTerm
+                },
+              };
+            }
+          }
+
+          if (newImage) {
+            this.referenceImages[inputName].push(newImage);
+            this.updateInputControlWithError(inputName);
+          }
+        }
+      });
+  }
+
+  // Called when DROPPING a file on the new drop zone
+  onReferenceImageDrop(event: DragEvent, inputName: string) {
+    event.preventDefault();
+    if ((this.referenceImages[inputName]?.length || 0) >= 3) return;
+    const file = event.dataTransfer?.files[0];
+    if (file && file.type.startsWith('image/')) {
+      // For a direct drop, go straight to the cropper
+      const dialogRef = this.dialog.open(ImageCropperDialogComponent, {
+        data: {
+          imageFile: file,
+          assetType: AssetTypeEnum.GENERIC_IMAGE,
+        },
+        width: '600px',
+      });
+
+      dialogRef.afterClosed().subscribe((result: SourceAssetResponseDto) => {
+        if (result && result.id) {
+          if (!this.referenceImages[inputName]) this.referenceImages[inputName] = [];
+          this.referenceImages[inputName].push({
+            sourceAssetId: result.id,
+            previewUrl: result.presignedUrl || '',
+          });
+          this.updateInputControlWithError(inputName);
+        }
+      });
+    }
+  }
+
+
+  clearReferenceImage(inputName: string, index: number) {
+    if (this.referenceImages[inputName]) {
+      this.referenceImages[inputName].splice(index, 1);
+      this.updateInputControlWithError(inputName);
+    }
+  }
+
+  private updateInputControlWithError(inputName: string) {
+    const images = this.referenceImages[inputName] || [];
+    this.stepForm.get('inputs')?.get(inputName)?.setValue(images);
   }
 }

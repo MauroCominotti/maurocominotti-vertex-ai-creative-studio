@@ -16,6 +16,7 @@ from src.workflows_executor.dto.workflows_executor_dto import (
     CropImageRequest,
     VirtualTryOnRequest,
 )
+from src.workflows.schema.workflow_model import ReferenceImage
 from src.config.config_service import config_service
 
 logging.basicConfig(level=logging.INFO)
@@ -99,6 +100,7 @@ class WorkflowsExecutorService:
 
         input_images = request.inputs.input_images
         source_media_items = []
+        source_asset_ids = []
         
         # Handle different input types for input_images
         if isinstance(input_images, str):
@@ -106,10 +108,18 @@ class WorkflowsExecutorService:
                 {"media_item_id": input_images, "media_index": 0, "role": "input"}
             ]
         elif isinstance(input_images, list):
-            source_media_items = [
-                {"media_item_id": image, "media_index": 0, "role": "input"}
-                for image in input_images
-            ]
+            for image in input_images:
+                if isinstance(image, str):
+                    source_media_items.append({"media_item_id": image, "media_index": 0, "role": "input"})
+                elif isinstance(image, ReferenceImage):
+                    if image.sourceMediaItem:
+                        source_media_items.append({
+                            "media_item_id": image.sourceMediaItem.mediaItemId,
+                            "media_index": image.sourceMediaItem.mediaIndex,
+                            "role": image.sourceMediaItem.role
+                        })
+                    elif image.sourceAssetId:
+                        source_asset_ids.append(image.sourceAssetId)
 
         body = {
             "prompt": request.inputs.prompt,
@@ -119,6 +129,7 @@ class WorkflowsExecutorService:
             "use_brand_guidelines": request.config.brand_guidelines,
             "number_of_media": 1,
             "source_media_items": source_media_items,
+            "source_asset_ids": source_asset_ids,
         }
 
         headers = {"Authorization": authorization} if authorization else {}

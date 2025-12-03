@@ -38,10 +38,41 @@
               <mat-option value="linked">Link</mat-option>
             </mat-select>
           </mat-form-field>
-          <mat-form-field *ngIf="inputModes[input.name] === 'fixed'" appearance="outline" class="value-input">
-            <textarea *ngIf="input.type === 'textarea'" matInput [formControlName]="input.name" [placeholder]="input.label" rows="2"></textarea>
-            <input *ngIf="input.type !== 'textarea'" matInput [formControlName]="input.name" [placeholder]="input.label">
+          <!-- Textarea Input -->
+          <mat-form-field *ngIf="inputModes[input.name] === 'fixed' && input.type === 'textarea'" appearance="outline" class="value-input">
+            <textarea matInput [formControlName]="input.name" [placeholder]="input.label" rows="2"></textarea>
           </mat-form-field>
+          <!-- Text Input -->
+          <mat-form-field *ngIf="inputModes[input.name] === 'fixed' && input.type === 'text'" appearance="outline" class="value-input">
+            <input matInput [formControlName]="input.name" [placeholder]="input.label">
+          </mat-form-field>
+          <!-- Inputs image -->
+          <!-- Inputs image -->
+          <div class="flex items-center gap-3" *ngIf="inputModes[input.name] === 'fixed' && input.type === 'image'">
+              <div
+                class="relative h-16 w-16 cursor-pointer rounded-xl border-2 border-dashed border-neutral-700 bg-neutral-800 transition-colors hover:border-neutral-500 hover:bg-neutral-700 flex items-center justify-center"
+                [class.opacity-50]="(referenceImages[input.name]?.length || 0) >= 1"
+                (click)="(referenceImages[input.name]?.length || 0) < 1 && openImageSelectorForReference(input.name)"
+                (dragover)="$event.preventDefault()"
+                (drop)="$event.preventDefault(); onReferenceImageDrop($event, input.name)"
+                >
+                <mat-icon class="text-neutral-500">add</mat-icon>
+                <span class="absolute bottom-0 text-[10px] text-neutral-500">{{ (referenceImages[input.name]?.length || 0) }}/1</span>
+              </div>
+              <!-- Show small previews of reference images -->
+              <div class="flex gap-1">
+                <div *ngFor="let ref of referenceImages[input.name]; let i = index" class="relative h-12 w-12">
+                  <img [src]="ref.previewUrl" class="h-full w-full rounded-lg object-cover" />
+                  <button
+                    (click)="clearReferenceImage(input.name, i)"
+                    class="absolute -right-1 -top-1 rounded-full bg-neutral-900 p-0.5 text-neutral-400 hover:text-white"
+                  >
+                    <mat-icon class="!h-3 !w-3 text-xs">close</mat-icon>
+                  </button>
+                </div>
+              </div>
+          </div>
+          <!-- / Inputs image -->
           <mat-form-field *ngIf="inputModes[input.name] === 'linked'" appearance="outline" class="value-input">
             <mat-select [formControlName]="input.name" [compareWith]="compareFn">
               <mat-option *ngFor="let out of compatibleOutputs[input.name]" [value]="out.value">

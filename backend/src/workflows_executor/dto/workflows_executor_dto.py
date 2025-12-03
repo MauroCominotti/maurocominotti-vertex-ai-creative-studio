@@ -38,5 +38,6 @@ class CropImageRequest(BaseModel):
     config: CropImageSettings
 
 class VirtualTryOnRequest(BaseModel):
+    workspace_id: str
     inputs: VirtualTryOnInputs
     config: VirtualTryOnSettings

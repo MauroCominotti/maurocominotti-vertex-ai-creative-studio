@@ -56,7 +56,7 @@ export interface CreateAudioDto {
   providedIn: 'root',
 })
 export class AudioService {
-  private apiUrl = `${environment.backendURL}/audios`;
+  private apiUrl = `${environment.backendURL}/gallery`;
   private activeAudioJob = new BehaviorSubject<MediaItem | null>(null);
   public activeAudioJob$ = this.activeAudioJob.asObservable();
   private pollingSubscription: Subscription | null = null;
@@ -64,7 +64,7 @@ export class AudioService {
   constructor(private http: HttpClient, private snackBar: MatSnackBar) {}
 
   generateAudio(request: CreateAudioDto): Observable<MediaItem> {
-    return this.http.post<MediaItem>(`${this.apiUrl}/generate`, request).pipe(
+    return this.http.post<MediaItem>(`${environment.backendURL}/audios/generate`, request).pipe(
       tap(initialItem => {
         this.activeAudioJob.next(initialItem);
         this.startAudioPolling(initialItem.id);
@@ -72,8 +72,8 @@ export class AudioService {
     );
   }
 
-  getAudioMediaItem(mediaId: string): Observable<MediaItem> {
-    return this.http.get<MediaItem>(`${this.apiUrl}/${mediaId}`);
+  getGalleryMediaItem(mediaId: string): Observable<MediaItem> {
+    return this.http.get<MediaItem>(`${this.apiUrl}/item/${mediaId}`);
   }
 
   private startAudioPolling(mediaId: string): void {
@@ -81,7 +81,7 @@ export class AudioService {
 
     this.pollingSubscription = timer(3000, 5000) // Start after 3s, then every 5s
       .pipe(
-        switchMap(() => this.getAudioMediaItem(mediaId)),
+        switchMap(() => this.getGalleryMediaItem(mediaId)),
         tap(latestItem => {
           this.activeAudioJob.next(latestItem);
 

@@ -63,21 +63,6 @@ async def generate_audio(
     )
 
 
-@router.get("/{media_id}", response_model=MediaItemResponse)
-async def get_media_item(
-    media_id: str,
-    audio_service: AudioService = Depends(),
-):
-    """
-    Retrieves a single media item by its unique ID, including its current status
-    and presigned URLs for viewing. This is the endpoint to use for polling.
-    """
-    media_item = await audio_service.get_media_item_with_presigned_urls(media_id)
-    if not media_item:
-        raise HTTPException(status_code=404, detail="Media item not found")
-    return media_item
-
-
 @router.post("/transcribe")
 async def audio_chat(audio_file: UploadFile = File()):
     client = speech.SpeechClient()

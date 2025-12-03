@@ -337,23 +337,3 @@ class AudioService:
             presigned_urls=[],
         )
 
-    async def get_media_item_with_presigned_urls(
-        self, media_id: str
-    ) -> Optional[MediaItemResponse]:
-        media_item = self.media_repo.get_by_id(media_id)
-        if not media_item:
-            return None
-
-        presigned_url_tasks = [
-            asyncio.to_thread(
-                self.iam_signer_credentials.generate_presigned_url, uri
-            )
-            for uri in media_item.gcs_uris
-        ]
-        presigned_urls = await asyncio.gather(*presigned_url_tasks)
-
-        return MediaItemResponse(
-            **media_item.model_dump(),
-            presigned_urls=presigned_urls,
-            presigned_thumbnail_urls=[],
-        )

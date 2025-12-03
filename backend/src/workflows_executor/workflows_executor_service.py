@@ -237,4 +237,4 @@ class WorkflowsExecutorService:
         if not image_id:
             raise HTTPException(status_code=500, detail="Couldn't create VTO image")
         
-        return {"vto_image": image_id}
+        return {"generated_image": image_id}

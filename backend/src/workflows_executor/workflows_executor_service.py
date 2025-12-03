@@ -159,6 +159,82 @@ class WorkflowsExecutorService:
         # logic here
         return {"cropped_image": "https://example.com/cropped_image.png"}
 
-    async def virtual_try_on(self, request: VirtualTryOnRequest):
-        # logic here
-        return {"vto_image": "https://example.com/vto_image.png"}
+    def _map_to_vto_input_link(self, input_data: Optional[str | list | ReferenceImage]) -> Optional[dict]:
+        if not input_data:
+            return None
+            
+        # If input is a list, take the first element
+        if isinstance(input_data, list):
+            if len(input_data) == 0:
+                return None
+            input_data = input_data[0]
+            
+        # Handle ReferenceImage
+        if isinstance(input_data, ReferenceImage):
+            if input_data.sourceMediaItem:
+                return {
+                    "source_media_item": {
+                        "media_item_id": input_data.sourceMediaItem.mediaItemId,
+                        "media_index": input_data.sourceMediaItem.mediaIndex,
+                    }
+                }
+            elif input_data.sourceAssetId:
+                return {"source_asset_id": input_data.sourceAssetId}
+                
+        # Handle string (legacy/direct ID) - assume it's a media item ID if it's a string?
+        # Or should we support asset ID as string? 
+        # Based on edit_image, string is treated as media_item_id with index 0.
+        if isinstance(input_data, str):
+            return {
+                "source_media_item": {
+                    "media_item_id": input_data,
+                    "media_index": 0,
+                }
+            }
+            
+        return None
+
+    async def virtual_try_on(self, request: VirtualTryOnRequest, authorization: str | None = None):
+        logger.info(f"Virtual Try On execution")
+        
+        url = self.backend_url + "/api/images/generate-images-for-vto"
+        
+        # Map inputs
+        person_image = self._map_to_vto_input_link(request.inputs.model_image)
+        top_image = self._map_to_vto_input_link(request.inputs.top_image)
+        bottom_image = self._map_to_vto_input_link(request.inputs.bottom_image)
+        dress_image = self._map_to_vto_input_link(request.inputs.dress_image)
+        shoes_image = self._map_to_vto_input_link(request.inputs.shoes_image)
+        
+        # Ensure person_image is present (it's required in VtoDto)
+        if not person_image:
+             raise HTTPException(status_code=400, detail="Person image is required for Virtual Try-On")
+
+        body = {
+            "workspace_id": request.workspace_id,
+            "number_of_media": 1, # Default to 1 as per other methods or config? VtoDto defaults to 1.
+            "person_image": person_image,
+            "top_image": top_image,
+            "bottom_image": bottom_image,
+            "dress_image": dress_image,
+            "shoe_image": shoes_image,
+        }
+
+        headers = {"Authorization": authorization} if authorization else {}
+
+        logger.info(
+            f"Call backend with url: {url}, body: {body}, headers: {headers}"
+        )
+
+        response = self.rest_client.post(url, json=body, headers=headers)
+        
+        if response.status_code != 200:
+             logger.error(f"Backend error: {response.text}")
+             raise HTTPException(status_code=response.status_code, detail=f"Backend error: {response.text}")
+             
+        dict_response = response.json()
+        image_id = dict_response.get("id", None)
+        if not image_id:
+            raise HTTPException(status_code=500, detail="Couldn't create VTO image")
+        
+        return {"vto_image": image_id}

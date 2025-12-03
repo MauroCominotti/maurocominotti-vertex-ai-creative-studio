@@ -36,7 +36,7 @@ export class GenericStepComponent implements OnInit, OnChanges {
     const inputs = this.stepForm.get('inputs') as FormGroup;
     this.config.inputs.forEach(input => {
       if (!inputs.contains(input.name)) {
-        inputs.addControl(input.name, this.fb.control(''));
+        inputs.addControl(input.name, this.fb.control(null));
       }
       const value = inputs.get(input.name)?.value;
 
@@ -97,7 +97,7 @@ export class GenericStepComponent implements OnInit, OnChanges {
     this.stepForm
       .get('inputs')
       ?.get(inputName)
-      ?.setValue(mode === 'fixed' ? '' : null);
+      ?.setValue(null);
   }
 
   compareFn(o1: any, o2: any): boolean {
@@ -220,6 +220,6 @@ export class GenericStepComponent implements OnInit, OnChanges {
 
   private updateInputControlWithError(inputName: string) {
     const images = this.referenceImages[inputName] || [];
-    this.stepForm.get('inputs')?.get(inputName)?.setValue(images);
+    this.stepForm.get('inputs')?.get(inputName)?.setValue(images.length > 0 ? images : null);
   }
 }

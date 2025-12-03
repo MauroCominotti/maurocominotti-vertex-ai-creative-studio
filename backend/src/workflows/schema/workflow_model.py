@@ -169,7 +169,7 @@ class GenerateImageStep(BaseStep[GenerateImageInputs, GenerateImageSettings]):
 
 # --- Edit Image ---
 class EditImageInputs(BaseModel):
-    input_images: Union[StepOutputReference, List[ReferenceImage], List[str]]
+    input_images: Union[StepOutputReference, List[ReferenceImage], List[str], str]
     prompt: Union[StepOutputReference, str]
 
 

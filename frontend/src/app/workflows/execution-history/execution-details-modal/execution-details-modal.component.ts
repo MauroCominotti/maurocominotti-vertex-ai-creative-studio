@@ -70,14 +70,22 @@ export class ExecutionDetailsModalComponent implements OnInit {
             // Also check inputs for Edit Image steps
             if (this.isImageOutput(step.step_id) && step.step_inputs) {
                 Object.entries(step.step_inputs).forEach(([key, val]: [string, any]) => {
-                    if ((key === 'input_images' || key === 'image') && typeof val === 'string' && val.length > 0) {
-                        mediaIdsToFetch.add(val);
-                    } else if ((key === 'input_images' || key === 'image') && Array.isArray(val)) {
-                        val.forEach((v: any) => {
-                            if (typeof v === 'string' && v.length > 0) {
-                                mediaIdsToFetch.add(v);
-                            }
-                        });
+                    if ((key === 'input_images' || key === 'image')) {
+                        if (typeof val === 'string' && val.length > 0) {
+                            mediaIdsToFetch.add(val);
+                        } else if (Array.isArray(val)) {
+                            val.forEach((v: any) => {
+                                if (typeof v === 'string' && v.length > 0) {
+                                    mediaIdsToFetch.add(v);
+                                } else if (v && typeof v === 'object') {
+                                    const id = v.sourceAssetId || v.sourceMediaItem?.mediaItemId;
+                                    if (id) mediaIdsToFetch.add(id);
+                                }
+                            });
+                        } else if (val && typeof val === 'object') {
+                            const id = val.sourceAssetId || val.sourceMediaItem?.mediaItemId;
+                            if (id) mediaIdsToFetch.add(id);
+                        }
                     }
                 });
             }

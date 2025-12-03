@@ -23,24 +23,48 @@ export class StepExecutionDetailsComponent implements OnInit {
   }
 
   getMediaUrl(value: any): string {
-    if (typeof value !== 'string') return '';
-    return this.mediaUrlMap.get(value) || value;
+    const id = this.getIdFromValue(value);
+    if (id && this.mediaUrlMap.has(id)) {
+      return this.mediaUrlMap.get(id)!;
+    }
+
+    if (value && typeof value === 'object' && value.previewUrl) {
+      return value.previewUrl;
+    }
+
+    return typeof value === 'string' ? value : '';
   }
 
-  onMediaLoaded(id: any): void {
-    if (typeof id === 'string') {
+  onMediaLoaded(value: any): void {
+    const id = this.getIdFromValue(value);
+    if (id) {
       this.loadedMedia.add(id);
     }
   }
 
-  navigateToGallery(id: any): void {
-    if (typeof id !== 'string') return;
+  navigateToGallery(value: any): void {
+    const id = this.getIdFromValue(value);
+    if (!id) return;
 
     if (this.mediaUrlMap.has(id) || id.length > 0) {
       const urlTree = this.router.createUrlTree(['/gallery', id]);
       const url = this.router.serializeUrl(urlTree);
       window.open(url, '_blank');
     }
+  }
+
+  private getIdFromValue(value: any): string | null {
+    if (typeof value === 'string') {
+      return value;
+    } else if (value && typeof value === 'object') {
+      return value.sourceAssetId || value.sourceMediaItem?.mediaItemId || null;
+    }
+    return null;
+  }
+
+  isLoaded(value: any): boolean {
+    const id = this.getIdFromValue(value);
+    return id ? this.loadedMedia.has(id) : false;
   }
 
   isArray(val: any): boolean {

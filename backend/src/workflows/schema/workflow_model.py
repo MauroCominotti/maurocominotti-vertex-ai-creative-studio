@@ -221,11 +221,11 @@ class CropImageStep(BaseStep[CropImageInputs, CropImageSettings]):
 
 # --- Virtual Try-On ---
 class VirtualTryOnInputs(BaseModel):
-    model_image: Union[StepOutputReference, ReferenceImage]
-    top_image: Optional[Union[StepOutputReference, ReferenceImage]] = None
-    bottom_image: Optional[Union[StepOutputReference, ReferenceImage]] = None
-    dress_image: Optional[Union[StepOutputReference, ReferenceImage]] = None
-    shoes_image: Optional[Union[StepOutputReference, ReferenceImage]] = None
+    model_image: Union[StepOutputReference, List[ReferenceImage]]
+    top_image: Optional[Union[StepOutputReference, List[ReferenceImage]]] = None
+    bottom_image: Optional[Union[StepOutputReference, List[ReferenceImage]]] = None
+    dress_image: Optional[Union[StepOutputReference, List[ReferenceImage]]] = None
+    shoes_image: Optional[Union[StepOutputReference, List[ReferenceImage]]] = None
 
 
 class VirtualTryOnSettings(BaseModel):

@@ -63,6 +63,7 @@ async def crop_image(
 @router.post("/virtual_try_on")
 async def virtual_try_on(
     request: VirtualTryOnRequest,
+    authorization: Annotated[str | None, Header()] = None,
     service: WorkflowsExecutorService = Depends(),
 ):
-    return await service.virtual_try_on(request)
+    return await service.virtual_try_on(request, authorization)

@@ -172,14 +172,22 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       // Also check inputs for Edit Image steps
       if (this.isImageOutput(step.step_id) && step.step_inputs) {
         Object.entries(step.step_inputs).forEach(([key, val]: [string, any]) => {
-          if ((key === 'input_images' || key === 'image') && typeof val === 'string' && val.length > 0) {
-            mediaIdsToFetch.add(val);
-          } else if ((key === 'input_images' || key === 'image') && Array.isArray(val)) {
-            val.forEach((v: any) => {
-              if (typeof v === 'string' && v.length > 0) {
-                mediaIdsToFetch.add(v);
-              }
-            });
+          if ((key === 'input_images' || key === 'image')) {
+            if (typeof val === 'string' && val.length > 0) {
+              mediaIdsToFetch.add(val);
+            } else if (Array.isArray(val)) {
+              val.forEach((v: any) => {
+                if (typeof v === 'string' && v.length > 0) {
+                  mediaIdsToFetch.add(v);
+                } else if (v && typeof v === 'object') {
+                  const id = v.sourceAssetId || v.sourceMediaItem?.mediaItemId;
+                  if (id) mediaIdsToFetch.add(id);
+                }
+              });
+            } else if (val && typeof val === 'object') {
+              const id = val.sourceAssetId || val.sourceMediaItem?.mediaItemId;
+              if (id) mediaIdsToFetch.add(id);
+            }
           }
         });
       }
@@ -370,13 +378,25 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       stepId: [stepData.stepId],
       type: [stepData.type],
       status: [stepData.status],
-      inputs: this.fb.group(stepData.inputs || {}),
-      outputs: this.fb.group(stepData.outputs || {}),
-      settings: this.fb.group(stepData.settings || {}),
+      inputs: this.createFormGroupFromData(stepData.inputs),
+      outputs: this.createFormGroupFromData(stepData.outputs),
+      settings: this.createFormGroupFromData(stepData.settings),
     });
 
     this.stepsArray.push(stepGroup);
     this.updateAvailableOutputs();
+  }
+
+  private createFormGroupFromData(data: any): FormGroup {
+    const groupConfig: any = {};
+    if (data) {
+      Object.keys(data).forEach(key => {
+        // Wrap value in array so FormBuilder treats it as [value, validators]
+        // This prevents arrays in data from being interpreted as validator configs
+        groupConfig[key] = [data[key]];
+      });
+    }
+    return this.fb.group(groupConfig);
   }
 
   deleteStep(index: number) {

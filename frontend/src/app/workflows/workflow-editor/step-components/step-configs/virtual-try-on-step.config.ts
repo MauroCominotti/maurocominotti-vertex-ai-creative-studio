@@ -12,14 +12,7 @@ export const VIRTUAL_TRY_ON_STEP_CONFIG: StepConfig = {
     { name: 'dress_image', label: 'Dress Image', type: 'image', required: false },
     { name: 'shoes_image', label: 'Shoes Image', type: 'image', required: false },
   ],
-  settings: [
-    {
-      name: 'save_output_to_gallery',
-      label: 'Save Output to Gallery',
-      type: 'checkbox',
-      defaultValue: false,
-    },
-  ],
+  settings: [],
   outputs: [
     {
       name: 'generated_image',

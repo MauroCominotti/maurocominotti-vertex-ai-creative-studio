@@ -20,6 +20,15 @@
   &.generate-video { border-top: 4px solid #fcc419; }              /* Purple */
   &.crop-image { border-top: 4px solid #22b8cf; }                  /* Cyan */
   &.virtual-try-on { border-top: 4px solid #8b5cf6; }              /* Purple */
+
+  &.invalid-step {
+    border-color: #f44336 !important;
+    box-shadow: 0 0 0 1px #f44336, 0 10px 30px rgba(244, 67, 54, 0.2) !important;
+
+    .step-header {
+      background: rgba(244, 67, 54, 0.1);
+    }
+  }
 }
 
 /* 1. Header Section */

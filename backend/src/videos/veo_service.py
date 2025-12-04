@@ -65,7 +65,7 @@ def _process_video_in_background(
 ):  # type: ignore
     """
     This is the long-running worker task. It creates its own service instances
-    because it runs in a completely separate process.
+    because it runs in a separate thread (previously process).
     The long-running process that generates video, thumbnails, and updates the
     database record upon completion or failure.
     """
@@ -658,7 +658,7 @@ class VeoService:
         self.media_repo.save(placeholder_item)
 
         # 4. Instead of using Fastapi's BackgroundTasks, submit the long-running
-        # function to the process pool, running it in a completely separate process.
+        # function to the thread pool.
         executor.submit(
             _process_video_in_background,
             media_item_id=placeholder_item.id,

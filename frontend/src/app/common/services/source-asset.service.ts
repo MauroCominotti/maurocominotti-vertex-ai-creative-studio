@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import {Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
-import {BehaviorSubject, Observable, of} from 'rxjs';
-import {tap, catchError, finalize, shareReplay} from 'rxjs/operators';
-import {environment} from '../../../environments/environment';
-import {WorkspaceStateService} from '../../services/workspace/workspace-state.service';
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { catchError, finalize, shareReplay, tap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 import {
   AssetScopeEnum,
   AssetTypeEnum,
 } from '../../admin/source-assets-management/source-asset.model';
+import { WorkspaceStateService } from '../../services/workspace/workspace-state.service';
 
 export interface SourceAssetResponseDto {
   id: string;
@@ -226,5 +226,11 @@ export class SourceAssetService {
           this.assets$.next(updatedAssets);
         }),
       );
+  }
+
+  getAsset(assetId: string): Observable<SourceAssetResponseDto> {
+    return this.http.get<SourceAssetResponseDto>(
+      `${environment.backendURL}/source_assets/${assetId}`,
+    );
   }
 }

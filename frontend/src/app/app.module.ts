@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import {importProvidersFrom, NgModule} from '@angular/core';
+import {importProvidersFrom, NgModule, Injector} from '@angular/core';
+import {setAppInjector} from './app-injector';
+import {NotificationContainerComponent} from './common/components/notification-container/notification-container.component';
 import {BrowserModule, provideClientHydration} from '@angular/platform-browser';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {initializeApp, provideFirebaseApp} from '@angular/fire/app';
@@ -80,9 +82,14 @@ import {MatDialogModule} from '@angular/material/dialog';
 import {SourceAssetGalleryComponent} from './common/components/source-asset-gallery/source-asset-gallery.component';
 import {SharedModule} from './common/shared.module';
 import {MatSlideToggleModule} from '@angular/material/slide-toggle';
+import {MatSliderModule} from '@angular/material/slider';
 import {ImageCropperComponent} from 'ngx-image-cropper';
 import {ImageCropperDialogComponent} from './common/components/image-cropper-dialog/image-cropper-dialog.component';
 import { WorkbenchComponent } from './workbench/workbench.component';
+import {AudioComponent} from './audio/audio.component';
+import {AddVoiceDialogComponent} from './components/add-voice-dialog/add-voice-dialog.component';
+import {MatButtonToggleModule} from '@angular/material/button-toggle';
+import { FlowPromptBoxComponent } from "./common/components/flow-prompt-box/flow-prompt-box.component";
 
 @NgModule({
   declarations: [
@@ -90,7 +97,6 @@ import { WorkbenchComponent } from './workbench/workbench.component';
     HeaderComponent,
     FooterComponent,
     HomeComponent,
-    ToastMessageComponent,
     LoginComponent,
     ConfirmationDialogComponent,
     FunTemplatesComponent,
@@ -103,7 +109,6 @@ import { WorkbenchComponent } from './workbench/workbench.component';
     ImageSelectorComponent,
     SourceAssetGalleryComponent,
     ImageCropperDialogComponent,
-    WorkbenchComponent,
   ],
   imports: [
     BrowserModule,
@@ -136,7 +141,11 @@ import { WorkbenchComponent } from './workbench/workbench.component';
     SharedModule,
     MatSlideToggleModule,
     ImageCropperComponent,
-  ],
+    MatButtonToggleModule,
+    MatSliderModule,
+    NotificationContainerComponent,
+    FlowPromptBoxComponent
+],
   providers: [
     provideClientHydration(),
     provideHttpClient(withInterceptorsFromDi()),
@@ -161,4 +170,8 @@ import { WorkbenchComponent } from './workbench/workbench.component';
   ],
   bootstrap: [AppComponent],
 })
-export class AppModule {}
+export class AppModule {
+  constructor(injector: Injector) {
+    setAppInjector(injector);
+  }
+}

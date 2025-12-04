@@ -4,7 +4,6 @@ import {
   computed,
   ViewChild,
   ElementRef,
-  AfterViewInit,
   OnDestroy,
   effect,
   inject,
@@ -46,6 +45,9 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
   isPlaying = signal<boolean>(false);
   selectedClipId = signal<string | null>(null);
 
+  // Simple tab between video/audio assets (UX only)
+  activeTab = signal<'video' | 'audio'>('video');
+
   // Visual Settings (Lighting & Zoom)
   exposureVal = 100;
   contrastVal = 100;
@@ -55,6 +57,12 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
   // Computed Values
   videoClips = computed(() => this.timelineClips().filter(c => c.trackIndex === 0));
   audioClips = computed(() => this.timelineClips().filter(c => c.trackIndex === 1));
+
+  // Filtered assets list based on active tab
+  filteredAssets = computed(() => {
+    const tab = this.activeTab();
+    return this.assets().filter(a => a.type === tab);
+  });
   
   videoTrackEnd = computed(() => {
       const clips = this.videoClips();
@@ -121,6 +129,9 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
     initialOffset: number;
   } | null = null;
 
+  // Drag state for moving clips along the timeline
+  dragState: { active: boolean; clipId: string; startX: number; initialStartTime: number } | null = null;
+
   constructor(
     public matIconRegistry: MatIconRegistry,
   ) {
@@ -184,6 +195,26 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
       .addSvgIcon(
         'play-arrow-icon',
         this.setPath(`${this.path}/play-arrow-icon.svg`),
+      )
+      .addSvgIcon(
+        'square-icon',
+        this.setPath(`${this.path}/square.svg`),     
+      )
+      .addSvgIcon(
+        'phone-icon',
+        this.setPath(`${this.path}/pixel-9.svg`),     
+      )
+      .addSvgIcon(
+        'lightbulb-icon',
+        this.setPath(`${this.path}/lightbulb-tips.svg`),     
+      )
+      .addSvgIcon(
+        'desktop-icon',
+        this.setPath(`${this.path}/desktop.svg`),     
+      )
+      .addSvgIcon(
+        'desktop-mac-icon',
+        this.setPath(`${this.path}/desktop-mac.svg`),     
       );
 
     // Setup an effect to handle video seeking/sync when active clip changes or time jumps
@@ -367,6 +398,20 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
     this.timelineClips.update(prev => [...prev, ...clipsToAdd]);
   }
 
+  // Start dragging a clip horizontally on the timeline
+  startDrag(event: MouseEvent, clip: TimelineClip) {
+    event.stopPropagation();
+    event.preventDefault();
+    this.selectClip(clip.id, event);
+    this.dragState = {
+      active: true,
+      clipId: clip.id,
+      startX: event.clientX,
+      initialStartTime: clip.startTime
+    };
+    this.isPlaying.set(false);
+  }
+
   selectClip(id: string, event: MouseEvent) {
     event.stopPropagation();
     this.selectedClipId.set(id);
@@ -466,6 +511,7 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
 
   // --- Interaction ---
   onTimelineMouseDown(event: MouseEvent) {
+      if (this.dragState?.active) return;
       const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
       const scrollLeft = (event.currentTarget as HTMLElement).scrollLeft;
       const clickX = event.clientX - rect.left + scrollLeft;
@@ -536,6 +582,73 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
       }
     }
 
+  // --- Drag Move / End Logic ---
+
+  onDragMove(event: MouseEvent) {
+    if (!this.dragState || !this.dragState.active) return;
+
+    const deltaX = event.clientX - this.dragState.startX;
+    const deltaTime = deltaX / this.pixelsPerSecond;
+    let newStartTime = this.dragState.initialStartTime + deltaTime;
+    if (newStartTime < 0) newStartTime = 0;
+
+    // Snap to start or current playhead for nicer UX
+    const snapThreshold = 10 / this.pixelsPerSecond;
+    if (Math.abs(newStartTime) < snapThreshold) {
+      newStartTime = 0;
+    } else if (Math.abs(newStartTime - this.currentTime()) < snapThreshold) {
+      newStartTime = this.currentTime();
+    }
+
+    const clipId = this.dragState.clipId;
+    this.timelineClips.update(clips =>
+      clips.map(c => (c.id === clipId ? { ...c, startTime: newStartTime } : c))
+    );
+  }
+
+  onDragEnd() {
+    if (this.dragState && this.dragState.active) {
+      const clipId = this.dragState.clipId;
+      this.dragState = null;
+      this.resolveOverlaps(clipId);
+    }
+  }
+
+  // Move-aside overlap resolution on the same track
+  private resolveOverlaps(movedClipId: string) {
+    const allClips = this.timelineClips();
+    const movedClip = allClips.find(c => c.id === movedClipId);
+    if (!movedClip) return;
+
+    const trackClips = allClips.filter(
+      c => c.trackIndex === movedClip.trackIndex && c.id !== movedClipId
+    );
+    const otherTracks = allClips.filter(c => c.trackIndex !== movedClip.trackIndex);
+
+    const processedTrackClips = trackClips.map(clip => {
+      const movedEnd = movedClip.startTime + movedClip.duration;
+      const clipEnd = clip.startTime + clip.duration;
+      const isOverlapping = clip.startTime < movedEnd && clipEnd > movedClip.startTime;
+      if (isOverlapping) {
+        return { ...clip, startTime: movedEnd };
+      }
+      return clip;
+    });
+
+    processedTrackClips.push(movedClip);
+    processedTrackClips.sort((a, b) => a.startTime - b.startTime);
+
+    for (let i = 1; i < processedTrackClips.length; i++) {
+      const prev = processedTrackClips[i - 1];
+      const curr = processedTrackClips[i];
+      if (curr.startTime < prev.startTime + prev.duration) {
+        curr.startTime = prev.startTime + prev.duration;
+      }
+    }
+
+    this.timelineClips.set([...processedTrackClips, ...otherTracks]);
+  }
+
   // --- Utilities ---
 
   formatTime(seconds: number): string {
@@ -557,6 +670,10 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
 
   getRandomHeight(seed: number) {
       // deterministic pseudo random for waveform vis
-      return 30 + (Math.sin(seed) * 30 + 30);
+      return 40 + (Math.sin(seed) * 30 + 30);
+  }
+
+  getSequence(length: number): number[] {
+    return [...Array(Math.floor(length)).keys()].map(i => i + 1);
   }
 }

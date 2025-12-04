@@ -71,7 +71,7 @@
                   <div *ngFor="let def of outputDefinitionsArray.controls; let i = index" [formGroupName]="i" class="definition-row">
                     <mat-form-field appearance="outline" class="name-col">
                       <mat-label>Parameter Name</mat-label>
-                      <input matInput formControlName="name" placeholder="e.g., main_prompt" />
+                      <input matInput formControlName="name" placeholder="e.g., Main Prompt" />
                     </mat-form-field>
                     <mat-form-field appearance="outline" class="type-col">
                       <mat-label>Type</mat-label>
@@ -106,6 +106,7 @@
               [stepIndex]="i"
               [config]="getStepConfig(step.value.type)"
               [availableOutputs]="availableOutputsPerStep[i]"
+              [showValidationErrors]="submitted"
               (delete)="deleteStep(i)">
             </app-generic-step>
           </ng-container>

@@ -8,6 +8,7 @@ import { NodeTypes, WorkflowModel } from '../../workflow.models';
 import { GalleryService } from '../../../gallery/gallery.service';
 
 import { Router } from '@angular/router';
+import { MediaResolutionService } from '../../shared/media-resolution.service';
 
 @Component({
     selector: 'app-execution-details-modal',
@@ -27,7 +28,8 @@ export class ExecutionDetailsModalComponent implements OnInit {
         @Inject(MAT_DIALOG_DATA) public data: { workflowId: string, executionId: string },
         private workflowService: WorkflowService,
         private galleryService: GalleryService,
-        private router: Router
+        private router: Router,
+        private mediaResolutionService: MediaResolutionService
     ) { }
 
     ngOnInit(): void {
@@ -55,52 +57,12 @@ export class ExecutionDetailsModalComponent implements OnInit {
     }
 
     resolveMediaUrls(): void {
-        if (!this.details || !this.details.step_entries) return;
+        if (!this.details || !this.details.step_entries || !this.workflow) return;
 
-        const mediaIdsToFetch = new Set<string>();
+        const stepTypeMap = new Map<string, NodeTypes>();
+        this.workflow.steps.forEach(s => stepTypeMap.set(s.stepId, s.type));
 
-        this.details.step_entries.forEach((step: any) => {
-            if (this.isImageOutput(step.step_id) && step.step_outputs) {
-                Object.values(step.step_outputs).forEach((val: any) => {
-                    if (typeof val === 'string' && val.length > 0) {
-                        mediaIdsToFetch.add(val);
-                    }
-                });
-            }
-            // Also check inputs for Edit Image steps
-            if (this.isImageOutput(step.step_id) && step.step_inputs) {
-                Object.entries(step.step_inputs).forEach(([key, val]: [string, any]) => {
-                    if ((key === 'input_images' || key === 'image')) {
-                        if (typeof val === 'string' && val.length > 0) {
-                            mediaIdsToFetch.add(val);
-                        } else if (Array.isArray(val)) {
-                            val.forEach((v: any) => {
-                                if (typeof v === 'string' && v.length > 0) {
-                                    mediaIdsToFetch.add(v);
-                                } else if (v && typeof v === 'object') {
-                                    const id = v.sourceAssetId || v.sourceMediaItem?.mediaItemId;
-                                    if (id) mediaIdsToFetch.add(id);
-                                }
-                            });
-                        } else if (val && typeof val === 'object') {
-                            const id = val.sourceAssetId || val.sourceMediaItem?.mediaItemId;
-                            if (id) mediaIdsToFetch.add(id);
-                        }
-                    }
-                });
-            }
-        });
-
-        mediaIdsToFetch.forEach(id => {
-            this.galleryService.getMedia(id).subscribe({
-                next: (mediaItem) => {
-                    if (mediaItem.presignedUrls && mediaItem.presignedUrls.length > 0) {
-                        this.mediaUrlMap.set(id, mediaItem.presignedUrls[0]);
-                    }
-                },
-                error: (err) => console.error(`Failed to resolve media ID ${id}`, err)
-            });
-        });
+        this.mediaResolutionService.resolveMediaUrls(this.details.step_entries, stepTypeMap, this.mediaUrlMap);
     }
 
     toggleStep(stepId: string): void {

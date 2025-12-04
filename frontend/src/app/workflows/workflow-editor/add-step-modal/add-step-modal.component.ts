@@ -7,6 +7,7 @@ interface StepTypeOption {
   label: string;
   description: string;
   icon: string; // Material Icon name
+  disabled?: boolean;
 }
 
 @Component({
@@ -37,22 +38,24 @@ export class AddStepModalComponent {
       icon: 'edit'
     },
     {
+      type: 'virtual_try_on',
+      label: 'Virtual Try-On',
+      description: 'Applies a garment to a model image.',
+      icon: 'checkroom'
+    },
+    {
       type: 'crop_image',
       label: 'Crop Image',
       description: 'Crops an image to a specific aspect ratio or dimension.',
-      icon: 'crop'
+      icon: 'crop',
+      disabled: true
     },
     {
       type: 'generate_video',
       label: 'Generate Video',
       description: 'Generates a video clip from a prompt or image.',
-      icon: 'movie'
-    },
-    {
-      type: 'virtual_try_on',
-      label: 'Virtual Try-On',
-      description: 'Applies a garment to a model image.',
-      icon: 'checkroom'
+      icon: 'movie',
+      disabled: true
     }
   ];
 

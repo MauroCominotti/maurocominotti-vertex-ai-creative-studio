@@ -1,5 +1,11 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { CROP_IMAGE_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/crop-image-step.config';
+import { EDIT_IMAGE_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/edit-image-step.config';
+import { GENERATE_IMAGE_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/generate-image-step.config';
+import { GENERATE_TEXT_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/generate-text-step.config';
+import { GENERATE_VIDEO_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/generate-video-step.config';
+import { VIRTUAL_TRY_ON_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/virtual-try-on-step.config';
 import { NodeTypes } from '../../workflow.models';
 
 @Component({
@@ -16,6 +22,15 @@ export class StepExecutionDetailsComponent implements OnInit {
 
   loadedMedia = new Set<string>();
   NodeTypes = NodeTypes;
+
+  stepConfigs = {
+    [NodeTypes.GENERATE_TEXT]: GENERATE_TEXT_STEP_CONFIG,
+    [NodeTypes.GENERATE_IMAGE]: GENERATE_IMAGE_STEP_CONFIG,
+    [NodeTypes.EDIT_IMAGE]: EDIT_IMAGE_STEP_CONFIG,
+    [NodeTypes.CROP_IMAGE]: CROP_IMAGE_STEP_CONFIG,
+    [NodeTypes.GENERATE_VIDEO]: GENERATE_VIDEO_STEP_CONFIG,
+    [NodeTypes.VIRTUAL_TRY_ON]: VIRTUAL_TRY_ON_STEP_CONFIG,
+  };
 
   constructor(private router: Router) { }
 
@@ -71,19 +86,49 @@ export class StepExecutionDetailsComponent implements OnInit {
     return Array.isArray(val);
   }
 
-  isImageOutput(): boolean {
-    return this.stepType === NodeTypes.GENERATE_IMAGE ||
-      this.stepType === NodeTypes.EDIT_IMAGE ||
-      this.stepType === NodeTypes.CROP_IMAGE ||
-      this.stepType === NodeTypes.VIRTUAL_TRY_ON;
+  getStepConfig() {
+    return this.stepConfigs[this.stepType as keyof typeof this.stepConfigs];
   }
 
-  isTextOutput(): boolean {
-    return this.stepType === NodeTypes.GENERATE_TEXT;
+  isImageInput(inputName: any): boolean {
+    const config = this.getStepConfig();
+    if (!config) return false;
+    const input = config.inputs.find(i => i.name === String(inputName));
+    return input?.type === 'image';
   }
 
-  isVideoOutput(): boolean {
-    return this.stepType === NodeTypes.GENERATE_VIDEO;
+  isImageOutput(outputName?: any): boolean {
+    const config = this.getStepConfig();
+    if (!config) return false;
+
+    if (outputName) {
+      const output = config.outputs.find(o => o.name === String(outputName));
+      return output?.type === 'image';
+    }
+
+    return config.outputs.some(o => o.type === 'image');
+  }
+
+  isTextOutput(outputName?: any): boolean {
+    const config = this.getStepConfig();
+    if (!config) return false;
+
+    if (outputName) {
+      const output = config.outputs.find(o => o.name === String(outputName));
+      return output?.type === 'text';
+    }
+    return config.outputs.some(o => o.type === 'text');
+  }
+
+  isVideoOutput(outputName?: any): boolean {
+    const config = this.getStepConfig();
+    if (!config) return false;
+
+    if (outputName) {
+      const output = config.outputs.find(o => o.name === String(outputName));
+      return output?.type === 'video';
+    }
+    return config.outputs.some(o => o.type === 'video');
   }
 
   get inputCount(): number {

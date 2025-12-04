@@ -1,9 +1,10 @@
 
-<div class="step-card" [formGroup]="stepForm" [ngClass]="config.type">
+<div class="step-card" [formGroup]="stepForm" [ngClass]="config.type" [class.invalid-step]="stepForm.invalid && showValidationErrors">
   <div class="step-header" (click)="isCollapsed = !isCollapsed">
     <div class="step-title">
       <mat-icon>{{ config.icon }}</mat-icon>
       <span>{{ config.title }}</span>
+      <mat-icon *ngIf="stepForm.invalid && showValidationErrors" class="!text-red-500 ml-2" matTooltip="Step has errors">error</mat-icon>
       <span class="step-id-subtle">#{{ stepIndex + 1 }}</span>
       <!-- Status Chip -->
       <mat-chip *ngIf="stepForm.get('status')?.value !== 'idle'" 
@@ -41,16 +42,25 @@
           <!-- Textarea Input -->
           <mat-form-field *ngIf="inputModes[input.name] === 'fixed' && input.type === 'textarea'" appearance="outline" class="value-input">
             <textarea matInput [formControlName]="input.name" [placeholder]="input.label" rows="2"></textarea>
+            <mat-error *ngIf="showValidationErrors && stepForm.get('inputs')?.get(input.name)?.hasError('required')">
+              {{ input.label }} is required
+            </mat-error>
           </mat-form-field>
           <!-- Text Input -->
           <mat-form-field *ngIf="inputModes[input.name] === 'fixed' && input.type === 'text'" appearance="outline" class="value-input">
             <input matInput [formControlName]="input.name" [placeholder]="input.label">
+            <mat-error *ngIf="showValidationErrors && stepForm.get('inputs')?.get(input.name)?.hasError('required')">
+              {{ input.label }} is required
+            </mat-error>
           </mat-form-field>
-          <!-- Inputs image -->
           <!-- Inputs image -->
           <div class="flex items-center gap-3" *ngIf="inputModes[input.name] === 'fixed' && input.type === 'image'">
               <div
-                class="relative h-16 w-16 cursor-pointer rounded-xl border-2 border-dashed border-neutral-700 bg-neutral-800 transition-colors hover:border-neutral-500 hover:bg-neutral-700 flex items-center justify-center"
+                class="relative h-16 w-16 cursor-pointer rounded-xl border-2 border-dashed transition-colors flex items-center justify-center"
+                [ngClass]="{
+                  'border-red-500 bg-red-500/10': stepForm.get('inputs')?.get(input.name)?.invalid && showValidationErrors,
+                  'border-neutral-700 bg-neutral-800 hover:border-neutral-500 hover:bg-neutral-700': !(stepForm.get('inputs')?.get(input.name)?.invalid && showValidationErrors)
+                }"
                 [class.opacity-50]="(referenceImages[input.name]?.length || 0) >= 1"
                 (click)="(referenceImages[input.name]?.length || 0) < 1 && openImageSelectorForReference(input.name)"
                 (dragover)="$event.preventDefault()"
@@ -79,6 +89,9 @@
                 {{ out.label }}
               </mat-option>
             </mat-select>
+            <mat-error *ngIf="showValidationErrors && stepForm.get('inputs')?.get(input.name)?.hasError('required')">
+              Input is required
+            </mat-error>
           </mat-form-field>
         </div>
       </div>

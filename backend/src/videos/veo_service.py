@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 import uuid
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional
 
 from google.cloud.logging import Client as LoggerClient
@@ -65,7 +65,7 @@ def _process_video_in_background(
 ):  # type: ignore
     """
     This is the long-running worker task. It creates its own service instances
-    because it runs in a completely separate process.
+    because it runs in a separate thread (previously process).
     The long-running process that generates video, thumbnails, and updates the
     database record upon completion or failure.
     """
@@ -581,7 +581,7 @@ class VeoService:
         self,
         request_dto: CreateVeoDto,
         user: UserModel,
-        executor: ProcessPoolExecutor,
+        executor: ThreadPoolExecutor,
     ) -> MediaItemResponse:
         """
         Immediately creates a placeholder MediaItem and starts the video generation
@@ -658,7 +658,7 @@ class VeoService:
         self.media_repo.save(placeholder_item)
 
         # 4. Instead of using Fastapi's BackgroundTasks, submit the long-running
-        # function to the process pool, running it in a completely separate process.
+        # function to the thread pool.
         executor.submit(
             _process_video_in_background,
             media_item_id=placeholder_item.id,
@@ -736,7 +736,7 @@ class VeoService:
         self,
         request_dto: ConcatenateVideosDto,
         user: UserModel,
-        executor: ProcessPoolExecutor,
+        executor: ThreadPoolExecutor,
     ) -> MediaItemResponse:
         """
         Creates a placeholder for a video concatenation job and starts it in the background.

@@ -1,6 +1,6 @@
 
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { AssetTypeEnum } from '../../../../admin/source-assets-management/source-asset.model';
 import { ImageCropperDialogComponent } from '../../../../common/components/image-cropper-dialog/image-cropper-dialog.component';
@@ -20,6 +20,7 @@ export class GenericStepComponent implements OnInit, OnChanges {
   @Input() availableOutputs: any[] = [];
   @Input() mode: 'create' | 'edit' | 'run' = 'create';
   @Input() config!: StepConfig;
+  @Input() showValidationErrors = false;
   @Output() delete = new EventEmitter<void>();
 
   isCollapsed = true;
@@ -35,9 +36,16 @@ export class GenericStepComponent implements OnInit, OnChanges {
   ngOnInit(): void {
     const inputs = this.stepForm.get('inputs') as FormGroup;
     this.config.inputs.forEach(input => {
+      const validators = input.required ? [Validators.required] : [];
+
       if (!inputs.contains(input.name)) {
-        inputs.addControl(input.name, this.fb.control(null));
+        inputs.addControl(input.name, this.fb.control(null, validators));
+      } else {
+        const control = inputs.get(input.name);
+        control?.setValidators(validators);
+        control?.updateValueAndValidity();
       }
+
       const value = inputs.get(input.name)?.value;
 
       // Determine if the input is linked (StepOutputReference)
@@ -220,6 +228,12 @@ export class GenericStepComponent implements OnInit, OnChanges {
 
   private updateInputControlWithError(inputName: string) {
     const images = this.referenceImages[inputName] || [];
-    this.stepForm.get('inputs')?.get(inputName)?.setValue(images.length > 0 ? images : null);
+    const control = this.stepForm.get('inputs')?.get(inputName);
+    if (control) {
+      // Create a shallow copy to ensure Angular detects the change
+      control.setValue(images.length > 0 ? [...images] : null);
+      control.markAsDirty();
+      control.updateValueAndValidity();
+    }
   }
 }

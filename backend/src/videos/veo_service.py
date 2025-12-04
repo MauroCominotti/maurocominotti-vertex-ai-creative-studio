@@ -68,7 +68,7 @@ def _process_video_in_background(
 ):  # type: ignore
     """
     This is the long-running worker task. It creates its own service instances
-    because it runs in a completely separate process.
+    because it runs in a separate thread (previously process).
     The long-running process that generates video, thumbnails, and updates the
     database record upon completion or failure.
     """

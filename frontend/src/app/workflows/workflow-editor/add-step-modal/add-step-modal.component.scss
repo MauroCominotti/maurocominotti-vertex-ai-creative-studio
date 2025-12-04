@@ -43,46 +43,82 @@ mat-dialog-content {
   display: flex;
   align-items: flex-start;
   gap: 16px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 12px;
   padding: 16px;
-  background-color: #2a2a2a;
-  border-radius: 8px;
-  border: 1px solid #444;
-  text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #f0f0f0;
+  text-align: left;
+  width: 100%;
 
-  &:hover {
-    background-color: #3a3a3a;
-    border-color: #8c5cf5; // Use accent color on hover
-    box-shadow: 0 4px 15px rgba(140, 92, 245, 0.2);
+  &:hover:not(:disabled) {
+    background: #2a2a2a;
+    border-color: #666;
+    transform: translateY(-2px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #161616;
+    border-color: #222;
+    
+    .icon-container {
+      background: #222;
+      color: #555;
+    }
   }
 
   .icon-container {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    background-color: rgba(140, 92, 245, 0.15);
-    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: #333;
+    border-radius: 8px;
+    color: #fff;
 
     mat-icon {
-      color: #bca0f8;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
     }
   }
 
   .text-container {
-    h3 {
-      font-size: 15px;
-      font-weight: 500;
-      margin: 0 0 4px 0;
+    flex: 1;
+
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      
+      h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 500;
+        color: #fff;
+      }
+
+      .coming-soon-badge {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: #333;
+        color: #aaa;
+        padding: 2px 6px;
+        border-radius: 4px;
+        letter-spacing: 0.5px;
+      }
     }
+
     p {
-      font-size: 13px;
-      color: #a0a0a0;
       margin: 0;
+      font-size: 13px;
+      color: #aaa;
       line-height: 1.4;
     }
   }

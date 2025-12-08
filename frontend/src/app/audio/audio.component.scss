@@ -37,7 +37,7 @@
 
 .header-section {
     position: absolute;
-    top: 25vh;
+    top: 10vh;
     left: 50%;
     transform: translateX(-50%);
     text-align: center;
@@ -54,11 +54,18 @@
     }
 }
 
+.close-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 101;
+  color: white;
+}
+
 // 3. CUSTOM AUDIO PLAYER STYLES
 .result-container {
     display: flex;
     justify-content: center;
-    margin-bottom: 10vh;
     width: 100%;
     z-index: 10;
 }

@@ -112,17 +112,14 @@ async def lifespan(app: FastAPI):
 
     logger.info("Creating ThreadPoolExecutor...")
     # Create the pool and attach it to the app's state
-    # We use ThreadPoolExecutor as the heavy lifting is done by external processes (ffmpeg) or network calls (Vertex AI)
-    # which releases the GIL. This also avoids gRPC fork safety issues.
-    app.state.process_pool = ThreadPoolExecutor(max_workers=4)
+    app.state.executor = ThreadPoolExecutor(max_workers=4)
 
     yield
 
     logger.info("Application shutdown terminating")
 
     logger.info("Closing ThreadPoolExecutor...")
-    app.state.process_pool.shutdown(wait=True)
-    # Your shutdown logic here, e.g., closing database connections
+    app.state.executor.shutdown(wait=True)
 
 
 app = FastAPI(

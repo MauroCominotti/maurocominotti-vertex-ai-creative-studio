@@ -12,7 +12,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subscription, interval, of } from 'rxjs';
 import { finalize, switchMap, takeWhile, tap } from 'rxjs/operators';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleErrorSnackbar';
+import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
 import { MediaResolutionService } from '../shared/media-resolution.service';
 import {
   NodeTypes,

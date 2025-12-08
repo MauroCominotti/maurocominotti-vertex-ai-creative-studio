@@ -86,7 +86,7 @@ async def create_brand_guideline(
             detail=f"File is too large. Maximum size is {MAX_UPLOAD_SIZE_BYTES // (1024*1024)}MB.",
         )
 
-    executor = request.app.state.process_pool
+    executor = request.app.state.executor
 
     # The service method now starts the background job.
     return await service.start_brand_guideline_processing_job(

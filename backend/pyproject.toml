@@ -30,6 +30,7 @@ dependencies = [
     "google-cloud-storage>=3.0.0",
     "pyyaml>=6.0.3",
     "google-cloud-workflows>=1.19.0",
+    "google-api-python-client>=2.187.0",
 ]
 
 [project.optional-dependencies]
@@ -68,3 +69,8 @@ addopts = "--cov --cov-report=lcov:lcov.info --cov-report=term"
 
 [tool.isort]
 profile = "black"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true

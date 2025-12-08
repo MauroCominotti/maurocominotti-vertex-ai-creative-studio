@@ -1,5 +1,7 @@
 import logging
 import os
+import asyncio
+
 from typing import Annotated, Optional
 
 from fastapi import Header, HTTPException
@@ -61,6 +63,60 @@ class WorkflowsExecutorService:
                 text += chunk.text
         return {"generated_text": text}
 
+    async def _poll_job_status(self, media_id: str, authorization: str | None = None):
+        """
+        Polls the gallery endpoint until the job is completed or failed.
+        """
+        
+        url = f"{self.backend_url}/api/gallery/item/{media_id}"
+        headers = {"Authorization": authorization} if authorization else {}
+        
+        # Poll configuration
+        initial_delay = 2
+        poll_interval = 5
+        timeout = 300  # 5 minutes timeout
+        
+        await asyncio.sleep(initial_delay)
+        
+        start_time = asyncio.get_event_loop().time()
+        
+        while True:
+            current_time = asyncio.get_event_loop().time()
+            if current_time - start_time > timeout:
+                raise HTTPException(status_code=504, detail="Image generation timed out")
+                
+            try:
+                response = self.rest_client.get(url, headers=headers)
+                if response.status_code != 200:
+                    logger.warning(f"Polling failed with status {response.status_code}: {response.text}")
+                    # Don't raise immediately on transient errors, maybe? 
+                    # But 404 or 403 might be permanent. 
+                    # For now, let's assume if we can't get status, we should probably fail or retry carefully.
+                    # If it's 404, maybe it's not ready yet? But it should be created immediately.
+                    if response.status_code == 404:
+                         # Maybe eventual consistency?
+                         pass
+                    else:
+                        raise HTTPException(status_code=response.status_code, detail=f"Polling error: {response.text}")
+                else:
+                    data = response.json()
+                    status = data.get("status")
+                    
+                    if status == "completed":
+                        return True
+                    elif status == "failed":
+                        error_message = data.get("error_message") or data.get("errorMessage") or "Unknown error"
+                        raise HTTPException(status_code=500, detail=f"Image generation failed: {error_message}")
+            except Exception as e:
+                # If it's already an HTTPException, re-raise it
+                if isinstance(e, HTTPException):
+                    raise e
+                logger.error(f"Error during polling: {e}")
+                # Continue polling? Or fail? 
+                # If we can't check status, we might be blind.
+            
+            await asyncio.sleep(poll_interval)
+
     async def generate_image(self, request: GenerateImageRequest, authorization: str | None = None):
         logger.info(f"Generate image execution")
 
@@ -91,6 +147,10 @@ class WorkflowsExecutorService:
         image_id = dict_response.get("id", None)
         if not image_id:
             raise HTTPException(status_code=500, detail="Couldn't create image")
+            
+        # Poll for completion
+        await self._poll_job_status(image_id, authorization)
+        
         return {"generated_image": image_id}
 
     async def edit_image(self, request: EditImageRequest, authorization: str | None = None):
@@ -148,6 +208,9 @@ class WorkflowsExecutorService:
         image_id = dict_response.get("id", None)
         if not image_id:
             raise HTTPException(status_code=500, detail="Couldn't edit image")
+        
+        # Poll for completion
+        await self._poll_job_status(image_id, authorization)
         
         return {"edited_image": image_id}
 
@@ -236,5 +299,8 @@ class WorkflowsExecutorService:
         image_id = dict_response.get("id", None)
         if not image_id:
             raise HTTPException(status_code=500, detail="Couldn't create VTO image")
+        
+        # Poll for completion
+        await self._poll_job_status(image_id, authorization)
         
         return {"generated_image": image_id}

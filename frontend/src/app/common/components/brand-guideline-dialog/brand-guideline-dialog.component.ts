@@ -57,10 +57,9 @@ export class BrandGuidelineDialogComponent {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
       const file = input.files[0];
-      const maxSize = 50 * 1024 * 1024; // 50MB
-
+      const maxSize = 500 * 1024 * 1024; // 500MB
       if (file.size > maxSize) {
-        handleErrorSnackbar(this.snackBar, { message: 'File size cannot exceed 50MB.' }, 'File Upload');
+        handleErrorSnackbar(this.snackBar, { message: 'File size cannot exceed 500MB.' }, 'File Upload');
         this.form.get('file')?.setValue(null);
         this.fileName = null;
         input.value = ''; // Reset file input to allow re-selection of the same file

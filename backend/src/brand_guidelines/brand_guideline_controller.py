@@ -35,9 +35,11 @@ from src.brand_guidelines.dto.generate_upload_url_dto import (
     GenerateUploadUrlDto,
     GenerateUploadUrlResponseDto,
 )
+from src.workspaces.repository.workspace_repository import WorkspaceRepository
+from src.workspaces.workspace_auth_guard import workspace_auth_service
 from src.users.user_model import UserModel, UserRoleEnum
 
-MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
+MAX_UPLOAD_SIZE_BYTES = 500 * 1024 * 1024  # 500 MB
 
 # Define role checkers for convenience
 user_only = Depends(
@@ -60,11 +62,20 @@ async def generate_upload_url(
     request_dto: GenerateUploadUrlDto,
     current_user: UserModel = Depends(get_current_user),
     service: BrandGuidelineService = Depends(),
+    workspace_repo: WorkspaceRepository = Depends(),
 ):
     """
     Generates a secure, short-lived URL that the client can use to upload a
     brand guideline PDF directly to Google Cloud Storage.
     """
+    # If a workspace ID is provided, ensure the user has access to it.
+    if request_dto.workspace_id:
+        await workspace_auth_service.authorize(
+            workspace_id=request_dto.workspace_id,
+            user=current_user,
+            workspace_repo=workspace_repo,
+        )
+
     if not request_dto.content_type == "application/pdf":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -100,7 +111,7 @@ async def finalize_upload_and_process(
     It creates the placeholder document in Firestore and triggers the
     asynchronous background job to process the PDF from GCS.
     """
-    executor = request.app.state.process_pool
+    executor = request.app.state.executor
 
     return await service.start_brand_guideline_processing_job(
         name=request_dto.name,

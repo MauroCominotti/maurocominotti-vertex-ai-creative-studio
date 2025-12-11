@@ -109,36 +109,24 @@ def _process_brand_guideline_in_background(
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-        # Current change --------------------------------------------------------------------------------
-        # async def _async_worker():
-        #     async with WorkerDatabase() as db_factory:
-        #         async with db_factory() as db:
-        #             # Create new instances of dependencies within this process
-        #             repo = BrandGuidelineRepository(db)
-        #             gcs_service = GcsService()
-        #             # GeminiService needs brand_guideline_repo
-        #             gemini_service = GeminiService(brand_guideline_repo=repo)
-        # Incoming change --------------------------------------------------------------------------------
-        try:
-            # 0. Download the source PDF from GCS
-            worker_logger.info(f"Downloading source PDF from {source_gcs_uri}")
-            file_contents = gcs_service.download_bytes_from_gcs(source_gcs_uri)
-
-            # 1. Split if necessary and upload file(s) to GCS
-            gcs_uris = asyncio.run(
-                BrandGuidelineService._split_and_upload_pdf(
-                    gcs_service,
-                    file_contents or b"",
-                    workspace_id,
-                    original_filename,
-                )
-            )
+        async def _async_worker():
+            async with WorkerDatabase() as db_factory:
+                async with db_factory() as db:
+                    # Create new instances of dependencies within this process
+                    repo = BrandGuidelineRepository(db)
+                    gcs_service = GcsService()
+                    # GeminiService needs brand_guideline_repo
+                    gemini_service = GeminiService(brand_guideline_repo=repo)
 
                     try:
+                        # 0. Download the source PDF from GCS
+                        worker_logger.info(f"Downloading source PDF from {source_gcs_uri}")
+                        file_contents = gcs_service.download_bytes_from_gcs(source_gcs_uri)
+
                         # 1. Split if necessary and upload file(s) to GCS
                         gcs_uris = await BrandGuidelineService._split_and_upload_pdf(
                             gcs_service,
-                            file_contents,
+                            file_contents or b"",
                             workspace_id,
                             original_filename,
                         )
@@ -153,13 +141,11 @@ def _process_brand_guideline_in_background(
                         )
 
                         # 2. Call Gemini for each chunk to extract structured data
-                        # Use a ThreadPoolExecutor to run extractions in parallel.
-                        successful_partial_results = []
-                        # We can run sync Gemini calls in thread pool if they are sync, 
-                        # but gemini_service.extract_brand_info_from_pdf might be sync or async?
-                        # In the user's code it was called with executor.submit, implying it's sync.
-                        # Let's check GeminiService.extract_brand_info_from_pdf.
-                        # Assuming it is sync for now as per user's previous code.
+                        # Use a ThreadPoolExecutor to run extractions in parallel if needed,
+                        # but here we use asyncio.gather with run_in_executor for potentially sync parts
+                        # or just await if they are async.
+                        # Assuming extract_brand_info_from_pdf is synchronous (based on previous usage),
+                        # we run it in an executor.
                         
                         loop = asyncio.get_running_loop()
                         tasks = [
@@ -168,6 +154,7 @@ def _process_brand_guideline_in_background(
                         ]
                         results = await asyncio.gather(*tasks, return_exceptions=True)
 
+                        successful_partial_results = []
                         for i, result in enumerate(results):
                             if isinstance(result, Exception):
                                 worker_logger.error(
@@ -364,7 +351,7 @@ class BrandGuidelineService:
         """
         # Authorize the user for the workspace before generating a URL
         if request_dto.workspace_id:
-            workspace = self.workspace_repo.get_by_id(request_dto.workspace_id)
+            workspace = await self.workspace_repo.get_by_id(request_dto.workspace_id)
             if not workspace:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,

@@ -585,7 +585,8 @@ export class VideoComponent implements OnInit, AfterViewInit {
           ? (this.startImageAssetId ?? undefined)
           : undefined,
       sourceVideoAssetId:
-        this.currentMode === 'Frames to Video' && this._input1IsVideo
+        (this.currentMode === 'Frames to Video' && this._input1IsVideo) ||
+        this.currentMode === 'Extend Video'
           ? (this.startImageAssetId ?? undefined)
           : undefined,
       endImageAssetId:
@@ -600,7 +601,8 @@ export class VideoComponent implements OnInit, AfterViewInit {
       sourceMediaItems:
         this.currentMode === 'Ingredients to Video'
           ? sourceMediaItemsForReference
-          : this.currentMode === 'Frames to Video'
+          : this.currentMode === 'Frames to Video' ||
+              this.currentMode === 'Extend Video'
             ? validSourceMediaItems
             : undefined,
     };
@@ -784,18 +786,23 @@ export class VideoComponent implements OnInit, AfterViewInit {
           );
 
     if (isVideo) {
-      const isVeo3 = [
+      // If we are in Extend Video mode, we don't need to force a switch if the model supports it.
+      // Veo 3.1 supports video extension.
+      const isVeo30 = [
         'veo-3.0-fast-generate-001',
         'veo-3.0-generate-001',
       ].includes(this.searchRequest.generationModel);
 
-      if (isVeo3) {
-        const veo2Model = this.generationModels.find(
-          m => m.value === 'veo-2.0-generate-001',
+      if (isVeo30) {
+        const veo31Model = this.generationModels.find(
+          m => m.value === 'veo-3.1-generate-preview',
         );
-        if (veo2Model) {
-          this.selectModel(veo2Model);
-          handleSuccessSnackbar(this._snackBar, "Veo 3 doesn't support video as input, so we've switched to Veo 2 for you.");
+        if (veo31Model) {
+          this.selectModel(veo31Model);
+          handleSuccessSnackbar(
+            this._snackBar,
+            "Veo 3.0 doesn't support video as input, so we've switched to Veo 3.1 for you.",
+          );
         }
       }
     }
@@ -1068,6 +1075,10 @@ export class VideoComponent implements OnInit, AfterViewInit {
     | 'image/png'
     | 'video/mp4'
     | null {
+    if (this.isConcatenateMode || this.isExtensionMode) {
+      return 'video/mp4';
+    }
+
     const anyInputIsPresent = !!this.image1Preview || !!this.image2Preview;
     const anyInputIsVideo = this._input1IsVideo || this._input2IsVideo;
 

@@ -41,6 +41,11 @@ from src.brand_guidelines.dto.brand_guideline_response_dto import (
 from src.brand_guidelines.dto.brand_guideline_search_dto import (
     BrandGuidelineSearchDto,
 )
+from src.brand_guidelines.dto.finalize_upload_dto import FinalizeUploadDto
+from src.brand_guidelines.dto.generate_upload_url_dto import (
+    GenerateUploadUrlDto,
+    GenerateUploadUrlResponseDto,
+)
 from src.brand_guidelines.repository.brand_guideline_repository import (
     BrandGuidelineRepository,
 )
@@ -63,8 +68,8 @@ GEMINI_PDF_LIMIT_BYTES = 50 * 1024 * 1024
 def _process_brand_guideline_in_background(
     guideline_id: int,
     name: str,
-    file_contents: bytes,
     original_filename: str,
+    source_gcs_uri: str,
     workspace_id: Optional[int],
 ):
     """
@@ -104,14 +109,30 @@ def _process_brand_guideline_in_background(
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-        async def _async_worker():
-            async with WorkerDatabase() as db_factory:
-                async with db_factory() as db:
-                    # Create new instances of dependencies within this process
-                    repo = BrandGuidelineRepository(db)
-                    gcs_service = GcsService()
-                    # GeminiService needs brand_guideline_repo
-                    gemini_service = GeminiService(brand_guideline_repo=repo)
+        # Current change --------------------------------------------------------------------------------
+        # async def _async_worker():
+        #     async with WorkerDatabase() as db_factory:
+        #         async with db_factory() as db:
+        #             # Create new instances of dependencies within this process
+        #             repo = BrandGuidelineRepository(db)
+        #             gcs_service = GcsService()
+        #             # GeminiService needs brand_guideline_repo
+        #             gemini_service = GeminiService(brand_guideline_repo=repo)
+        # Incoming change --------------------------------------------------------------------------------
+        try:
+            # 0. Download the source PDF from GCS
+            worker_logger.info(f"Downloading source PDF from {source_gcs_uri}")
+            file_contents = gcs_service.download_bytes_from_gcs(source_gcs_uri)
+
+            # 1. Split if necessary and upload file(s) to GCS
+            gcs_uris = asyncio.run(
+                BrandGuidelineService._split_and_upload_pdf(
+                    gcs_service,
+                    file_contents or b"",
+                    workspace_id,
+                    original_filename,
+                )
+            )
 
                     try:
                         # 1. Split if necessary and upload file(s) to GCS
@@ -335,11 +356,47 @@ class BrandGuidelineService:
             **guideline.model_dump(), presigned_source_pdf_urls=presigned_urls
         )
 
+    async def generate_signed_upload_url(
+        self, request_dto: GenerateUploadUrlDto, current_user: UserModel
+    ) -> GenerateUploadUrlResponseDto:
+        """
+        Generates a GCS v4 signed URL for a client-side upload.
+        """
+        # Authorize the user for the workspace before generating a URL
+        if request_dto.workspace_id:
+            workspace = self.workspace_repo.get_by_id(request_dto.workspace_id)
+            if not workspace:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Workspace with ID '{request_dto.workspace_id}' not found.",
+                )
+
+        file_uuid = uuid.uuid4()
+        destination_blob_name = f"brand-guidelines/{request_dto.workspace_id or 'global'}/uploads/{file_uuid}/{request_dto.filename}"
+
+        signed_url, gcs_uri = await asyncio.to_thread(
+            self.iam_signer_credentials.generate_v4_upload_signed_url,
+            destination_blob_name,
+            request_dto.content_type,
+            self.gcs_service.bucket_name,
+        )
+
+        if not signed_url or not gcs_uri:
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "Could not generate upload URL.",
+            )
+
+        return GenerateUploadUrlResponseDto(
+            upload_url=signed_url, gcs_uri=gcs_uri
+        )
+
     async def start_brand_guideline_processing_job(
         self,
         name: str,
-        file: UploadFile,
         workspace_id: Optional[int],
+        gcs_uri: str,
+        original_filename: str,
         current_user: UserModel,
         executor: ThreadPoolExecutor,
     ) -> BrandGuidelineResponseDto:
@@ -384,14 +441,12 @@ class BrandGuidelineService:
                     existing_guidelines_response.data[0]
                 )
 
-        # 3. Read file contents into memory for the background process
-        file_contents = await file.read()
-
         # 4. Create and save a placeholder document
         placeholder_guideline = BrandGuidelineModel(
             name=name,
             workspace_id=workspace_id,
             status=JobStatusEnum.PROCESSING,
+            source_pdf_gcs_uris=[gcs_uri],  # Store the initial upload URI
         )
         placeholder_guideline = await self.repo.create(placeholder_guideline)
 
@@ -400,9 +455,9 @@ class BrandGuidelineService:
             _process_brand_guideline_in_background,
             guideline_id=placeholder_guideline.id,
             name=name,
-            file_contents=file_contents,
-            original_filename=file.filename or "guideline.pdf",
+            original_filename=original_filename,
             workspace_id=workspace_id,
+            source_gcs_uri=gcs_uri,
         )
 
         logger.info(

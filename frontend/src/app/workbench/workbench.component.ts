@@ -9,8 +9,12 @@ import {
   inject,
   OnInit
 } from '@angular/core';
-import { MatIconRegistry } from '@angular/material/icon';
+import {MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer, SafeResourceUrl, SafeUrl } from '@angular/platform-browser';
+import { MatDialog } from '@angular/material/dialog';
+import { ImageSelectorComponent, MediaItemSelection } from '../common/components/image-selector/image-selector.component';
+import { SourceAssetResponseDto } from '../common/services/source-asset.service';
+import { MediaItem } from '../common/models/media-item.model';
 // --- Interfaces ---
 interface MediaAsset {
   id: string;
@@ -35,7 +39,7 @@ interface TimelineClip {
 @Component({
   selector: 'app-workbench',
   templateUrl: './workbench.component.html',
-  styleUrls: ['./workbench.component.scss']
+  styleUrls: ['./workbench.component.scss'],
 })
 export class WorkbenchComponent implements OnInit, OnDestroy {
   // Signals for State
@@ -134,6 +138,7 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
 
   constructor(
     public matIconRegistry: MatIconRegistry,
+    private dialog: MatDialog,
   ) {
     this.matIconRegistry
     .addSvgIcon(
@@ -295,6 +300,124 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
     input.value = '';
   }
 
+  // --- Cloud Media Selection ---
+  openMediaSelector() {
+    const mimeType = this.activeTab() === 'video' ? 'video/*' : 'audio/*';
+    const dialogRef = this.dialog.open(ImageSelectorComponent, {
+      width: '90vw',
+      height: '80vh',
+      maxWidth: '90vw',
+      data: {
+        mimeType: mimeType,
+      },
+      panelClass: 'image-selector-dialog',
+    });
+
+    dialogRef.afterClosed().subscribe((result: MediaItemSelection | SourceAssetResponseDto) => {
+      if (result) {
+        this.processCloudMediaResult(result);
+      }
+    });
+  }
+
+  private processCloudMediaResult(result: MediaItemSelection | SourceAssetResponseDto) {
+    const isGalleryItem = 'mediaItem' in result;
+    
+    let url: string;
+    let name: string;
+    let type: 'video' | 'audio';
+    let thumbnail: string | undefined;
+
+    if (isGalleryItem) {
+      const selection = result as MediaItemSelection;
+      const mediaItem = selection.mediaItem;
+      const selectedIndex = selection.selectedIndex || 0;
+      url = mediaItem.presignedUrls?.[selectedIndex] || '';
+      name = mediaItem.prompt || 'Cloud Media';
+      // Determine type from mimeType or default to current tab
+      type = mediaItem.mimeType?.startsWith('audio') ? 'audio' : 'video';
+      // Use presignedThumbnailUrls for videos
+      thumbnail = type === 'video' 
+        ? (mediaItem.presignedThumbnailUrls?.[selectedIndex] || url) 
+        : undefined;
+    } else {
+      const asset = result as SourceAssetResponseDto;
+      url = asset.presignedUrl || '';
+      name = asset.originalFilename || 'Source Asset';
+      type = asset.mimeType?.startsWith('audio') ? 'audio' : 'video';
+      // Use presignedThumbnailUrl for videos, fallback to presignedUrl
+      thumbnail = type === 'video' 
+        ? (asset.presignedThumbnailUrl || asset.presignedUrl) 
+        : undefined;
+    }
+
+    if (!url) return;
+
+    const id = Math.random().toString(36).substr(2, 9);
+    const newAsset: MediaAsset = {
+      id,
+      name,
+      type,
+      url,
+      safeUrl: this.sanitizer.bypassSecurityTrustResourceUrl(url),
+      duration: 0,
+      thumbnail,
+    };
+
+    this.assets.update(prev => [...prev, newAsset]);
+
+    // Extract duration from the cloud media
+    if (type === 'video') {
+      this.extractVideoMetadataFromUrl(newAsset);
+    } else {
+      this.extractAudioMetadataFromUrl(newAsset);
+    }
+  }
+
+  private extractVideoMetadataFromUrl(asset: MediaAsset) {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.crossOrigin = 'anonymous';
+    video.src = asset.url;
+    video.onloadedmetadata = () => {
+      this.updateAssetDuration(asset.id, video.duration);
+      video.currentTime = Math.min(1, video.duration / 4);
+    };
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 160;
+        canvas.height = 90;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const thumbUrl = canvas.toDataURL('image/jpeg');
+          this.assets.update(items => items.map(i => i.id === asset.id ? {...i, thumbnail: thumbUrl} : i));
+        }
+      } catch (e) {
+        // CORS may prevent thumbnail generation for cloud assets
+        console.warn('Could not generate thumbnail for cloud asset', e);
+      }
+    };
+    video.onerror = () => {
+      // If video fails to load metadata, set a default duration
+      this.updateAssetDuration(asset.id, 10);
+    };
+  }
+
+  private extractAudioMetadataFromUrl(asset: MediaAsset) {
+    const audio = new Audio();
+    audio.crossOrigin = 'anonymous';
+    audio.src = asset.url;
+    audio.onloadedmetadata = () => {
+      this.updateAssetDuration(asset.id, audio.duration);
+    };
+    audio.onerror = () => {
+      // If audio fails to load metadata, set a default duration
+      this.updateAssetDuration(asset.id, 10);
+    };
+  }
+
   extractVideoMetadata(asset: MediaAsset, file: File) {
     const video = document.createElement('video');
     video.preload = 'metadata';
@@ -328,6 +451,11 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
     this.assets.update(items => items.map(i => i.id === id ? {...i, duration} : i));
     this.timelineClips.update(clips => clips.map(clip => clip.assetId === id ? { ...clip, duration } : clip));
     this.refreshTimelineLayout();
+  }
+
+  onThumbnailError(asset: MediaAsset) {
+    // Clear the thumbnail if it fails to load, so the placeholder icon shows
+    this.assets.update(items => items.map(i => i.id === asset.id ? {...i, thumbnail: undefined} : i));
   }
 
   refreshTimelineLayout() {

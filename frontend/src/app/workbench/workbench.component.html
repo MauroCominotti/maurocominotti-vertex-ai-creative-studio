@@ -49,7 +49,7 @@
             <div class="flex flex-col  md:w-11/12 mx-auto">
 
                 <!-- Top Workspace (3 Columns) -->
-                <div class="flex flex-col xl:flex-row w-11/12 md:w-4/5 mx-auto my-4 p-6 gap-6 min-h-0 overflow-hidden">
+                <div class="flex flex-col xl:flex-row w-11/12 mx-auto my-4 p-6 gap-6 min-h-0 overflow-hidden">
 
                     <!-- COL 1: Assets Panel -->
                     <div
@@ -61,8 +61,8 @@
                         <!-- Grid of assets -->
                         <div class="flex-1 overflow-y-auto grid grid-cols-2 gap-3 content-start custom-scrollbar">
 
-                            <!-- "Add New" Card (Always visible) -->
-                            <label
+                            <!-- "Add New" Card (Cloud Media Selector) -->
+                            <div (click)="openMediaSelector()"
                                 class="aspect-square border-2 border-dashed border-gray-700 rounded-xl flex flex-col items-center justify-center text-gray-500 gap-2 cursor-pointer hover:border-blue-500 hover:text-blue-400 transition-colors relative group bg-[#151517]">
                                 <div
                                     class="w-8 h-8 rounded-full bg-gray-800 group-hover:bg-blue-500/20 flex items-center justify-center transition-colors">
@@ -73,16 +73,22 @@
                                         <line x1="5" y1="12" x2="19" y2="12"></line>
                                     </svg>
                                 </div>
-                                <span class="text-[10px] font-medium">Add Media</span>
-                                <input type="file" multiple accept="video/*,audio/*"
-                                    class="absolute inset-0 opacity-0 cursor-pointer" (change)="onFileSelected($event)">
-                            </label>
+                                <span class="text-[10px] font-medium">Add from Cloud</span>
+                            </div>
 
                             <!-- Asset Cards (filtered by activeTab) -->
                             <div *ngFor="let asset of filteredAssets()"
                                 class="group relative aspect-square bg-black rounded-xl overflow-hidden border border-white/5 cursor-pointer hover:ring-2 hover:ring-blue-500/50 transition-all">
                                 <img *ngIf="asset.thumbnail" [src]="asset.thumbnail"
-                                    class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
+                                    class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                                    (error)="onThumbnailError(asset)">
+                                <div *ngIf="!asset.thumbnail && asset.type === 'video'"
+                                    class="w-full h-full flex items-center justify-center bg-gray-900">
+                                    <svg class="text-blue-400 w-8 h-8" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2">
+                                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                    </svg>
+                                </div>
                                 <div *ngIf="!asset.thumbnail && asset.type === 'audio'"
                                     class="w-full h-full flex items-center justify-center bg-gray-900">
                                     <svg class="text-purple-400 w-8 h-8" viewBox="0 0 24 24" fill="none"
@@ -274,12 +280,31 @@
                     class="h-104 p-6 my-8 flex flex-col overflow-hidden relative z-10 ">
                     <!-- Timeline Header / Toolbar -->
                     <div class="h-12 border-b border-white/5 flex items-center justify-between px-4 ">
-                         <div class="h-10 ml-96 p-2 border-b border-white/5 w-full sticky top-0  z-10 bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-3xl shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
-                                    <div *ngFor="let tick of timeRulerTicks()"
-                                        class="absolute top-0 bottom-0 border-l border-white/10 text-[9px] pl-1 text-white/60"
+                         <!-- Time Ruler -->
+                         <div class="h-10 ml-96 p-2 overflow-x-hidden border-b border-white/5 w-full sticky top-0 z-10 bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-3xl shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px]">
+                            <div class="relative h-full" [style.width.px]="timelineWidth()">
+                                <!-- Major ticks with labels (every second) -->
+                                <ng-container *ngFor="let tick of timeRulerTicks()">
+                                    <!-- Major tick line -->
+                                    <div class="absolute top-0 h-full flex flex-col items-center"
                                         [style.left.px]="tick * pixelsPerSecond">
-                                        {{tick}}s
+                                        <div class="w-0.5 h-5 bg-white/80"></div>
+                                        <span class="text-[10px] font-semibold text-white/90 mt-0.5">{{tick}}s</span>
                                     </div>
+                                    <!-- Minor ticks (subdivisions) - show half-second marks -->
+                                    <div *ngIf="pixelsPerSecond >= 20" 
+                                        class="absolute top-0 w-0.5 h-3 bg-white/50"
+                                        [style.left.px]="(tick + 0.5) * pixelsPerSecond">
+                                    </div>
+                                    <!-- Quarter-second marks when zoomed in -->
+                                    <ng-container *ngIf="pixelsPerSecond >= 40">
+                                        <div class="absolute top-0 w-px h-2 bg-white/40"
+                                            [style.left.px]="(tick + 0.25) * pixelsPerSecond"></div>
+                                        <div class="absolute top-0 w-px h-2 bg-white/40"
+                                            [style.left.px]="(tick + 0.75) * pixelsPerSecond"></div>
+                                    </ng-container>
+                                </ng-container>
+                            </div>
                          </div>
 
                         <div class="flex items-center justify-center  gap-4">
@@ -380,14 +405,22 @@
                                     }" [style.left.px]="clip.startTime * pixelsPerSecond"
                                         [style.width.px]="clip.duration * pixelsPerSecond">
 
-                                        <!-- Thumbnail Strip -->
-                                        <div
+                                        <!-- Thumbnail Strip (when thumbnail available) -->
+                                        <div *ngIf="getAssetThumbnail(clip.assetId)"
                                             class="absolute inset-0 flex opacity-50 group-hover:opacity-70 transition-opacity pointer-events-none grayscale group-hover:grayscale-0 overflow-hidden">
                                             <ng-container *ngFor="let i of [1,2,3,4,5]">
-                                                <img *ngIf="getAssetThumbnail(clip.assetId)"
-                                                    [src]="getAssetThumbnail(clip.assetId)"
+                                                <img [src]="getAssetThumbnail(clip.assetId)"
                                                     class="h-full object-cover w-20 flex-shrink-0">
                                             </ng-container>
+                                        </div>
+
+                                        <!-- Fallback gradient when no thumbnail -->
+                                        <div *ngIf="!getAssetThumbnail(clip.assetId)"
+                                            class="absolute inset-0 bg-gradient-to-r from-blue-900/50 to-blue-700/30 flex items-center justify-center">
+                                            <svg class="text-blue-400 w-6 h-6 opacity-50" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2">
+                                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                            </svg>
                                         </div>
 
                                         <!-- Trim Handles -->

@@ -66,11 +66,26 @@ class SourceAssetRepository(BaseRepository[SourceAssetModel]):
 
         # Apply filters from the DTO
         if search_dto.mime_type:
-            if search_dto.mime_type.endswith("image/*"):
-                # TODO: Handle wildcard prefix search (e.g., "image/*")
-                # by creating a range query that finds all strings starting with the prefix.
+            if search_dto.mime_type == "image/*":
+                # Filter for all image types (exclude video and audio)
                 base_query = base_query.where(
-                    filter=FieldFilter("mime_type", "!=", "video/mp4")
+                    filter=FieldFilter("mime_type", ">=", "image/")
+                ).where(
+                    filter=FieldFilter("mime_type", "<", "image/~")
+                )
+            elif search_dto.mime_type == "video/*":
+                # Filter for all video types
+                base_query = base_query.where(
+                    filter=FieldFilter("mime_type", ">=", "video/")
+                ).where(
+                    filter=FieldFilter("mime_type", "<", "video/~")
+                )
+            elif search_dto.mime_type == "audio/*":
+                # Filter for all audio types
+                base_query = base_query.where(
+                    filter=FieldFilter("mime_type", ">=", "audio/")
+                ).where(
+                    filter=FieldFilter("mime_type", "<", "audio/~")
                 )
             else:
                 # Standard exact match

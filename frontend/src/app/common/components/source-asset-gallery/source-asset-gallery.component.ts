@@ -53,6 +53,8 @@ export class SourceAssetGalleryComponent
     | 'image/*'
     | 'image/png'
     | 'video/mp4'
+    | 'video/*'
+    | 'audio/*'
     | 'audio/mpeg'
     | null = null;
   @ViewChild('sentinel') private sentinel!: ElementRef<HTMLElement>;

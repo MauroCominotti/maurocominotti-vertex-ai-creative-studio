@@ -25,7 +25,7 @@ import {provideFirestore, getFirestore} from '@angular/fire/firestore';
 import {environment} from '../environments/environment';
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatButtonModule} from '@angular/material/button';
-import {MatIconModule} from '@angular/material/icon';
+import {MatIcon, MatIconModule} from '@angular/material/icon';
 import {MatChipsModule} from '@angular/material/chips';
 import {MatExpansionModule} from '@angular/material/expansion';
 import {MatTabsModule} from '@angular/material/tabs';
@@ -109,6 +109,9 @@ import { FlowPromptBoxComponent } from "./common/components/flow-prompt-box/flow
     ImageSelectorComponent,
     SourceAssetGalleryComponent,
     ImageCropperDialogComponent,
+    WorkbenchComponent,
+    AudioComponent,
+    AddVoiceDialogComponent,
   ],
   imports: [
     BrowserModule,
@@ -144,7 +147,7 @@ import { FlowPromptBoxComponent } from "./common/components/flow-prompt-box/flow
     MatButtonToggleModule,
     MatSliderModule,
     NotificationContainerComponent,
-    FlowPromptBoxComponent
+    FlowPromptBoxComponent,
 ],
   providers: [
     provideClientHydration(),

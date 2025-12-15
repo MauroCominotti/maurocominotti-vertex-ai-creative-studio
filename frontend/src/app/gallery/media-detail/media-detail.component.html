@@ -1,3 +1,19 @@
+<!--
+ Copyright 2025 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
 <div
   *ngIf="isLoading"
   class="flex flex-col justify-center items-center h-screen text-white text-center"
@@ -59,10 +75,9 @@
           <div class="py-4 space-y-6">
             <!-- Parameters Section -->
             <section class="space-y-3">
-              <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">
-                Parameters
-              </h3>
+              <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">Parameters</h3>
               <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+
                 <strong class="font-semibold text-gray-400">Model:</strong>
                 <p class="text-right break-all">
                   {{ mediaItem.model || 'N/A' }}
@@ -85,6 +100,16 @@
                   <p class="text-right">
                     {{ mediaItem.generationTime | number: '1.0-2' }}s
                   </p>
+                </div>
+
+                <div *ngIf="mediaItem.voiceName" class="contents">
+                  <strong class="font-semibold text-gray-400">Voice:</strong>
+                  <p class="text-right">{{ mediaItem.voiceName }}</p>
+                </div>
+
+                <div *ngIf="mediaItem.languageCode" class="contents">
+                  <strong class="font-semibold text-gray-400">Language:</strong>
+                  <p class="text-right">{{ mediaItem.languageCode }}</p>
                 </div>
 
                 <div *ngIf="mediaItem.seed" class="contents">
@@ -114,6 +139,53 @@
                   <p class="text-right">
                     {{ mediaItem.aspectRatio || mediaItem.aspect }}
                   </p>
+                </div>
+                <div *ngIf="mediaItem?.resolution" class="contents">
+                  <strong class="font-semibold text-gray-400">Resolution:</strong>
+                  <p class="text-right">{{ mediaItem.resolution }}</p>
+                </div>
+                
+                <div *ngIf="mediaItem?.googleSearch !== undefined" class="contents">
+                  <strong class="font-semibold text-gray-400">Google Search:</strong>
+                  <p class="text-right">
+                    {{ mediaItem.googleSearch ? 'Enabled' : 'Disabled' }}
+                  </p>
+                </div>
+                
+              </div>
+
+            </section>
+                
+            <!-- Grounding Information -->
+            <section class="space-y-3" *ngIf="mediaItem.groundingMetadata">
+              <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">
+                Grounding Information
+              </h3>
+              <div *ngIf="mediaItem.groundingMetadata.webSearchQueries" class="mb-4">
+                <strong class="font-semibold text-gray-400 block mb-1">Search Queries:</strong>
+                <div class="flex flex-wrap gap-2">
+                  <span *ngFor="let query of mediaItem.groundingMetadata.webSearchQueries"
+                    class="px-2 py-1 bg-gray-800 rounded text-sm text-gray-300">
+                    {{ query }}
+                  </span>
+                </div>
+              </div>
+              <div *ngIf="mediaItem.groundingMetadata.groundingChunks" class="mb-4">
+                <strong class="font-semibold text-gray-400 block mb-1">Sources:</strong>
+                <ul class="space-y-2">
+                  <li *ngFor="let chunk of mediaItem.groundingMetadata.groundingChunks">
+                    <a *ngIf="chunk.web" [href]="chunk.web.uri" target="_blank"
+                      class="text-blue-400 hover:underline text-sm flex items-center gap-2">
+                      <mat-icon class="!text-sm !w-4 !h-4">open_in_new</mat-icon>
+                      {{ chunk.web.title || chunk.web.uri }}
+                    </a>
+                  </li>
+                </ul>
+              </div>
+              <div *ngIf="mediaItem.groundingMetadata.searchEntryPoint" class="mb-4">
+                <strong class="font-semibold text-gray-400 block mb-1">Search Entry Point:</strong>
+                <div [innerHTML]="getSafeHtml(mediaItem.groundingMetadata.searchEntryPoint.renderedContent)"
+                  class="bg-white rounded-md p-2">
                 </div>
               </div>
             </section>
@@ -169,10 +241,9 @@
                 <!-- From uploaded assets -->
                 <a
                   *ngFor="let asset of mediaItem.enrichedSourceAssets"
-                  [href]="asset.presignedUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="block w-20 h-20 rounded-md overflow-hidden hover:opacity-80 transition-opacity"
+                  href="#"
+                  (click)="openSourceAssetInLightbox(asset, $event)"
+                  class="block w-20 h-20 rounded-md overflow-hidden hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   <img
                     [src]="asset?.presignedThumbnailUrl || asset.presignedUrl"
@@ -187,7 +258,7 @@
                   [queryParams]="{img_index: source.mediaIndex}"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="block w-20 h-20 rounded-md overflow-hidden hover:opacity-80 transition-opacity"
+                  class="block w-20 h-20 rounded-md overflow-hidden hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   <img
                     [src]="source?.presignedThumbnailUrl || source.presignedUrl"
@@ -719,4 +790,32 @@
       </mat-tab-group>
     </div>
   </div>
+</div>
+
+<!-- Lightbox Overlay for Source Assets -->
+<div
+  *ngIf="selectedAssetForLightbox"
+  class="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4"
+  (click)="closeLightbox()"
+>
+  <div
+    (click)="$event.stopPropagation()"
+    class="relative w-full h-full max-w-7xl max-h-[90vh] flex"
+  >
+    <app-media-lightbox
+      class="w-full h-full"
+      [mediaItem]="selectedAssetForLightbox"
+      [initialIndex]="lightboxInitialIndex"
+      [showSeeMoreInfoButton]="false"
+      [showShareButton]="false"
+      [showDownloadButton]="true"
+    ></app-media-lightbox>
+  </div>
+  <button
+    (click)="closeLightbox()"
+    class="absolute top-4 right-4 z-[101] text-white bg-black/40 rounded-full p-2 hover:bg-black/60 transition-colors"
+    aria-label="Close lightbox"
+  >
+    <mat-icon>close</mat-icon>
+  </button>
 </div>

@@ -1,4 +1,20 @@
-import { Injectable } from '@angular/core';
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {Injectable} from '@angular/core';
 import {HttpClient, HttpErrorResponse} from '@angular/common/http';
 import {Observable, throwError} from 'rxjs';
 import {catchError} from 'rxjs/operators';
@@ -26,10 +42,10 @@ export class MediaTemplatesService {
       .pipe(catchError(this.handleError));
   }
 
-  updateMediaTemplate(template: MediaTemplate): Observable<MediaTemplate> {
-    const url = `${this.apiUrl}/${template.id}`;
+  updateMediaTemplate(id: number, payload: Omit<MediaTemplate, 'id' | 'mimeType'>): Observable<MediaTemplate> {
+    const url = `${this.apiUrl}/${id}`;
     return this.http
-      .put<MediaTemplate>(url, template)
+      .put<MediaTemplate>(url, payload)
       .pipe(catchError(this.handleError));
   }
 
@@ -55,5 +71,10 @@ export class MediaTemplatesService {
     }
     console.error(errorMessage);
     return throwError(() => new Error(errorMessage));
+  }
+
+  deleteMediaTemplate(id: number): Observable<void> {
+    const url = `${this.apiUrl}/${id}`;
+    return this.http.delete<void>(url).pipe(catchError(this.handleError));
   }
 }

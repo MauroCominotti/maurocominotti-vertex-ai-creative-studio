@@ -15,11 +15,7 @@
  */
 
 import {Component} from '@angular/core';
-import {
-  Router,
-  NavigationEnd,
-  Event as NavigationEvent,
-} from '@angular/router';
+import {Router, NavigationEnd, Event as NavigationEvent} from '@angular/router';
 import {trigger, transition, style, query, animate} from '@angular/animations';
 import {LoadingService} from './common/services/loading.service';
 

@@ -18,12 +18,18 @@
     <div
       class="workspace-container bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[48px] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px] z-[1000]"
       [matMenuTriggerFor]="workspaceMenu"
-      [matTooltip]="'You are on a ' + activeWorkspace?.scope + ' workspace. Click to switch workspaces!'"
+      [matTooltip]="
+        'You are on a ' +
+        activeWorkspace.scope +
+        ' workspace. Click to switch workspaces!'
+      "
     >
       <mat-icon>{{
-        activeWorkspace?.scope === WorkspaceScope.PUBLIC ? 'public' : 'lock'
+        activeWorkspace.scope === WorkspaceScope.PUBLIC ? 'public' : 'lock'
       }}</mat-icon>
-      <span class="workspace-name">{{ activeWorkspace?.name || "Undefined" }}</span>
+      <span class="workspace-name">{{
+        activeWorkspace.name || 'Undefined'
+      }}</span>
       <mat-icon>unfold_more</mat-icon>
     </div>
 
@@ -33,7 +39,12 @@
         *ngFor="let workspace of workspaces"
         (click)="setActiveWorkspace(workspace.id)"
       >
-        <mat-icon [style.visibility]="activeWorkspaceId === workspace.id ? 'visible' : 'hidden'">check</mat-icon>
+        <mat-icon
+          [style.visibility]="
+            activeWorkspaceId === workspace.id ? 'visible' : 'hidden'
+          "
+          >check</mat-icon
+        >
         <mat-icon>{{
           workspace.scope === WorkspaceScope.PUBLIC ? 'public' : 'lock'
         }}</mat-icon>
@@ -44,23 +55,39 @@
         <mat-icon>add</mat-icon>
         <span>Create New Private Workspace</span>
       </button>
-      <button mat-menu-item (click)="openInviteDialog($event)" [disabled]="!canInvite" matTooltipPosition="right" matTooltip="You can invite users in your Private Workspaces!">
+      <button
+        mat-menu-item
+        (click)="openInviteDialog($event)"
+        [disabled]="!canInvite"
+        matTooltipPosition="right"
+        matTooltip="You can invite users in your Private Workspaces!"
+      >
         <mat-icon>person_add</mat-icon>
         <span>Invite Users</span>
       </button>
       <button
         mat-menu-item
         [disabled]="
-          !canEditBrandGuidelines ||
-          (brandGuidelineService.activeBrandGuidelineJob$ | async)?.status === JobStatus.PROCESSING
+          !canAccessBrandGuidelines ||
+          (brandGuidelineService.activeBrandGuidelineJob$ | async)?.status ===
+            JobStatus.PROCESSING
         "
         (click)="openBrandGuidelinesDialog($event)"
       >
-        <ng-container *ngIf="brandGuidelineService.activeBrandGuidelineJob$ | async as job">
-          <mat-spinner *ngIf="job.status === JobStatus.PROCESSING" [diameter]="20" class="inline-block mr-2"></mat-spinner>
+        <ng-container
+          *ngIf="brandGuidelineService.activeBrandGuidelineJob$ | async as job"
+        >
+          <mat-spinner
+            *ngIf="job.status === JobStatus.PROCESSING"
+            [diameter]="20"
+            class="inline-block mr-2"
+          ></mat-spinner>
           <mat-icon *ngIf="job.status !== JobStatus.PROCESSING">style</mat-icon>
         </ng-container>
-        <mat-icon *ngIf="!(brandGuidelineService.activeBrandGuidelineJob$ | async)">style</mat-icon>
+        <mat-icon
+          *ngIf="!(brandGuidelineService.activeBrandGuidelineJob$ | async)"
+          >style</mat-icon
+        >
         <span>Brand Guidelines</span>
       </button>
 

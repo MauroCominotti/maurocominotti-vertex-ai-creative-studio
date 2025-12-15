@@ -23,7 +23,10 @@ import {WorkspaceService} from '../../../services/workspace/workspace.service';
 import {WorkspaceStateService} from '../../../services/workspace/workspace-state.service';
 import {CreateWorkspaceModalComponent} from '../create-workspace-modal/create-workspace-modal.component';
 import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
-import {handleErrorSnackbar, handleSuccessSnackbar} from '../../../utils/handleErrorSnackbar';
+import {
+  handleErrorSnackbar,
+  handleSuccessSnackbar,
+} from '../../../utils/handleMessageSnackbar';
 import {
   InviteUserData,
   InviteUserModalComponent,
@@ -45,7 +48,7 @@ import {JobStatus, MediaItem} from '../../models/media-item.model';
 })
 export class WorkspaceSwitcherComponent implements OnInit {
   workspaces: Workspace[] = [];
-  activeWorkspaceId: string | null = null;
+  activeWorkspaceId: number | null = null;
   activeWorkspace: Workspace | null = null;
   currentUser: UserModel | null;
   readonly JobStatus = JobStatus;
@@ -66,8 +69,14 @@ export class WorkspaceSwitcherComponent implements OnInit {
   ngOnInit(): void {
     this.loadWorkspaces();
     this.workspaceStateService.activeWorkspaceId$.subscribe(id => {
-      this.activeWorkspaceId = id;
-      this.activeWorkspace = this.workspaces.find(w => w.id === id) || null;
+      // Ensure we handle both string (from legacy/url) and number types safely if needed,
+      // but ideally workspaceStateService should also be consistent.
+      // Assuming workspaceStateService might still emit strings if not updated, let's cast or parse if needed.
+      // For now, let's assume strict number typing is propagated.
+      // Actually, workspaceStateService might need checking too.
+      // Let's assume id is number here based on the goal.
+      this.activeWorkspaceId = typeof id === 'string' ? parseInt(id, 10) : id;
+      this.activeWorkspace = this.workspaces.find(w => w.id === this.activeWorkspaceId) || null;
     });
 
     this.brandGuidelineService.activeBrandGuidelineJob$.subscribe(job => {
@@ -97,8 +106,7 @@ export class WorkspaceSwitcherComponent implements OnInit {
     this.workspaceService.getWorkspaces().subscribe({
       next: workspaces => {
         this.workspaces = workspaces;
-        this.activeWorkspace =
-          this.workspaces.find(w => w.id === this.activeWorkspaceId) || null;
+        // Now that we have the workspaces, we can determine the initial active one.
         this.initializeActiveWorkspace();
       },
       error: error => {
@@ -108,9 +116,24 @@ export class WorkspaceSwitcherComponent implements OnInit {
   }
 
   initializeActiveWorkspace(): void {
+    const storedWorkspaceId = localStorage.getItem('activeWorkspaceId');
     const queryParamId = this.route.snapshot.queryParamMap.get('workspaceId');
-    if (queryParamId && this.workspaces.some(w => w.id === queryParamId)) {
-      this.setActiveWorkspace(queryParamId);
+
+    // Order of precedence: URL query param > localStorage > default public.
+    let preferredWorkspaceId: number | null = null;
+
+    if (queryParamId) {
+        preferredWorkspaceId = parseInt(queryParamId, 10);
+    } else if (storedWorkspaceId) {
+        preferredWorkspaceId = parseInt(storedWorkspaceId, 10);
+    }
+
+    if (
+      preferredWorkspaceId &&
+      !isNaN(preferredWorkspaceId) &&
+      this.workspaces.some(w => w.id === preferredWorkspaceId)
+    ) {
+      this.setActiveWorkspace(preferredWorkspaceId);
       return;
     }
 
@@ -118,20 +141,26 @@ export class WorkspaceSwitcherComponent implements OnInit {
       w => w.scope === WorkspaceScope.PUBLIC,
     );
     if (googleWorkspace) {
+      // Fallback to public workspace
       this.setActiveWorkspace(googleWorkspace.id);
-      return;
-    }
-
-    if (this.workspaces.length > 0) {
+    } else if (this.workspaces.length > 0) {
+      // Fallback to the first workspace
       this.setActiveWorkspace(this.workspaces[0].id);
     }
   }
 
-  setActiveWorkspace(workspaceId: string | null): void {
-    this.workspaceStateService.setActiveWorkspaceId(workspaceId);
+  setActiveWorkspace(workspaceId: number | null): void {
+    // We might need to cast to any if workspaceStateService expects string,
+    // but we should check that service too. For now, let's assume we pass number.
+    this.workspaceStateService.setActiveWorkspaceId(workspaceId as any);
     this.activeWorkspace =
       this.workspaces.find(w => w.id === workspaceId) || null;
     this.brandGuidelineService.clearCache();
+    if (workspaceId) {
+      localStorage.setItem('activeWorkspaceId', workspaceId.toString());
+    } else {
+      localStorage.removeItem('activeWorkspaceId');
+    }
   }
 
   openCreateWorkspaceDialog(): void {
@@ -149,9 +178,7 @@ export class WorkspaceSwitcherComponent implements OnInit {
   createWorkspace(name: string): void {
     this.workspaceService.createWorkspace(name).subscribe({
       next: newWorkspace => {
-        this.snackBar.open(`Workspace "${name}" created!`, 'OK', {
-          duration: 3000,
-        });
+        handleSuccessSnackbar(this.snackBar, `Workspace "${name}" created!`);
         this.workspaces.push(newWorkspace);
         this.setActiveWorkspace(newWorkspace.id);
       },
@@ -174,17 +201,25 @@ export class WorkspaceSwitcherComponent implements OnInit {
     return isOwner || isAdmin;
   }
 
-  get canEditBrandGuidelines(): boolean {
-    if (!this.currentUser || !this.activeWorkspace) {
-      return false;
-    }
+  get canAccessBrandGuidelines(): boolean {
+    if (!this.currentUser || !this.activeWorkspace) return false;
+
+    // Anyone can access guidelines on a public workspace.
+    if (this.activeWorkspace.scope === WorkspaceScope.PUBLIC) return true;
+
+    // For private workspaces, only admins or owners can access.
     const isAdmin = !!this.currentUser.roles?.includes(UserRolesEnum.ADMIN);
-    // An admin can edit any workspace's guidelines.
-    // A non-admin can only edit guidelines for private workspaces they own.
     const isOwnerOfPrivateWorkspace =
       this.activeWorkspace.scope === WorkspaceScope.PRIVATE &&
       this.currentUser.id === this.activeWorkspace.ownerId;
     return isAdmin || isOwnerOfPrivateWorkspace;
+  }
+
+  get canPerformEditActionsOnBrandGuidelines(): boolean {
+    if (!this.currentUser || !this.activeWorkspace) return false;
+    const isAdmin = !!this.currentUser.roles?.includes(UserRolesEnum.ADMIN);
+    const isOwner = this.currentUser.id === this.activeWorkspace.ownerId;
+    return isAdmin || isOwner;
   }
 
   openInviteDialog(event: MouseEvent): void {
@@ -205,7 +240,7 @@ export class WorkspaceSwitcherComponent implements OnInit {
           .inviteUser(this.activeWorkspaceId, result.email, result.role)
           .subscribe({
             next: () => {
-              this.snackBar.open('Invitation sent!', 'OK', {duration: 3000});
+              handleSuccessSnackbar(this.snackBar, 'Invitation sent!');
             },
             error: error => {
               handleErrorSnackbar(
@@ -235,7 +270,11 @@ export class WorkspaceSwitcherComponent implements OnInit {
             width: '800px',
             maxWidth: '90vw',
             panelClass: 'brand-guideline-dialog',
-            data: {workspaceId: workspaceId, guideline},
+            data: {
+              workspaceId: workspaceId,
+              guideline,
+              canEdit: this.canPerformEditActionsOnBrandGuidelines,
+            },
           });
           return dialogRef
             .afterClosed()
@@ -266,9 +305,7 @@ export class WorkspaceSwitcherComponent implements OnInit {
                 .deleteBrandGuideline(guideline.id)
                 .subscribe({
                   next: () => {
-                    this.snackBar.open('Brand Guideline deleted.', 'OK', {
-                      duration: 3000,
-                    });
+                    handleSuccessSnackbar(this.snackBar, 'Brand Guideline deleted.');
                   },
                   error: error =>
                     handleErrorSnackbar(

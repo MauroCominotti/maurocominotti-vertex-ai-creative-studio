@@ -21,9 +21,9 @@ import {BehaviorSubject, Observable} from 'rxjs';
   providedIn: 'root',
 })
 export class WorkspaceStateService {
-  private readonly activeWorkspaceIdSubject = new BehaviorSubject<string | null>(
-    null,
-  );
+  private readonly activeWorkspaceIdSubject = new BehaviorSubject<
+    string | null
+  >(null);
   public readonly activeWorkspaceId$: Observable<string | null> =
     this.activeWorkspaceIdSubject.asObservable();
 
@@ -35,4 +35,3 @@ export class WorkspaceStateService {
     return this.activeWorkspaceIdSubject.getValue();
   }
 }
-

@@ -1,11 +1,28 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import {AfterViewInit, Component, OnInit, ViewChild} from '@angular/core';
 import {MatTableDataSource} from '@angular/material/table';
 import {MatPaginator} from '@angular/material/paginator';
 import {MatSort} from '@angular/material/sort';
 import {MediaTemplatesService} from './media-templates.service';
+import {MatSnackBar} from '@angular/material/snack-bar';
+import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
 import {MatDialog} from '@angular/material/dialog';
 import {MediaTemplateFormComponent} from './media-template-form/media-template-form.component';
-import {of} from 'rxjs';
 import {MediaTemplate} from '../../fun-templates/media-template.model';
 
 @Component({
@@ -35,6 +52,7 @@ export class MediaTemplatesManagementComponent
   constructor(
     private mediaTemplatesService: MediaTemplatesService,
     public dialog: MatDialog,
+    private snackBar: MatSnackBar,
   ) {
     this.dataSource = new MatTableDataSource<MediaTemplate>([]);
   }
@@ -83,9 +101,17 @@ export class MediaTemplatesManagementComponent
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        const saveObservable = result.id
-          ? this.mediaTemplatesService.updateMediaTemplate(result)
-          : this.mediaTemplatesService.createMediaTemplate(result);
+        let saveObservable;
+        if (result.id) {
+          const {id, mimeType, ...updatePayload} = result;
+          saveObservable = this.mediaTemplatesService.updateMediaTemplate(
+            id,
+            updatePayload,
+          );
+        } else {
+          saveObservable =
+            this.mediaTemplatesService.createMediaTemplate(result);
+        }
 
         // TODO: Replace with actual service call
         // For now, just simulating a successful save.
@@ -120,7 +146,19 @@ export class MediaTemplatesManagementComponent
   }
 
   deleteTemplate(template: MediaTemplate): void {
-    // TODO: Implement delete functionality, e.g., show a confirmation dialog
-    console.log('Deleting template:', template);
+    if (
+      template.id &&
+      confirm(`Are you sure you want to delete template "${template.name}"?`)
+    ) {
+      this.mediaTemplatesService.deleteMediaTemplate(template.id).subscribe({
+        next: () => {
+          this.fetchTemplates();
+          handleSuccessSnackbar(this.snackBar, 'Template deleted successfully');
+        },
+        error: (err: Error) => {
+          handleErrorSnackbar(this.snackBar, err, 'Delete template');
+        },
+      });
+    }
   }
 }

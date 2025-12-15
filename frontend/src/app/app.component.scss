@@ -15,26 +15,26 @@
  */
 
 .content {
-    height: 100%;
-    position: relative;
-    // padding-top: 54px;
+  height: 100%;
+  position: relative;
+  // padding-top: 54px;
 }
 
 .login {
-    height: 100%;
-    position: relative;
+  height: 100%;
+  position: relative;
 }
 
 ::ng-deep .mat-mdc-snack-bar-container {
-    &.green-snackbar {
-        --mdc-snackbar-container-color: #0F9D58;
-        --mat-mdc-snack-bar-button-color: #fff;
-        --mdc-snackbar-supporting-text-color: #fff;
-    }
+  &.green-snackbar {
+    --mdc-snackbar-container-color: #0f9d58;
+    --mat-mdc-snack-bar-button-color: #fff;
+    --mdc-snackbar-supporting-text-color: #fff;
+  }
 
-    &.red-snackbar {
-        --mdc-snackbar-container-color: #e9103f;
-        --mat-mdc-snack-bar-button-color: #fff;
-        --mdc-snackbar-supporting-text-color: #fff;
-    }
+  &.red-snackbar {
+    --mdc-snackbar-container-color: #e9103f;
+    --mat-mdc-snack-bar-button-color: #fff;
+    --mdc-snackbar-supporting-text-color: #fff;
+  }
 }

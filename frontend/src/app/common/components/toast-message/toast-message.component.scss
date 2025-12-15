@@ -14,30 +14,31 @@
  * limitations under the License.
  */
 
-.toast-content{
-    color: #FFFFFF;
-    font-family: 'Google Sans', sans-serif !important;
+.toast-content {
+  color: #ffffff;
+  font-family: 'Google Sans', sans-serif !important;
 }
 
-.close-toast{
-    margin-left: auto;
-    align-self: baseline;
-    cursor: pointer;
+.close-toast {
+  margin-left: auto;
+  align-self: baseline;
+  cursor: pointer;
 }
 
 .red-toast {
-    background-color: #ED0C0C !important;
+  background-color: #ed0c0c !important;
 }
 .green-toast {
-    background-color: #06865e !important;
+  background-color: #06865e !important;
 }
 
-.mat-mdc-snack-bar-container .mdc-snackbar__surface{
-    background-color: transparent !important;
+.mat-mdc-snack-bar-container .mdc-snackbar__surface {
+  background-color: transparent !important;
 }
 
 .toast-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white !important;
 }

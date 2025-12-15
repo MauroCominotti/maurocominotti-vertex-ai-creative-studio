@@ -1,3 +1,19 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import {Injectable, OnDestroy} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {
@@ -30,7 +46,8 @@ export class GalleryService implements OnDestroy {
   private imagesCache$ = new BehaviorSubject<MediaItem[]>([]);
   public isLoading$ = new BehaviorSubject<boolean>(false);
   private allImagesLoaded$ = new BehaviorSubject<boolean>(false);
-  private nextPageCursor: string | null = null;
+  private currentPage = 0;
+  private pageSize = 20;
   private allFetchedImages: MediaItem[] = [];
   private filters$ = new BehaviorSubject<GallerySearchDto>({limit: 20});
   private dataLoadingSubscription: Subscription;
@@ -106,7 +123,8 @@ export class GalleryService implements OnDestroy {
       ...this.filters$.value,
       workspaceId:
         this.workspaceStateService.getActiveWorkspaceId() ?? undefined,
-      startAfter: this.nextPageCursor ?? undefined,
+      offset: this.currentPage * this.pageSize,
+      limit: this.pageSize,
     };
 
     this.fetchImages(body)
@@ -137,7 +155,7 @@ export class GalleryService implements OnDestroy {
 
   private resetCache() {
     this.allFetchedImages = [];
-    this.nextPageCursor = null;
+    this.currentPage = 0;
     this.allImagesLoaded$.next(false);
     this.imagesCache$.next([]);
   }
@@ -146,13 +164,13 @@ export class GalleryService implements OnDestroy {
     response: PaginatedGalleryResponse,
     append = false,
   ) {
-    this.nextPageCursor = response.nextPageCursor ?? null;
+    this.currentPage++;
     this.allFetchedImages = append
       ? [...this.allFetchedImages, ...response.data]
       : response.data;
     this.imagesCache$.next(this.allFetchedImages);
 
-    if (!this.nextPageCursor) {
+    if (this.currentPage >= response.totalPages) {
       this.allImagesLoaded$.next(true);
     }
     this.isLoading$.next(false);

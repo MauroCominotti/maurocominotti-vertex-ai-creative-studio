@@ -1,3 +1,17 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.auth.auth_guard import RoleChecker, get_current_user
@@ -52,7 +66,7 @@ async def list_all_users(
     Retrieves a paginated list of all users in the system.
     This functionality is restricted to administrators.
     """
-    return user_service.find_all_users(search_params)
+    return await user_service.find_all_users(search_params)
 
 
 @router.get(
@@ -61,13 +75,13 @@ async def list_all_users(
     summary="Get User by ID (Admin Only)",
     dependencies=[admin_only],
 )
-async def get_user_by_id(user_id: str, user_service: UserService = Depends()):
+async def get_user_by_id(user_id: int, user_service: UserService = Depends()):
     """
 
     Retrieves a single user's profile by their unique ID.
     This functionality is restricted to administrators.
     """
-    user = user_service.get_user_by_id(user_id)
+    user = await user_service.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -80,7 +94,7 @@ async def get_user_by_id(user_id: str, user_service: UserService = Depends()):
     dependencies=[admin_only],
 )
 async def update_user_role(
-    user_id: str,
+    user_id: int,
     role_data: UserUpdateRoleDto,
     user_service: UserService = Depends(),
 ):
@@ -88,7 +102,7 @@ async def update_user_role(
     Updates the role of a specific user (e.g., promote to 'admin' or 'creator').
     This functionality is restricted to administrators.
     """
-    updated_user = user_service.update_user_role(user_id, role_data)
+    updated_user = await user_service.update_user_role(user_id, role_data)
     if not updated_user:
         raise HTTPException(status_code=404, detail="User not found")
     return updated_user
@@ -100,11 +114,11 @@ async def update_user_role(
     summary="Delete a User (Admin Only)",
     dependencies=[admin_only],
 )
-async def delete_user(user_id: str, user_service: UserService = Depends()):
+async def delete_user(user_id: int, user_service: UserService = Depends()):
     """
     Permanently deletes a user from the database.
     This functionality is restricted to administrators.
     """
-    if not user_service.delete_user_by_id(user_id):
+    if not await user_service.delete_user_by_id(user_id):
         raise HTTPException(status_code=404, detail="User not found")
     return

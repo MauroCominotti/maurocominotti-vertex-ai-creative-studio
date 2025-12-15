@@ -20,18 +20,35 @@
     <!-- <img priority width="2392" height="408" ngSrc="assets/images/model-arena-homepage.png" class="w-full rounded-xl" alt="Model Arena Homepage"> -->
     <div class="video-container mb-8">
       <!-- Text for Tablet and beyond -->
-      <div class="hidden md:flex justify-center items-center w-full h-full absolute flex-col">
-        <h1 class="text-center justify-center text-white text-2xl font-bold !m-0 !z-[50]">Model Arena
+      <div
+        class="hidden md:flex justify-center items-center w-full h-full absolute flex-col"
+      >
+        <h1
+          class="text-center justify-center text-white text-2xl font-bold !m-0 !z-[50]"
+        >
+          Model Arena
         </h1>
-        <p class="mt-4 text-lg leading-8 text-white !z-[50]">Compare models to find what fits best 🚀
+        <p class="mt-4 text-lg leading-8 text-white !z-[50]">
+          Compare models to find what fits best 🚀
         </p>
       </div>
-      <div class="gradient-bg hidden md:block !relative !w-full !h-full !z-[10]">
+      <div
+        class="gradient-bg hidden md:block !relative !w-full !h-full !z-[10]"
+      >
         <svg xmlns="http://www.w3.org/2000/svg">
           <defs>
             <filter id="goo">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-              <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo" />
+              <feGaussianBlur
+                in="SourceGraphic"
+                stdDeviation="10"
+                result="blur"
+              />
+              <feColorMatrix
+                in="blur"
+                mode="matrix"
+                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8"
+                result="goo"
+              />
               <feBlend in="SourceGraphic" in2="goo" />
             </filter>
           </defs>
@@ -47,15 +64,25 @@
       </div>
 
       <!-- Text for mobile -->
-      <div class="flex flex-col justify-center items-center w-full h-full md:hidden">
+      <div
+        class="flex flex-col justify-center items-center w-full h-full md:hidden"
+      >
         <!-- As this svg uses a gradient, it needs to have a different fill id, therefore we have one for mobile and other for larger devices -->
         <div class="flex">
-          <mat-icon svgIcon="mobile-white-gemini-spark-icon" class="!w-6 !h-6 mr-2 md:mr-[1rem]"></mat-icon>
-          <div class="text-center justify-center text-white title-font font-bold">Model Arena</div>
+          <mat-icon
+            svgIcon="mobile-white-gemini-spark-icon"
+            class="!w-6 !h-6 mr-2 md:mr-[1rem]"
+          ></mat-icon>
+          <div
+            class="text-center justify-center text-white title-font font-bold"
+          >
+            Model Arena
+          </div>
         </div>
-        <p class="mt-4 text-white text-center md:text-lg md:leading-8">Compare models to find what fits best 🚀</p>
+        <p class="mt-4 text-white text-center md:text-lg md:leading-8">
+          Compare models to find what fits best 🚀
+        </p>
       </div>
-      </div>
-
+    </div>
   </div>
 </div>

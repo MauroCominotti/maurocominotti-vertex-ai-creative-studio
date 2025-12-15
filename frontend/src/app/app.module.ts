@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import {importProvidersFrom, NgModule} from '@angular/core';
+import {importProvidersFrom, NgModule, Injector} from '@angular/core';
+import {setAppInjector} from './app-injector';
+import {NotificationContainerComponent} from './common/components/notification-container/notification-container.component';
 import {BrowserModule, provideClientHydration} from '@angular/platform-browser';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {initializeApp, provideFirebaseApp} from '@angular/fire/app';
@@ -73,15 +75,20 @@ import {MediaGalleryComponent} from './gallery/media-gallery/media-gallery.compo
 import {MediaDetailComponent} from './gallery/media-detail/media-detail.component';
 import {ScrollingModule} from '@angular/cdk/scrolling';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
-import { MediaLightboxComponent } from './common/components/media-lightbox/media-lightbox.component';
+import {MediaLightboxComponent} from './common/components/media-lightbox/media-lightbox.component';
 import {VtoComponent} from './vto/vto.component';
 import {ImageSelectorComponent} from './common/components/image-selector/image-selector.component';
 import {MatDialogModule} from '@angular/material/dialog';
 import {SourceAssetGalleryComponent} from './common/components/source-asset-gallery/source-asset-gallery.component';
 import {SharedModule} from './common/shared.module';
 import {MatSlideToggleModule} from '@angular/material/slide-toggle';
+import {MatSliderModule} from '@angular/material/slider';
 import {ImageCropperComponent} from 'ngx-image-cropper';
 import {ImageCropperDialogComponent} from './common/components/image-cropper-dialog/image-cropper-dialog.component';
+import {AudioComponent} from './audio/audio.component';
+import {AddVoiceDialogComponent} from './components/add-voice-dialog/add-voice-dialog.component';
+import {MatButtonToggleModule} from '@angular/material/button-toggle';
+import { FlowPromptBoxComponent } from "./common/components/flow-prompt-box/flow-prompt-box.component";
 
 @NgModule({
   declarations: [
@@ -89,7 +96,6 @@ import {ImageCropperDialogComponent} from './common/components/image-cropper-dia
     HeaderComponent,
     FooterComponent,
     HomeComponent,
-    ToastMessageComponent,
     LoginComponent,
     ConfirmationDialogComponent,
     FunTemplatesComponent,
@@ -102,6 +108,8 @@ import {ImageCropperDialogComponent} from './common/components/image-cropper-dia
     ImageSelectorComponent,
     SourceAssetGalleryComponent,
     ImageCropperDialogComponent,
+    AudioComponent,
+    AddVoiceDialogComponent,
   ],
   imports: [
     BrowserModule,
@@ -134,7 +142,11 @@ import {ImageCropperDialogComponent} from './common/components/image-cropper-dia
     SharedModule,
     MatSlideToggleModule,
     ImageCropperComponent,
-  ],
+    MatButtonToggleModule,
+    MatSliderModule,
+    NotificationContainerComponent,
+    FlowPromptBoxComponent
+],
   providers: [
     provideClientHydration(),
     provideHttpClient(withInterceptorsFromDi()),
@@ -159,4 +171,8 @@ import {ImageCropperDialogComponent} from './common/components/image-cropper-dia
   ],
   bootstrap: [AppComponent],
 })
-export class AppModule {}
+export class AppModule {
+  constructor(injector: Injector) {
+    setAppInjector(injector);
+  }
+}

@@ -15,8 +15,10 @@
 from pydantic import BaseModel
 from typing import List
 
+
 class GenerationOptionsResponse(BaseModel):
     """Defines the shape of the data for frontend dropdown options."""
+
     generation_models: List[str]
     aspect_ratios: List[str]
     styles: List[str]

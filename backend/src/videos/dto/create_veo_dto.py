@@ -1,3 +1,17 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from enum import Enum
 from typing import Optional
 
@@ -23,7 +37,7 @@ from src.common.schema.media_item_model import (
 
 
 class ReferenceImageDto(BaseDto):
-    asset_id: str = Field(
+    asset_id: int = Field(
         description="The ID of the SourceAsset to use as a reference."
     )
     reference_type: ReferenceImageTypeEnum = Field(
@@ -40,11 +54,11 @@ class CreateVeoDto(BaseDto):
     prompt: Annotated[str, Query(max_length=10000)] = Field(
         description="Prompt term to be passed to the model"
     )
-    workspace_id: str = Field(
-        min_length=1, description="The ID of the workspace for this generation."
+    workspace_id: int = Field(
+        ge=1, description="The ID of the workspace for this generation."
     )
     generation_model: GenerationModelEnum = Field(
-        default=GenerationModelEnum.VEO_3_FAST,
+        default=GenerationModelEnum.VEO_3_1_PREVIEW,
         description="Model used for image generation.",
     )
     aspect_ratio: AspectRatioEnum = Field(
@@ -83,15 +97,15 @@ class CreateVeoDto(BaseDto):
         le=8,
         description="Duration in seconds for the videos to generate (between 1 and 8 secs).",
     )
-    start_image_asset_id: Optional[str] = Field(
+    start_image_asset_id: Optional[int] = Field(
         default=None,
         description="The ID of the SourceAsset to use as the starting image.",
     )
-    end_image_asset_id: Optional[str] = Field(
+    end_image_asset_id: Optional[int] = Field(
         default=None,
         description="The ID of the SourceAsset to use as the ending image.",
     )
-    source_video_asset_id: Optional[str] = Field(
+    source_video_asset_id: Optional[int] = Field(
         default=None,
         description="The ID of the SourceAsset to use as the source video.",
     )
@@ -155,10 +169,13 @@ class CreateVeoDto(BaseDto):
 
         if has_any_references:
             # Enforce model compatibility for any reference image usage
-            if model != GenerationModelEnum.VEO_2_GENERATE_EXP:
+            if (
+                model != GenerationModelEnum.VEO_2_GENERATE_EXP
+                and model != GenerationModelEnum.VEO_3_1_PREVIEW
+            ):
                 raise ValueError(
                     "Reference images are only supported by the "
-                    f"'{GenerationModelEnum.VEO_2_GENERATE_EXP.value}' model."
+                    f"'{GenerationModelEnum.VEO_3_1_PREVIEW.value}' model."
                 )
 
             # Check for other conflicting fields from the main DTO
@@ -199,6 +216,7 @@ class CreateVeoDto(BaseDto):
     ) -> GenerationModelEnum:
         """Ensures that only supported generation models for video are used."""
         valid_video_ratios = [
+            GenerationModelEnum.VEO_3_1_PREVIEW,
             GenerationModelEnum.VEO_3_FAST,
             GenerationModelEnum.VEO_3_QUALITY,
             GenerationModelEnum.VEO_3_FAST_PREVIEW,

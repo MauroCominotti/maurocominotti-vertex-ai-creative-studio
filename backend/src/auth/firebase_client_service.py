@@ -21,7 +21,6 @@ from fastapi import HTTPException, status
 from firebase_admin import auth, credentials, firestore
 from google.auth.exceptions import RefreshError
 from google.cloud import resourcemanager_v3
-from google.cloud.firestore import Client
 
 from src.config.config_service import config_service
 
@@ -78,7 +77,6 @@ class FirebaseClient:
 
         db_name = config_service.FIREBASE_DB
         logger.info(f"Connecting to Firestore database: '{db_name}'")
-        self.db = firestore.client(database_id=db_name)
 
     def check_adc_authentication(self):
         """
@@ -102,12 +100,16 @@ class FirebaseClient:
                 # You might still consider this a success if credentials exist
                 return credentials is not None
 
-            logger.info(f"ADC found for project: {project_id}. Attempting a test API call...")
+            logger.info(
+                f"ADC found for project: {project_id}. Attempting a test API call..."
+            )
 
             # 2. Make a lightweight, authenticated API call to test the credentials
             client = resourcemanager_v3.ProjectsClient(credentials=credentials)  # type: ignore
             project_name = f"projects/{project_id}"
-            client.get_project(name=project_name) # This call requires 'resourcemanager.projects.get' permission
+            client.get_project(
+                name=project_name
+            )  # This call requires 'resourcemanager.projects.get' permission
 
             logger.info("✅ ADC Authentication successful.")
             return True
@@ -126,7 +128,7 @@ class FirebaseClient:
 
 
 firebase_client = FirebaseClient()
-firestore_db: Client = firebase_client.db
+
 
 
 def create_firebase_user(email: str, password: str):

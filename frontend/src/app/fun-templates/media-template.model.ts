@@ -101,12 +101,12 @@ export enum GenerationModelEnum {
   IMAGEN_4_FAST = 'imagen-4.0-fast-generate-001',
 
   // Video-Specific Models
+  VEO_3_1_PREVIEW = 'veo-3.1-generate-preview',
   VEO_3_FAST = 'veo-3.0-fast-generate-001',
   VEO_3_QUALITY = 'veo-3.0-generate-001',
   VEO_2_FAST = 'veo-2.0-fast-generate-001',
   VEO_2_QUALITY = 'veo-2.0-generate-001',
 }
-
 
 // The parameters that can be passed to the generator
 export interface GenerationParameters {
@@ -123,8 +123,16 @@ export interface GenerationParameters {
   durationSeconds?: number;
 }
 
+/** This mirrors the backend's `SourceAssetLinkResponse` */
+export interface EnrichedSourceAsset {
+  assetId: number;
+  role: string; // e.g., 'input', 'style_reference'
+  presignedUrl: string;
+  gcsUri: string;
+}
+
 export interface MediaTemplate {
-  id: string; // Unique identifier for the template
+  id: number; // Unique identifier for the template
   name: string;
   description: string;
   mimeType: MimeTypeEnum;
@@ -135,6 +143,7 @@ export interface MediaTemplate {
   thumbnailUris?: string[];
   presignedUrls: string[];
   presignedThumbnailUrls?: string[];
+  enrichedSourceAssets?: EnrichedSourceAsset[];
   generationParameters: GenerationParameters; // All generator settings bundled
 }
 

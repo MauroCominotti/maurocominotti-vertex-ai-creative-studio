@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import {LanguageEnum, VoiceEnum} from '../../audio/audio.constants';
 import {PaginatedResponse} from './paginated-response.model';
 import {SourceMediaItemLink} from './search.model';
 
@@ -22,11 +23,14 @@ export interface EnrichedSourceAsset {
   presignedUrl: string;
   presignedThumbnailUrl: string;
   gcsUri: string;
+  mimeType?: string;
+  role: string;
 }
 
 export interface EnrichedSourceMediaItem extends SourceMediaItemLink {
   presignedUrl: string;
   presignedThumbnailUrl: string;
+  mimeType?: string;
   gcsUri: string;
 }
 
@@ -43,7 +47,7 @@ export enum JobStatus {
  * Represents a single media item, mirroring the Pydantic model from the backend.
  */
 export interface MediaItem {
-  id: string;
+  id: number;
   userEmail?: string;
   createdAt?: string; // ISO 8601 date string
   updatedAt?: string; // ISO 8601 date string
@@ -86,12 +90,18 @@ export interface MediaItem {
   seed?: number;
   critique?: string;
   addWatermark?: boolean;
+  googleSearch?: boolean;
+  resolution?: string;
+  groundingMetadata?: any;
 
   // Music specific
   audioAnalysis?: Record<string, any>;
+  voiceName?: VoiceEnum | string;
+  languageCode?: LanguageEnum;
 
   // Debugging field
   rawData?: Record<string, any>;
+  workspaceId?: number;
   errorMessage?: string;
 }
 
@@ -99,5 +109,4 @@ export interface MediaItem {
  * Defines the response structure for a paginated gallery query,
  * mirroring the Pydantic model from the backend.
  */
-export interface PaginatedGalleryResponse
-  extends PaginatedResponse<MediaItem> {}
+export type PaginatedGalleryResponse = PaginatedResponse<MediaItem>;

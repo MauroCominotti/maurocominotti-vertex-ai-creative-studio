@@ -1,4 +1,4 @@
-# 🚀 GenMedia Creative Studio | Vertex AI
+# 🚀 GCC Creative Studio | Vertex AI
 
 ![Angular](https://img.shields.io/badge/angular-%23DD0031.svg?style=for-the-badge&logo=angular&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
@@ -8,19 +8,56 @@
 [![Code Style: Google](https://img.shields.io/badge/code%20style-google-blueviolet.svg?style=for-the-badge)](https://github.com/google/gts)
 ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-GenMedia Creative Studio is an app that highlights the capabilities of Google Cloud Vertex AI generative AI creative APIs, including Imagen, the text-to-image model.
+Creative Studio is a comprehensive, all-in-one Generative AI platform designed as a deployable solution for your own Google Cloud project. It serves as a powerful reference implementation and creative suite, showcasing the full spectrum of Google's state-of-the-art generative AI models on Vertex AI.
 
-Features Gemini for prompt rewriting as well as for a critic to provide a multimodal evaluation of the generated images.
+Built for creators, marketers, and developers, this application provides a hands-on, interactive experience with cutting-edge multimodal capabilities.
 
-This app is built with [Angular](https://angular.dev/), a TypeScript-based free and open-source single-page web application framework. It is developed by Google and by a community of individuals and corporations.
+> ###### _This is not an officially supported Google product. This project is not eligible for the [Google Open Source Software Vulnerability Rewards Program](https://bughunters.google.com/open-source-security)._
+
+## Core Features 🎨
+Creative Studio goes beyond simple demos, implementing advanced, real-world features that developers can learn from and build upon:
+
+**🎬 Advanced Video Generation (Veo):**
+- Generate high-quality videos from text prompts.
+- Utilize Image-to-Video (R2V) capabilities, allowing users to upload reference images.
+- Differentiate between reference types, using images for ASSET consistency or STYLE transfer.
+
+**🖼️ High-Fidelity Image Generation (Imagen):**
+- Create stunning images from detailed text descriptions.
+- Explore a wide range of creative styles, lighting, and composition controls.
+
+**✍️ Gemini-Powered Prompt Engineering:**
+- **Prompt Rewriting:** Automatically enhance and expand user prompts for superior generation results.
+- **Multimodal Critic:** Use Gemini's multimodal understanding to evaluate and provide feedback on generated images.
+
+**📄 Brand Guidelines Integration:**
+- Upload PDF style guides that the backend processes to automatically infuse brand identity into generated content.
+- Features a robust, scalable upload mechanism using GCS Signed URLs to bypass server timeouts and handle large files efficiently.
+
+**👕 Virtual Try-On (VTO):**
+- Includes functionality for seeding system-level assets like garments and models, laying the groundwork for virtual try-on applications.
+
+
+## GenMedia Screenshots | Creative Studio
+![](./screenshots/cstudio-login.png)
+![](./screenshots/cstudio-homepage.png)
+![](./screenshots/cstudio-brand-guidelines.png)
+
+## Deploy in 20min!!
+Just run this script which has a step by step approach for you to deploy the infrastructure and start the app, just follow the instructions
+```
+curl https://raw.githubusercontent.com/GoogleCloudPlatform/professional-services/refs/heads/main/examples/creative-studio/bootstrap.sh | bash
+```
+
+For better guidance, [we recorded a video](./screenshots/how_to_deploy_creative_studio.mp4) to showcase how to deploy Creative Studio in a completely new and fresh GCP Account.
+
+<video controls autoplay loop width="100%" style="max-width: 1200px;">
+  <source src="./screenshots/how_to_deploy_creative_studio.mp4" type="video/mp4">
+  Your browser does not support the video tag. You can <a href="./screenshots/how_to_deploy_creative_studio.mp4">download the video here</a>.
+</video>
+
 
 > **IMPORTANT:** In order to run this app, you will have to enable the [Vertex AI API](https://console.developers.google.com/apis/api/aiplatform.googleapis.com/overview) and the [IAM Service Account Credentials API](https://console.developers.google.com/apis/api/iamcredentials.googleapis.com/overview).
-
-## GenMedia | Creative Studio
-
-![](./screenshots/creative_studio_login.png)
-![](./screenshots/creative_studio_homepage.png)
-![](./screenshots/creative_studio_imagen4.png)
 
 ## Run locally
 
@@ -133,17 +170,6 @@ Install the required Python libraries.
 ```
 pip install -r requirements.txt
 ```
-
-### Run with mesop
-
-To run locally, use the `mesop` command and open the browser to the URL provided:
-
-```
-mesop main.py
-```
-
-> **NOTE:** The mesop application may request you to allow it to accept incoming network connections. Please accept to avoid limiting the application's behavior.
-
 
 ## Deploy to Cloud Run
 

@@ -18,6 +18,7 @@ import sys
 from google.cloud.logging import Client as LoggerClient
 from google.cloud.logging.handlers import CloudLoggingHandler
 
+
 def setup_logging():
     """
     Configures the root logger for the entire application.

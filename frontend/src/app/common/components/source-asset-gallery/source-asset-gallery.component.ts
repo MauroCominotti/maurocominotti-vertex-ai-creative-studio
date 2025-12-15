@@ -1,3 +1,19 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import {
   AfterViewInit,
   Component,
@@ -21,6 +37,7 @@ import {UserService} from '../../services/user.service';
 import {MatDialog} from '@angular/material/dialog';
 import {MatSnackBar} from '@angular/material/snack-bar';
 import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
+import { handleErrorSnackbar, handleSuccessSnackbar } from '../../../utils/handleMessageSnackbar';
 
 @Component({
   selector: 'app-source-asset-gallery',
@@ -43,7 +60,7 @@ export class SourceAssetGalleryComponent
   public assets: SourceAssetResponseDto[] = [];
   public isLoading = true;
   public allAssetsLoaded = false;
-  public deletingAssetId: string | null = null;
+  public deletingAssetId: number | null = null;
   // --- Column Management Properties ---
   public columns: SourceAssetResponseDto[][] = [];
   private numColumns = 4;
@@ -150,7 +167,7 @@ export class SourceAssetGalleryComponent
     this.assetSelected.emit(asset);
   }
 
-  trackByAsset(index: number, asset: SourceAssetResponseDto): string {
+  trackByAssetId(index: number, asset: SourceAssetResponseDto): number {
     return asset.id;
   }
 
@@ -203,14 +220,10 @@ export class SourceAssetGalleryComponent
           )
           .subscribe({
             next: () => {
-              this.snackBar.open('Asset deleted successfully.', 'OK', {
-                duration: 3000,
-              });
+              handleSuccessSnackbar(this.snackBar, 'Asset deleted successfully.');
             },
             error: err => {
-              this.snackBar.open('Failed to delete asset.', 'OK', {
-                duration: 3000,
-              });
+              handleErrorSnackbar(this.snackBar, err, 'Delete asset');
               console.error(err);
             },
           });

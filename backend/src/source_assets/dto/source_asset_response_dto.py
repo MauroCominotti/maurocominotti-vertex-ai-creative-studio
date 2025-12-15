@@ -21,5 +21,6 @@ class SourceAssetResponseDto(SourceAssetModel):
     Data transfer object for returning a user asset, including a
     temporary, accessible URL.
     """
+
     presigned_url: str
     presigned_thumbnail_url: str

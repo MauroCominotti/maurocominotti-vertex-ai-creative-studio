@@ -1,3 +1,17 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 variable "gcp_project_id" {
   type        = string
   description = "The GCP Project ID."
@@ -103,3 +117,15 @@ variable "runtime_secrets" {
   description = "A map of ENV_VAR_NAME = SECRET_NAME to mount at runtime."
   default     = {}
 }
+
+# database
+variable "cloud_sql_connection_name" {
+  description = "Cloud SQL Instance Connection Name"
+  type        = string
+}
+variable "db_secret_id" {
+  description = "Secret Manager Secret ID for DB Password"
+  type        = string
+}
+variable "db_name" { type = string }
+variable "db_user" { type = string }

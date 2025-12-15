@@ -1,4 +1,20 @@
-import { Injectable } from '@angular/core';
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {Injectable} from '@angular/core';
 import {
   HttpClient,
   HttpHeaders,
@@ -13,7 +29,9 @@ import {UserModel} from '../../common/models/user.model';
 export interface PaginatedResponse {
   count: number;
   data: UserModel[];
-  nextPageCursor?: string;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 @Injectable({
@@ -35,13 +53,13 @@ export class UserService {
   getUsers(
     limit: number,
     filter: string,
-    startAfter?: string,
+    offset?: number,
   ): Observable<PaginatedResponse> {
     let params = new HttpParams()
       .set('limit', limit.toString())
       .set('email', filter);
 
-    if (startAfter) params = params.set('startAfter', startAfter);
+    if (offset !== undefined) params = params.set('offset', offset.toString());
 
     return this.http
       .get<PaginatedResponse>(this.usersApiUrl, {params, ...this.httpOptions})
@@ -67,8 +85,10 @@ export class UserService {
   updateUser(user: UserModel): Observable<any> {
     // FastAPI might return the updated user or just a success status
     const url = `${this.usersApiUrl}/${user.id}`;
+    // The backend expects UserUpdateRoleDto which only has 'roles'
+    const payload = {roles: user.roles};
     return this.http
-      .put(url, user, this.httpOptions)
+      .put(url, payload, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

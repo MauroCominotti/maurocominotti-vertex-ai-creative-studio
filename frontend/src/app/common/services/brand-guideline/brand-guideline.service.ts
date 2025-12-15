@@ -53,7 +53,7 @@ export class BrandGuidelineService {
   constructor(private http: HttpClient) {}
 
   private initiateUpload(
-    workspaceId: string,
+    workspaceId: number,
     filename: string,
     contentType: string,
     size: number,
@@ -70,7 +70,7 @@ export class BrandGuidelineService {
   }
 
   private finalizeUpload(
-    workspaceId: string,
+    workspaceId: number,
     gcsUri: string,
     name: string,
     original_filename: string,
@@ -87,7 +87,7 @@ export class BrandGuidelineService {
   }
 
   createBrandGuideline(
-    workspaceId: string,
+    workspaceId: number,
     file: File,
     name: string,
   ): Observable<BrandGuidelineModel> {
@@ -108,7 +108,7 @@ export class BrandGuidelineService {
       tap(initialJob => {
         this.activeBrandGuidelineJobSubject.next(initialJob);
         if (initialJob.status === JobStatus.PROCESSING) {
-          this.pollBrandGuidelineJob(initialJob.id);
+          this.pollBrandGuidelineJob(initialJob.id.toString());
         }
       }),
     );
@@ -120,7 +120,7 @@ export class BrandGuidelineService {
    * @returns An observable of the brand guideline or null if not found.
    */
   getBrandGuidelineForWorkspace(
-    workspaceId: string,
+    workspaceId: number,
   ): Observable<BrandGuidelineModel | null> {
     const cachedGuideline = this.cachedBrandGuidelineSubject.getValue();
     if (cachedGuideline && cachedGuideline.workspaceId === workspaceId) {
@@ -139,7 +139,7 @@ export class BrandGuidelineService {
    * Deletes a brand guideline by its ID.
    * @param id The ID of the brand guideline to delete.
    */
-  deleteBrandGuideline(id: string): Observable<void> {
+  deleteBrandGuideline(id: number): Observable<void> {
     // Invalidate cache on deletion.
     this.clearCache();
     return this.http.delete<void>(`${this.apiUrl}/${id}`);

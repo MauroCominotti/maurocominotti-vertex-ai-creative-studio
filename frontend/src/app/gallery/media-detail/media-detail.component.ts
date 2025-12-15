@@ -1,15 +1,35 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import {Component, OnDestroy} from '@angular/core';
 import {ActivatedRoute, NavigationExtras, Router} from '@angular/router';
-import {Location} from '@angular/common';
 import {first, Subscription} from 'rxjs';
-import {MediaItem} from '../../common/models/media-item.model';
+import {
+  MediaItem,
+} from '../../common/models/media-item.model';
 import {GalleryService} from '../gallery.service';
 import {LoadingService} from '../../common/services/loading.service';
 import {MatSnackBar} from '@angular/material/snack-bar';
-import {ToastMessageComponent} from '../../common/components/toast-message/toast-message.component';
 import {CreatePromptMediaDto} from '../../common/models/prompt.model';
 import {AuthService} from '../../common/services/auth.service';
 import {SourceMediaItemLink} from '../../common/models/search.model';
+import {MimeTypeEnum} from '../../fun-templates/media-template.model';
+import {EnrichedSourceAsset} from '../../common/models/media-item.model';
+import {DomSanitizer, SafeHtml} from '@angular/platform-browser';
+import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
 
 @Component({
   selector: 'app-media-detail',
@@ -26,6 +46,8 @@ export class MediaDetailComponent implements OnDestroy {
   public initialSlideIndex = 0;
   promptJson: CreatePromptMediaDto | undefined;
   isPromptExpanded = false;
+  public selectedAssetForLightbox: MediaItem | null = null;
+  public lightboxInitialIndex = 0;
 
   constructor(
     private route: ActivatedRoute,
@@ -34,6 +56,7 @@ export class MediaDetailComponent implements OnDestroy {
     private loadingService: LoadingService,
     private _snackBar: MatSnackBar,
     private authService: AuthService,
+    private sanitizer: DomSanitizer,
   ) {
     // Check if user is admin
     this.isAdmin = this.authService.isUserAdmin() ?? false;
@@ -41,8 +64,6 @@ export class MediaDetailComponent implements OnDestroy {
     // Get the media item from the router state
     this.mediaItem =
       this.router.getCurrentNavigation()?.extras.state?.['mediaItem'];
-
-    console.log('constructor - mediaItem', this.mediaItem);
 
     if (this.mediaItem) {
       // If we have the media item, we don't need to load it
@@ -166,36 +187,18 @@ export class MediaDetailComponent implements OnDestroy {
     // Note: The 'createTemplateFromMediaItem' method should be implemented in a relevant service (e.g., TemplateService or GalleryService).
     // It should perform a POST request to the `/from-media-item/{media_item_id}` endpoint.
     this.galleryService
-      .createTemplateFromMediaItem(this.mediaItem.id)
+      .createTemplateFromMediaItem(this.mediaItem.id.toString())
       .pipe(first())
       .subscribe({
         next: (newTemplate: {id: string}) => {
           this.loadingService.hide();
-          this._snackBar.openFromComponent(ToastMessageComponent, {
-            panelClass: ['green-toast'],
-            verticalPosition: 'top',
-            horizontalPosition: 'right',
-            duration: 6000,
-            data: {
-              text: 'Template created successfully!',
-              matIcon: 'check_small',
-            },
-          });
+          handleSuccessSnackbar(this._snackBar, 'Template created successfully!');
           this.router.navigate(['/templates/edit', newTemplate.id]);
         },
         error: err => {
           this.loadingService.hide();
           console.error('Failed to create template from media item', err);
-          this._snackBar.openFromComponent(ToastMessageComponent, {
-            panelClass: ['red-toast'],
-            verticalPosition: 'top',
-            horizontalPosition: 'right',
-            duration: 6000,
-            data: {
-              text: 'Failed to create template. Please try again.',
-              matIcon: 'error',
-            },
-          });
+          handleErrorSnackbar(this._snackBar, err, 'Create template');
         },
       });
   }
@@ -326,5 +329,44 @@ export class MediaDetailComponent implements OnDestroy {
     };
 
     this.router.navigate(['/video'], {state: {remixState}});
+  }
+
+  public openSourceAssetInLightbox(
+    sourceAsset: EnrichedSourceAsset,
+    event: MouseEvent,
+  ): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const isVideo =
+      sourceAsset.mimeType?.startsWith('video/') === true ||
+      sourceAsset.presignedUrl.includes('.mp4');
+
+    if (isVideo) {
+      // PhotoSwipe lightbox doesn't support videos, so open in a new tab.
+      window.open(sourceAsset.presignedUrl, '_blank');
+      return;
+    }
+
+    // Existing logic for images
+    // Construct a MediaItem-like object for the lightbox
+    const mediaItem: MediaItem = {
+      id: Number(sourceAsset.sourceAssetId),
+      mimeType: MimeTypeEnum.IMAGE,
+      presignedUrls: [sourceAsset.presignedUrl],
+      presignedThumbnailUrls: [sourceAsset.presignedThumbnailUrl],
+      originalPrompt: `Input: ${sourceAsset.role}`,
+      gcsUris: [sourceAsset.gcsUri],
+    };
+    this.selectedAssetForLightbox = mediaItem;
+    this.lightboxInitialIndex = 0;
+  }
+
+  public closeLightbox(): void {
+    this.selectedAssetForLightbox = null;
+  }
+
+  public getSafeHtml(html: string): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 }

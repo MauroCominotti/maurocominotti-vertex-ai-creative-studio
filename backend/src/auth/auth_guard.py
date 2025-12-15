@@ -1,3 +1,18 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import asyncio
 import logging
 from typing import List
 
@@ -14,7 +29,7 @@ from src.users.user_model import UserModel, UserRoleEnum
 from src.users.user_service import UserService
 
 # Initialize the service once to be used by dependencies.
-user_service = UserService()
+# user_service = UserService()  <-- REMOVED
 
 # This scheme will require the client to send a token in the Authorization header.
 # It tells FastAPI how to find the token but doesn't validate it itself.
@@ -24,7 +39,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 logger = logging.getLogger(__name__)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)) -> UserModel:
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    user_service: UserService = Depends(UserService),
+) -> UserModel:
     """
     Dependency that handles the entire authentication and user provisioning flow.
 
@@ -40,13 +58,14 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> UserModel:
             # --- Local: Use Firebase Auth ---
             # Verifies the token using the standard Firebase Admin SDK method.
             logger.info("Verifying token using Firebase Admin SDK...")
-            decoded_token = auth.verify_id_token(token)
+            decoded_token = await asyncio.to_thread(auth.verify_id_token, token)
         else:
             # --- Development/Production: Use Google Identity Platform (OIDC) ---
             # Verifies the Google-issued OIDC ID token. The audience must be the
             # OAuth 2.0 client ID of the Identity Platform-protected resource.
             GOOGLE_TOKEN_AUDIENCE = config_service.GOOGLE_TOKEN_AUDIENCE
-            decoded_token = id_token.verify_oauth2_token(
+            decoded_token = await asyncio.to_thread(
+                id_token.verify_oauth2_token,
                 token,
                 google_auth_requests.Request(),
                 audience=GOOGLE_TOKEN_AUDIENCE,
@@ -54,7 +73,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> UserModel:
 
         email = decoded_token.get("email")
         name = decoded_token.get("name")
-        picture = decoded_token.get("picture")
+        picture = decoded_token.get("picture", "")
         token_info_hd = decoded_token.get("hd")
 
         # Restrict by particular organizations if it's a closed environment
@@ -77,7 +96,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> UserModel:
 
         # Just-In-Time (JIT) User Provisioning:
         # Create a user profile in our database on their first API call.
-        user_doc = user_service.create_user_if_not_exists(
+        user_doc = await user_service.create_user_if_not_exists(
             email=email, name=name, picture=picture
         )
 
@@ -86,6 +105,25 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> UserModel:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Could not create or retrieve user profile.",
             )
+
+        if not user_doc.picture:
+            user_doc.picture = picture
+            # We need to update the user. Since user_doc is a Pydantic model, we can't just save it.
+            # We should use the service to update it.
+            # Assuming user_service has an update method or we can call repo via service.
+            # But user_service.user_repo is available.
+            # However, user_doc.id is now an int (or str representation of int).
+            # user_service.update_user_role doesn't update picture.
+            # Let's check if we can update picture.
+            # For now, let's skip updating picture here or add a method to service.
+            # But wait, user_service.user_repo.update takes id and dict.
+            # We can use that if we really need to.
+            # But better to add update_user to service.
+            # For now, I'll just skip updating picture to avoid complexity if it's not critical,
+            # or try to use the repo if accessible.
+            # user_service.user_repo is public.
+            if user_doc.id:
+                 await user_service.user_repo.update(user_doc.id, {"picture": picture})
 
         return user_doc
 

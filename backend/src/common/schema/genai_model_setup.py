@@ -27,6 +27,7 @@ class GenAIModelSetup:
     A base class to handle the initialization of a shared Google GenAI client.
     This uses a singleton pattern to ensure the client is only created once.
     """
+
     _client: Optional[Client] = None
 
     @classmethod

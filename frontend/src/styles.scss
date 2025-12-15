@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 // Custom Theming for Angular Material
 // For more information: https://material.angular.io/guide/theming
 @use '@angular/material' as mat;
@@ -26,16 +25,18 @@
 @include mat.core();
 
 // Define the theme object.
-$creative-studio-theme: mat.define-theme((
-  color: (
-    theme-type: dark,
-    primary: mat.$azure-palette,
-    tertiary: mat.$blue-palette,
-  ),
-  density: (
-    scale: 0,
+$creative-studio-theme: mat.define-theme(
+  (
+    color: (
+      theme-type: dark,
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    density: (
+      scale: 0,
+    ),
   )
-));
+);
 
 // To get the theme colors and typography styles to apply, you must include a theme.
 // Here, we're using a pre-built theme. You can also create your own.
@@ -72,8 +73,14 @@ $creative-studio-theme: mat.define-theme((
 
 @import url(//fonts.googleapis.com/css2?family=Google+Sans);
 
-html, body { background-color: transparent; }
-body { margin: 0; font-family: 'Google Sans', Roboto, Arial, "Helvetica Neue", sans-serif !important; }
+html,
+body {
+  background-color: transparent;
+}
+body {
+  margin: 0;
+  font-family: 'Google Sans', Roboto, Arial, 'Helvetica Neue', sans-serif !important;
+}
 
 body,
 h1,
@@ -87,7 +94,7 @@ input,
 optgroup,
 select,
 textarea {
-  font-family: 'Google Sans', Roboto, Arial, "Helvetica Neue", sans-serif !important;
+  font-family: 'Google Sans', Roboto, Arial, 'Helvetica Neue', sans-serif !important;
 }
 
 @tailwind base;
@@ -120,7 +127,6 @@ textarea {
 textarea {
   border: 1px solid white;
 }
-
 
 // Background Bubble Animation for Mobile and HomeScreen
 @keyframes moveInCircle {
@@ -171,22 +177,26 @@ textarea {
 
   svg {
     position: fixed;
-    top:0;
-    left:0;
+    top: 0;
+    left: 0;
     width: 0;
     height: 0;
   }
 
-
   .gradients-container {
-    filter: url(#goo) blur(40px) ;
+    filter: url(#goo) blur(40px);
     width: 100%;
     height: 100%;
   }
 
   .g1 {
     position: absolute;
-    background: radial-gradient(circle at center, rgba(var(--color1), 0.8) 0, rgba(var(--color1), 0) 50%) no-repeat;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color1), 0.8) 0,
+        rgba(var(--color1), 0) 50%
+      )
+      no-repeat;
     mix-blend-mode: var(--blending);
 
     width: var(--circle-size);
@@ -202,7 +212,12 @@ textarea {
 
   .g2 {
     position: absolute;
-    background: radial-gradient(circle at center, rgba(var(--color2), 0.8) 0, rgba(var(--color2), 0) 50%) no-repeat;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color2), 0.8) 0,
+        rgba(var(--color2), 0) 50%
+      )
+      no-repeat;
     mix-blend-mode: var(--blending);
 
     width: var(--circle-size);
@@ -218,7 +233,12 @@ textarea {
 
   .g3 {
     position: absolute;
-    background: radial-gradient(circle at center, rgba(var(--color3), 0.8) 0, rgba(var(--color3), 0) 50%) no-repeat;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color3), 0.8) 0,
+        rgba(var(--color3), 0) 50%
+      )
+      no-repeat;
     mix-blend-mode: var(--blending);
 
     width: var(--circle-size);
@@ -234,7 +254,12 @@ textarea {
 
   .g4 {
     position: absolute;
-    background: radial-gradient(circle at center, rgba(var(--color4), 0.8) 0, rgba(var(--color4), 0) 50%) no-repeat;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color4), 0.8) 0,
+        rgba(var(--color4), 0) 50%
+      )
+      no-repeat;
     mix-blend-mode: var(--blending);
 
     width: var(--circle-size);
@@ -250,7 +275,12 @@ textarea {
 
   .g5 {
     position: absolute;
-    background: radial-gradient(circle at center, rgba(var(--color5), 0.8) 0, rgba(var(--color5), 0) 50%) no-repeat;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color5), 0.8) 0,
+        rgba(var(--color5), 0) 50%
+      )
+      no-repeat;
     mix-blend-mode: var(--blending);
 
     width: calc(var(--circle-size) * 2);
@@ -266,7 +296,12 @@ textarea {
 
   .interactive {
     position: absolute;
-    background: radial-gradient(circle at center, rgba(var(--color-interactive), 0.8) 0, rgba(var(--color-interactive), 0) 50%) no-repeat;
+    background: radial-gradient(
+        circle at center,
+        rgba(var(--color-interactive), 0.8) 0,
+        rgba(var(--color-interactive), 0) 50%
+      )
+      no-repeat;
     mix-blend-mode: var(--blending);
 
     width: 100%;
@@ -402,7 +437,10 @@ app-workspace-switcher .workspace-name {
 
 // Medium devices (tablets, 768px and up)
 @media (min-width: 768px) {
-  html, body { background-color: #2e3031; }
+  html,
+  body {
+    background-color: #2e3031;
+  }
   :root {
     --color-bg1: transparent;
     --color-bg2: transparent;

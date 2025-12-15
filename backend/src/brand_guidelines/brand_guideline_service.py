@@ -1,3 +1,17 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import asyncio
 import datetime
 import io
@@ -7,6 +21,7 @@ import os
 import shutil
 import sys
 import uuid
+import json
 from concurrent.futures import (
     ProcessPoolExecutor,
     ThreadPoolExecutor,
@@ -14,14 +29,13 @@ from concurrent.futures import (
 )
 from typing import List, Optional
 
-from fastapi import HTTPException, UploadFile, status
-from google.cloud.firestore_v1.base_query import FieldFilter
+from fastapi import HTTPException, UploadFile, status, Depends
 from google.cloud.logging import Client as LoggerClient
 from google.cloud.logging.handlers import CloudLoggingHandler
 from google.genai import types
 from pypdf import PdfReader, PdfWriter
-import json
 
+from src.workspaces.schema.workspace_model import WorkspaceScopeEnum
 from src.auth.iam_signer_credentials_service import IamSignerCredentials
 from src.brand_guidelines.dto.brand_guideline_response_dto import (
     BrandGuidelineResponseDto,
@@ -54,16 +68,22 @@ GEMINI_PDF_LIMIT_BYTES = 50 * 1024 * 1024
 
 
 def _process_brand_guideline_in_background(
-    guideline_id: str,
+    guideline_id: int,
     name: str,
     original_filename: str,
     source_gcs_uri: str,
-    workspace_id: Optional[str],
+    workspace_id: Optional[int],
 ):
     """
     This is the long-running worker task that runs in a separate process.
     """
-    print(f"DEBUG: _process_brand_guideline_in_background started for {guideline_id}", flush=True)
+    import asyncio
+    import os
+    import sys
+    from google.cloud.logging import Client as LoggerClient
+    from google.cloud.logging.handlers import CloudLoggingHandler
+    from src.database import WorkerDatabase
+
     worker_logger = logging.getLogger(f"brand_guideline_worker.{guideline_id}")
     worker_logger.setLevel(logging.INFO)
 
@@ -81,216 +101,224 @@ def _process_brand_guideline_in_background(
         else:
             handler = logging.StreamHandler(sys.stdout)
             formatter = logging.Formatter(
-                "%(asctime)s - [BG_WORKER] - %(levelname)s - %(message)s"
+                "%(asctime)s - [BRAND_GUIDELINE_WORKER] - %(levelname)s - %(message)s"
             )
             handler.setFormatter(formatter)
             worker_logger.addHandler(handler)
 
-        # Create new instances of dependencies within this process
-        repo = BrandGuidelineRepository()
-        gcs_service = GcsService()
-        gemini_service = GeminiService()
-        gcs_service = GcsService()
-        gemini_service = GeminiService()
-        vector_search_service = VectorSearchService()
+        # Create a new event loop for this process
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
-        try:
-            # 0. Download the source PDF from GCS
-            worker_logger.info(f"Downloading source PDF from {source_gcs_uri}")
-            file_contents = gcs_service.download_bytes_from_gcs(source_gcs_uri)
-            worker_logger.info(f"Downloaded {len(file_contents) if file_contents else 0} bytes from GCS.")
+        async def _async_worker():
+            async with WorkerDatabase() as db_factory:
+                async with db_factory() as db:
+                    # Create new instances of dependencies within this process
+                    repo = BrandGuidelineRepository(db)
+                    gcs_service = GcsService()
+                    # GeminiService needs brand_guideline_repo
+                    gemini_service = GeminiService(brand_guideline_repo=repo)
+                    vector_search_service = VectorSearchService()
 
-            # 1. Split if necessary and upload file(s) to GCS
-            gcs_uris = asyncio.run(
-                BrandGuidelineService._split_and_upload_pdf(
-                    gcs_service,
-                    file_contents or b"",
-                    workspace_id,
-                    original_filename,
-                )
-            )
-
-            if not gcs_uris:
-                raise Exception(
-                    "Failed to upload PDF chunk(s) to Google Cloud Storage."
-                )
-
-            worker_logger.info(
-                f"PDF(s) uploaded to {gcs_uris}. Starting AI extraction."
-            )
-
-            # 1.5 Extract Images
-            worker_logger.info("Extracting reference images from PDF...")
-            extracted_image_uris = asyncio.run(
-                BrandGuidelineService._extract_and_upload_images(
-                    gcs_service,
-                    file_contents or b"",
-                    workspace_id,
-                    original_filename
-                )
-            )
-            worker_logger.info(f"Extracted {len(extracted_image_uris)} reference images.")
-
-            # 2. Call Gemini for each chunk to extract structured data
-            # Use a ThreadPoolExecutor to run extractions in parallel.
-            worker_logger.info(f"Starting AI extraction for {len(gcs_uris)} chunks.")
-            successful_partial_results = []
-            successful_chunks_metadata = [] # To store metadata for indexing
-
-            with ThreadPoolExecutor(max_workers=len(gcs_uris)) as executor:
-                # Create a future for each extraction task
-                future_to_index = {
-                    executor.submit(
-                        gemini_service.extract_brand_info_from_pdf, uri
-                    ): i
-                    for i, uri in enumerate(gcs_uris)
-                }
-
-                for future in as_completed(future_to_index):
-                    i = future_to_index[future]
                     try:
-                        result = future.result()
-                        if result:
-                            successful_partial_results.append(result)
-                            
-                            # Save chunk JSON to GCS
-                            chunk_json_path = f"brand-guidelines/{workspace_id or 'global'}/processed/{guideline_id}/text/chunk_{i}.json"
-                            gcs_service.upload_bytes_to_gcs(
-                                json.dumps(result).encode('utf-8'),
-                                chunk_json_path,
-                                "application/json"
-                            )
-                            successful_chunks_metadata.append({
-                                "index": i,
-                                "data": result,
-                                "gcs_uri": f"gs://{gcs_service.bucket_name}/{chunk_json_path}"
-                            })
+                        # 0. Download the source PDF from GCS
+                        worker_logger.info(f"Downloading source PDF from {source_gcs_uri}")
+                        file_contents = gcs_service.download_bytes_from_gcs(source_gcs_uri)
+                        worker_logger.info(f"Downloaded {len(file_contents) if file_contents else 0} bytes from GCS.")
 
-                    except Exception as exc:
-                        worker_logger.error(
-                            f"Extraction for PDF chunk {i} failed: {exc}"
+                        # 1. Split if necessary and upload file(s) to GCS
+                        gcs_uris = await BrandGuidelineService._split_and_upload_pdf(
+                            gcs_service,
+                            file_contents or b"",
+                            workspace_id,
+                            original_filename,
                         )
 
-            # 3. Aggregate the results (for the main document)
-            worker_logger.info(f"Aggregating results from {len(successful_partial_results)} successful extractions.")
-            extracted_data: BrandGuidelineModel | None = (
-                gemini_service.aggregate_brand_info(successful_partial_results)
-            )
+                        if not gcs_uris:
+                            raise Exception(
+                                "Failed to upload PDF chunk(s) to Google Cloud Storage."
+                            )
 
-            if not extracted_data:
-                worker_logger.error(
-                    f"Failed to extract data from PDF at {gcs_uris}."
-                )
-                raise Exception(
-                    "AI processing failed to extract data from the PDF."
-                )
+                        worker_logger.info(
+                            f"PDF(s) uploaded to {gcs_uris}. Starting AI extraction."
+                        )
 
-            # 4. Index Content into Vector Search (Multimodal RAG)
-            text_vectors = []
-            image_vectors = []
+                        # 1.5 Extract Images (Merged from HEAD)
+                        worker_logger.info("Extracting reference images from PDF...")
+                        extracted_image_uris = await BrandGuidelineService._extract_and_upload_images(
+                            gcs_service,
+                            file_contents or b"",
+                            str(workspace_id) if workspace_id else None,
+                            original_filename
+                        )
+                        worker_logger.info(f"Extracted {len(extracted_image_uris)} reference images.")
 
-            # 4a. Index Text Chunks
-            for chunk in successful_chunks_metadata:
-                # Embed the guideline text from the chunk
-                text_content = chunk["data"].get("guideline_text", "")
-                # Fallback to rules if text is empty, or combine them
-                if not text_content and chunk["data"].get("brand_rules"):
-                    text_content = "\n".join(chunk["data"]["brand_rules"])
-                
-                worker_logger.info(f"Chunk {chunk['index']} text content length: {len(text_content)}")
-                
-                if text_content:
-                    try:
-                        embedding = gemini_service.generate_embedding(text_content)
-                        if embedding:
-                            worker_logger.info(f"Generated embedding for chunk {chunk['index']}, length: {len(embedding)}")
-                            text_vectors.append({
-                                "id": f"{guideline_id}_text_{chunk['index']}",
-                                "embedding": embedding,
-                                "restricts": [
-                                    {"namespace": "scope", "allow_list": [workspace_id or "Global"]},
-                                    {"namespace": "type", "allow_list": ["text"]},
-                                    {"namespace": "guideline_id", "allow_list": [guideline_id]},
-                                ]
-                            })
-                        else:
-                            worker_logger.warning(f"Embedding generation returned None for chunk {chunk['index']}")
+                        # 2. Call Gemini for each chunk to extract structured data
+                        worker_logger.info(f"Starting AI extraction for {len(gcs_uris)} chunks.")
+                        
+                        # Use asyncio.gather to run extractions in parallel
+                        # We need to capture both the result and the index/metadata for vector indexing
+                        async def extract_and_store(index: int, uri: str):
+                            try:
+                                # Run sync method in executor
+                                result = await loop.run_in_executor(None, gemini_service.extract_brand_info_from_pdf, uri)
+                                
+                                if result:
+                                    # Save chunk JSON to GCS (Merged from HEAD)
+                                    chunk_json_path = f"brand-guidelines/{workspace_id or 'global'}/processed/{guideline_id}/text/chunk_{index}.json"
+                                    # Assuming gcs_service.upload_bytes_to_gcs is sync (based on HEAD usage)
+                                    # but inside _split_and_upload_pdf it was called with run_in_thread.
+                                    # Safe to run in thread here too.
+                                    await loop.run_in_executor(
+                                        None,
+                                        lambda: gcs_service.upload_bytes_to_gcs(
+                                            json.dumps(result).encode('utf-8'),
+                                            chunk_json_path,
+                                            "application/json"
+                                        )
+                                    )
+                                    
+                                    return {
+                                        "success": True,
+                                        "index": index,
+                                        "data": result,
+                                        "gcs_uri": f"gs://{gcs_service.bucket_name}/{chunk_json_path}"
+                                    }
+                            except Exception as e:
+                                worker_logger.error(f"Extraction for PDF chunk {uri} failed: {e}")
+                                return {"success": False, "error": str(e)}
+
+                        tasks = [extract_and_store(i, uri) for i, uri in enumerate(gcs_uris)]
+                        chunk_results = await asyncio.gather(*tasks)
+
+                        successful_partial_results = []
+                        successful_chunks_metadata = []
+
+                        for res in chunk_results:
+                            if res and res.get("success"):
+                                successful_partial_results.append(res["data"])
+                                successful_chunks_metadata.append(res)
+
+                        # 3. Aggregate the results
+                        worker_logger.info(f"Aggregating results from {len(successful_partial_results)} successful extractions.")
+                        extracted_data: BrandGuidelineModel | None = (
+                            gemini_service.aggregate_brand_info(successful_partial_results)
+                        )
+
+                        if not extracted_data:
+                            worker_logger.error(
+                                f"Failed to extract data from PDF at {gcs_uris}."
+                            )
+                            raise Exception(
+                                "AI processing failed to extract data from the PDF."
+                            )
+
+                        # 4. Index Content into Vector Search (Multimodal RAG) (Merged from HEAD)
+                        text_vectors = []
+                        image_vectors = []
+
+                        # 4a. Index Text Chunks
+                        for chunk in successful_chunks_metadata:
+                            # Embed the guideline text from the chunk
+                            text_content = chunk["data"].get("guideline_text", "")
+                            # Fallback to rules if text is empty, or combine them
+                            if not text_content and chunk["data"].get("brand_rules"):
+                                text_content = "\n".join(chunk["data"]["brand_rules"])
+                            
+                            worker_logger.info(f"Chunk {chunk['index']} text content length: {len(text_content)}")
+                            
+                            if text_content:
+                                try:
+                                    embedding = await loop.run_in_executor(None, gemini_service.generate_embedding, text_content)
+                                    if embedding:
+                                        worker_logger.info(f"Generated embedding for chunk {chunk['index']}, length: {len(embedding)}")
+                                        text_vectors.append({
+                                            "id": f"{guideline_id}_text_{chunk['index']}",
+                                            "embedding": embedding,
+                                            "restricts": [
+                                                {"namespace": "scope", "allow_list": [str(workspace_id) if workspace_id else "Global"]},
+                                                {"namespace": "type", "allow_list": ["text"]},
+                                                {"namespace": "guideline_id", "allow_list": [str(guideline_id)]},
+                                            ]
+                                        })
+                                    else:
+                                        worker_logger.warning(f"Embedding generation returned None for chunk {chunk['index']}")
+                                except Exception as e:
+                                    worker_logger.error(f"Failed to embed text chunk {chunk['index']}: {e}")
+                            else:
+                                worker_logger.warning(f"No text content found for chunk {chunk['index']}")
+
+                        # 4b. Index Images
+                        for i, img_uri in enumerate(extracted_image_uris):
+                            try:
+                                # Determine mime type from extension
+                                mime_type = "image/png"
+                                if img_uri.lower().endswith(".jpg") or img_uri.lower().endswith(".jpeg"):
+                                    mime_type = "image/jpeg"
+                                
+                                img_part = types.Part.from_uri(file_uri=img_uri, mime_type=mime_type)
+                                embedding = await loop.run_in_executor(None, gemini_service.generate_embedding, [img_part])
+                                
+                                if embedding:
+                                    image_vectors.append({
+                                        "id": f"{guideline_id}_image_{i}",
+                                        "embedding": embedding,
+                                        "restricts": [
+                                            {"namespace": "scope", "allow_list": [str(workspace_id) if workspace_id else "Global"]},
+                                            {"namespace": "type", "allow_list": ["image"]},
+                                            {"namespace": "guideline_id", "allow_list": [str(guideline_id)]},
+                                        ]
+                                    })
+                            except Exception as e:
+                                worker_logger.error(f"Failed to embed image {img_uri}: {e}")
+
+                        # 4c. Upsert to respective indices
+                        if text_vectors:
+                            worker_logger.info(f"Upserting {len(text_vectors)} text vectors to Text Index.")
+                            await loop.run_in_executor(None, vector_search_service.upsert_vectors, text_vectors, "text")
+                        
+                        if image_vectors:
+                            worker_logger.info(f"Upserting {len(image_vectors)} image vectors to Image Index.")
+                            await loop.run_in_executor(None, vector_search_service.upsert_vectors, image_vectors, "image")
+
+                        worker_logger.info("Vector upsert complete.")
+
+                        # 5. Update the final, fully-populated database record
+                        update_data = {
+                            "status": JobStatusEnum.COMPLETED,
+                            "source_pdf_gcs_uris": gcs_uris,
+                            "color_palette": extracted_data.color_palette,
+                            "tone_of_voice_summary": extracted_data.tone_of_voice_summary,
+                            "visual_style_summary": extracted_data.visual_style_summary,
+                            "guideline_text": extracted_data.guideline_text,
+                            "brand_rules": extracted_data.brand_rules,
+                            "reference_image_uris": extracted_image_uris,
+                        }
+                        await repo.update(guideline_id, update_data)
+                        worker_logger.info(
+                            f"Successfully processed brand guideline: {guideline_id}"
+                        )
+
                     except Exception as e:
-                        worker_logger.error(f"Failed to embed text chunk {chunk['index']}: {e}")
-                else:
-                    worker_logger.warning(f"No text content found for chunk {chunk['index']}")
+                        worker_logger.error(
+                            "Brand guideline processing task failed.",
+                            extra={
+                                "json_fields": {
+                                    "guideline_id": guideline_id,
+                                    "error": str(e),
+                                }
+                            },
+                            exc_info=True,
+                        )
+                        # --- ON FAILURE, UPDATE THE DOCUMENT WITH AN ERROR STATUS ---
+                        error_update_data = {
+                            "status": JobStatusEnum.FAILED,
+                            "error_message": str(e),
+                        }
+                        await repo.update(guideline_id, error_update_data)
 
-            # 4b. Index Images
-            for i, img_uri in enumerate(extracted_image_uris):
-                try:
-                    # Determine mime type from extension
-                    mime_type = "image/png"
-                    if img_uri.lower().endswith(".jpg") or img_uri.lower().endswith(".jpeg"):
-                        mime_type = "image/jpeg"
-                    
-                    img_part = types.Part.from_uri(file_uri=img_uri, mime_type=mime_type)
-                    embedding = gemini_service.generate_embedding([img_part])
-                    
-                    if embedding:
-                        image_vectors.append({
-                            "id": f"{guideline_id}_image_{i}",
-                            "embedding": embedding,
-                            "restricts": [
-                                {"namespace": "scope", "allow_list": [workspace_id or "Global"]},
-                                {"namespace": "type", "allow_list": ["image"]},
-                                {"namespace": "guideline_id", "allow_list": [guideline_id]},
-                            ]
-                        })
-                except Exception as e:
-                    worker_logger.error(f"Failed to embed image {img_uri}: {e}")
-
-            # 4c. Upsert to respective indices
-            if text_vectors:
-                worker_logger.info(f"Upserting {len(text_vectors)} text vectors to Text Index.")
-                vector_search_service.upsert_vectors(text_vectors, index_type="text")
-            
-            if image_vectors:
-                worker_logger.info(f"Upserting {len(image_vectors)} image vectors to Image Index.")
-                vector_search_service.upsert_vectors(image_vectors, index_type="image")
-
-            worker_logger.info("Vector upsert complete.")
-
-            logger.info("Brand guideline processing complete.")
-            logger.info(extracted_data)
-
-            # 5. Update the final, fully-populated Firestore document
-            update_data = {
-                "status": JobStatusEnum.COMPLETED,
-                "source_pdf_gcs_uris": gcs_uris,
-                "color_palette": extracted_data.color_palette,
-                "tone_of_voice_summary": extracted_data.tone_of_voice_summary,
-                "visual_style_summary": extracted_data.visual_style_summary,
-                "guideline_text": extracted_data.guideline_text,
-                "brand_rules": extracted_data.brand_rules,
-                "reference_image_uris": extracted_image_uris,
-            }
-            repo.update(guideline_id, update_data)
-            worker_logger.info(
-                f"Successfully processed brand guideline: {guideline_id}"
-            )
-
-        except Exception as e:
-            worker_logger.error(
-                "Brand guideline processing task failed.",
-                extra={
-                    "json_fields": {
-                        "guideline_id": guideline_id,
-                        "error": str(e),
-                    }
-                },
-                exc_info=True,
-            )
-            # --- ON FAILURE, UPDATE THE DOCUMENT WITH AN ERROR STATUS ---
-            error_update_data = {
-                "status": JobStatusEnum.FAILED,
-                "error_message": str(e),
-            }
-            repo.update(guideline_id, error_update_data)
+        loop.run_until_complete(_async_worker())
+        loop.close()
 
     except Exception as e:
         worker_logger.error(
@@ -308,19 +336,27 @@ class BrandGuidelineService:
     including PDF processing via background tasks.
     """
 
-    def __init__(self):
-        self.repo = BrandGuidelineRepository()
-        self.gcs_service = GcsService()
-        self.gemini_service = GeminiService()
-        self.workspace_repo = WorkspaceRepository()
-        self.iam_signer_credentials = IamSignerCredentials()
-        self.vector_search_service = VectorSearchService()
+    def __init__(
+        self,
+        repo: BrandGuidelineRepository = Depends(),
+        gcs_service: GcsService = Depends(),
+        gemini_service: GeminiService = Depends(),
+        workspace_repo: WorkspaceRepository = Depends(),
+        iam_signer_credentials: IamSignerCredentials = Depends(),
+        vector_search_service: VectorSearchService = Depends(),
+    ):
+        self.repo = repo
+        self.gcs_service = gcs_service
+        self.gemini_service = gemini_service
+        self.workspace_repo = workspace_repo
+        self.iam_signer_credentials = iam_signer_credentials
+        self.vector_search_service = vector_search_service
 
     @staticmethod
     async def _split_and_upload_pdf(
         gcs_service: GcsService,
         file_contents: bytes,
-        workspace_id: Optional[str],
+        workspace_id: Optional[int],
         original_filename: str,
     ) -> list[str]:
         """
@@ -445,6 +481,7 @@ class BrandGuidelineService:
 
             if image_upload_tasks:
                 logger.info(f"Found {len(image_upload_tasks)} images to upload.")
+                # We need to await inside an async function, ensure this is called correctly
                 results = await asyncio.gather(*image_upload_tasks)
                 extracted_uris = [uri for uri in results if uri]
             else:
@@ -485,7 +522,7 @@ class BrandGuidelineService:
 
         # Delete the Firestore document
         if guideline.id:
-            await asyncio.to_thread(self.repo.delete, guideline.id)
+            await self.repo.delete(guideline.id)
 
     async def _create_brand_guideline_response(
         self, guideline: BrandGuidelineModel
@@ -513,7 +550,7 @@ class BrandGuidelineService:
         """
         # Authorize the user for the workspace before generating a URL
         if request_dto.workspace_id:
-            workspace = self.workspace_repo.get_by_id(request_dto.workspace_id)
+            workspace = await self.workspace_repo.get_by_id(request_dto.workspace_id)
             if not workspace:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -543,11 +580,11 @@ class BrandGuidelineService:
     async def start_brand_guideline_processing_job(
         self,
         name: str,
-        workspace_id: Optional[str],
+        workspace_id: Optional[int],
         gcs_uri: str,
         original_filename: str,
         current_user: UserModel,
-        executor: ProcessPoolExecutor,
+        executor: ThreadPoolExecutor,
     ) -> BrandGuidelineResponseDto:
         """
         Creates a placeholder for a brand guideline and starts the processing
@@ -557,7 +594,7 @@ class BrandGuidelineService:
         is_system_admin = UserRoleEnum.ADMIN in current_user.roles
 
         if workspace_id:
-            workspace = self.workspace_repo.get_by_id(workspace_id)
+            workspace = await self.workspace_repo.get_by_id(workspace_id)
             if not workspace:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -582,9 +619,8 @@ class BrandGuidelineService:
             search_dto = BrandGuidelineSearchDto(
                 workspace_id=workspace_id, limit=1
             )
-            workspace_filter = FieldFilter("workspace_id", "==", workspace_id)
-            existing_guidelines_response = await asyncio.to_thread(
-                self.repo.query, search_dto, extra_filters=[workspace_filter]
+            existing_guidelines_response = await self.repo.query(
+                search_dto, workspace_id=workspace_id
             )
             if existing_guidelines_response.data:
                 await self._delete_guideline_and_assets(
@@ -595,21 +631,19 @@ class BrandGuidelineService:
         # file_contents = await file.read()
 
         # 4. Create and save a placeholder document
-        guideline_id = str(uuid.uuid4())
         placeholder_guideline = BrandGuidelineModel(
-            id=guideline_id,
             name=name,
             workspace_id=workspace_id,
             status=JobStatusEnum.PROCESSING,
             source_pdf_gcs_uris=[gcs_uri],  # Store the initial upload URI
         )
-        self.repo.save(placeholder_guideline)
+        placeholder_guideline = await self.repo.create(placeholder_guideline)
 
-        logger.info(f"Submitting background job for guideline {guideline_id} to executor...")
+        logger.info(f"Submitting background job for guideline {placeholder_guideline.id} to executor...")
         # 5. Submit the job to the background process pool
         executor.submit(
             _process_brand_guideline_in_background,
-            guideline_id=guideline_id,
+            guideline_id=placeholder_guideline.id,
             name=name,
             original_filename=original_filename,
             workspace_id=workspace_id,
@@ -626,12 +660,12 @@ class BrandGuidelineService:
         )
 
     async def get_guideline_by_id(
-        self, guideline_id: str, current_user: UserModel
+        self, guideline_id: int, current_user: UserModel
     ) -> Optional[BrandGuidelineResponseDto]:
         """
         Retrieves a single brand guideline and performs an authorization check.
         """
-        guideline = await asyncio.to_thread(self.repo.get_by_id, guideline_id)
+        guideline = await self.repo.get_by_id(guideline_id)
 
         if not guideline:
             return None
@@ -643,9 +677,7 @@ class BrandGuidelineService:
             return await self._create_brand_guideline_response(guideline)
 
         # For workspace-specific guidelines, check membership.
-        workspace = await asyncio.to_thread(
-            self.workspace_repo.get_by_id, guideline.workspace_id
-        )
+        workspace = await self.workspace_repo.get_by_id(guideline.workspace_id)
 
         if not workspace:
             # This indicates an data inconsistency, but we handle it gracefully.
@@ -663,83 +695,33 @@ class BrandGuidelineService:
         return await self._create_brand_guideline_response(guideline)
 
     async def get_guideline_by_workspace_id(
-        self, workspace_id: str, current_user: UserModel
+        self, workspace_id: int, current_user: UserModel
     ) -> Optional[BrandGuidelineResponseDto]:
         """
         Retrieves the unique brand guideline for a workspace.
         """
-        workspace = await asyncio.to_thread(
-            self.workspace_repo.get_by_id, workspace_id
-        )
+        workspace = await self.workspace_repo.get_by_id(workspace_id)
         if not workspace:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Workspace with ID '{workspace_id}' not found.",
             )
 
-        is_system_admin = UserRoleEnum.ADMIN in current_user.roles
-        if not is_system_admin and current_user.id not in workspace.member_ids:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not a member of this workspace.",
-            )
+        if not workspace.scope == WorkspaceScopeEnum.PUBLIC:
+            is_system_admin = UserRoleEnum.ADMIN in current_user.roles
+            if (
+                not is_system_admin
+                and current_user.id not in workspace.member_ids
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You are not authorized to view brand guidelines for this workspace.",
+                )
 
         search_dto = BrandGuidelineSearchDto(workspace_id=workspace_id, limit=1)
-        workspace_filter = FieldFilter("workspace_id", "==", workspace_id)
-        response = await asyncio.to_thread(
-            self.repo.query, search_dto, extra_filters=[workspace_filter]
-        )
+        response = await self.repo.query(search_dto, workspace_id=workspace_id)
 
         if not response.data:
             return None
 
         return await self._create_brand_guideline_response(response.data[0])
-
-    async def delete_guideline(
-        self, guideline_id: str, current_user: UserModel
-    ):
-        """
-        Deletes a brand guideline and all its associated assets after an
-        authorization check.
-        """
-        # 1. Fetch the guideline
-        guideline = await asyncio.to_thread(self.repo.get_by_id, guideline_id)
-        if not guideline:
-            # If it doesn't exist, we can consider the deletion successful.
-            logger.warning(
-                f"Attempted to delete non-existent guideline with ID: {guideline_id}"
-            )
-            return
-
-        # 2. Authorization Check
-        is_system_admin = UserRoleEnum.ADMIN in current_user.roles
-
-        # Global guidelines can only be deleted by admins
-        if not guideline.workspace_id:
-            if not is_system_admin:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Only a system admin can delete global brand guidelines.",
-                )
-        else:  # Workspace-specific guideline
-            workspace = await asyncio.to_thread(
-                self.workspace_repo.get_by_id, guideline.workspace_id
-            )
-            # If workspace doesn't exist, only admin can clean up the orphan guideline.
-            if not workspace and not is_system_admin:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Parent workspace for this guideline not found.",
-                )
-
-            is_workspace_owner = (
-                workspace and current_user.id == workspace.owner_id
-            )
-            if not (is_system_admin or is_workspace_owner):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Only the workspace owner or a system admin can delete this brand guideline.",
-                )
-
-        # 3. Perform deletion
-        await self._delete_guideline_and_assets(guideline)

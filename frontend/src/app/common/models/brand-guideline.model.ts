@@ -17,9 +17,9 @@
 import {JobStatus} from './media-item.model';
 
 export interface BrandGuidelineModel {
-  id: string;
+  id: number;
   name: string;
-  workspaceId?: string;
+  workspaceId: number;
   sourcePdfGcsUris: string[];
   colorPalette: string[];
   logoAssetId?: string;

@@ -1,13 +1,32 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {BehaviorSubject, Observable, of} from 'rxjs';
 import {tap, catchError, finalize, shareReplay} from 'rxjs/operators';
 import {environment} from '../../../environments/environment';
 import {WorkspaceStateService} from '../../services/workspace/workspace-state.service';
-import {AssetScopeEnum, AssetTypeEnum} from '../../admin/source-assets-management/source-asset.model';
+import {
+  AssetScopeEnum,
+  AssetTypeEnum,
+} from '../../admin/source-assets-management/source-asset.model';
 
 export interface SourceAssetResponseDto {
-  id: string;
+  id: number;
   userId: string;
   gcsUri: string;
   originalFilename: string;
@@ -22,7 +41,7 @@ export interface SourceAssetResponseDto {
 
 export interface SourceAssetSearchDto {
   limit?: number;
-  startAfter?: string;
+  offset?: number;
   mimeType?: string;
   assetType?: string;
   userEmail?: string;
@@ -31,7 +50,9 @@ export interface SourceAssetSearchDto {
 export interface PaginationResponseDto<T> {
   data: T[];
   count: number;
-  nextPageCursor: string | null;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 @Injectable({
@@ -41,7 +62,8 @@ export class SourceAssetService {
   private assets$ = new BehaviorSubject<SourceAssetResponseDto[]>([]);
   public isLoading$ = new BehaviorSubject<boolean>(false);
   private allAssetsLoaded$ = new BehaviorSubject<boolean>(false);
-  private nextPageCursor: string | null = null;
+  private currentPage = 0;
+  private pageSize = 20;
   private allFetchedAssets: SourceAssetResponseDto[] = [];
   private filters$ = new BehaviorSubject<SourceAssetSearchDto>({});
 
@@ -50,7 +72,10 @@ export class SourceAssetService {
     PaginationResponseDto<SourceAssetResponseDto>
   > | null = null;
 
-  constructor(private http: HttpClient, private workspaceStateService: WorkspaceStateService,) {}
+  constructor(
+    private http: HttpClient,
+    private workspaceStateService: WorkspaceStateService,
+  ) {}
 
   get assets(): Observable<SourceAssetResponseDto[]> {
     return this.assets$.asObservable();
@@ -83,7 +108,7 @@ export class SourceAssetService {
       aspectRatio?: string;
       assetType?: AssetTypeEnum;
       scope?: AssetScopeEnum; // 1. Add scope to the options
-    } = {}
+    } = {},
   ): Observable<SourceAssetResponseDto> {
     const formData = new FormData();
     formData.append('file', file);
@@ -107,13 +132,13 @@ export class SourceAssetService {
     return this.http
       .post<SourceAssetResponseDto>(
         `${environment.backendURL}/source_assets/upload`,
-        formData
+        formData,
       )
       .pipe(tap(() => this.refreshAssets()));
   }
 
   refreshAssets(): void {
-    this.nextPageCursor = null;
+    this.currentPage = 0;
     this.allAssetsLoaded$.next(false);
     this.assets$.next([]);
     this.loadAssets();
@@ -126,7 +151,7 @@ export class SourceAssetService {
 
     if (reset) {
       this.allFetchedAssets = [];
-      this.nextPageCursor = null;
+      this.currentPage = 0;
       this.allAssetsLoaded$.next(false);
       this.assetsRequest$ = null; // Invalidate cache on reset
     }
@@ -144,11 +169,11 @@ export class SourceAssetService {
     this.isLoading$.next(true);
     this.assetsRequest$ = this.fetchAssets().pipe(
       tap(response => {
-        this.nextPageCursor = response.nextPageCursor ?? null;
+        this.currentPage++;
         this.allFetchedAssets.push(...response.data);
         this.assets$.next(this.allFetchedAssets);
 
-        if (!this.nextPageCursor) {
+        if (this.currentPage >= response.totalPages) {
           this.allAssetsLoaded$.next(true);
         } else {
           // If there are more pages, clear the cache so infinite scroll can fetch the next page.
@@ -157,7 +182,7 @@ export class SourceAssetService {
       }),
       catchError(() => {
         this.assetsRequest$ = null; // Allow retry on error
-        return of({data: [], count: 0, nextPageCursor: null});
+        return of({data: [], count: 0, page: 0, pageSize: 0, totalPages: 0});
       }),
       finalize(() => {
         this.isLoading$.next(false);
@@ -175,9 +200,9 @@ export class SourceAssetService {
     const currentFilters = this.filters$.value;
 
     const body: SourceAssetSearchDto = {
-      limit: 20,
+      limit: this.pageSize,
       ...currentFilters,
-      startAfter: this.nextPageCursor ?? undefined,
+      offset: this.currentPage * this.pageSize,
     };
     return this.http.post<PaginationResponseDto<SourceAssetResponseDto>>(
       assetsUrl,
@@ -191,7 +216,7 @@ export class SourceAssetService {
     this.assets$.next(this.allFetchedAssets);
   }
 
-  deleteAsset(assetId: string) {
+  deleteAsset(assetId: number) {
     return this.http
       .delete(`${environment.backendURL}/source_assets/${assetId}`)
       .pipe(
@@ -199,7 +224,7 @@ export class SourceAssetService {
           // Remove the asset from the local BehaviorSubject to update the UI instantly
           const currentAssets = this.assets$.getValue();
           const updatedAssets = currentAssets.filter(
-            asset => asset.id !== assetId,
+            asset => asset.id.toString() !== assetId.toString(),
           );
           this.assets$.next(updatedAssets);
         }),

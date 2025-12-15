@@ -62,6 +62,10 @@ class SourceAssetRepository(BaseRepository[SourceAssetModel]):
         Performs a paginated query for assets. If target_user_id is provided,
         it scopes the search to that specific user.
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[SourceAssetRepository] query called with mime_type={search_dto.mime_type}, target_user_id={target_user_id}")
+        
         base_query = self.collection_ref
 
         # Apply filters from the DTO

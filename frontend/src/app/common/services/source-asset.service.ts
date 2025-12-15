@@ -201,6 +201,7 @@ export class SourceAssetService {
       ...currentFilters,
       startAfter: this.nextPageCursor ?? undefined,
     };
+    console.log('[SourceAssetService] Fetching assets with body:', JSON.stringify(body));
     return this.http.post<PaginationResponseDto<SourceAssetResponseDto>>(
       assetsUrl,
       body,

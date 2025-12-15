@@ -143,4 +143,25 @@ export class ImageSelectorComponent {
     event.preventDefault();
     event.stopPropagation();
   }
+
+  /**
+   * Returns the accept types for the file input.
+   * Uses explicit file extensions for better browser/OS compatibility.
+   */
+  getAcceptTypes(): string {
+    if (!this.data.mimeType) {
+      return 'image/*,video/*,audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.wma';
+    }
+    
+    if (this.data.mimeType === 'audio/*' || this.data.mimeType === 'audio/mpeg') {
+      // Include explicit audio extensions for better compatibility
+      return 'audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.wma,.webm';
+    }
+    
+    if (this.data.mimeType === 'video/*' || this.data.mimeType === 'video/mp4') {
+      return 'video/*,.mp4,.webm,.mov,.avi,.mkv';
+    }
+    
+    return this.data.mimeType;
+  }
 }

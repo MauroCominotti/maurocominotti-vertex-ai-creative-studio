@@ -50,3 +50,7 @@ def setup_logging():
         )
         handler.setFormatter(formatter)
         root_logger.addHandler(handler)
+
+    # Enable DEBUG logging for ADK and Agents for debugging purposes
+    logging.getLogger("google.adk").setLevel(logging.DEBUG)
+    logging.getLogger("src.agents").setLevel(logging.DEBUG)

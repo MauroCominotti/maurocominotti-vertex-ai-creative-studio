@@ -23,6 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 # ADK Imports
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
+from src.auth.iam_signer_credentials_service import IamSignerCredentials
 
 logger = logging.getLogger(__name__)
 
@@ -66,38 +67,61 @@ async def generate_with_agents(
     
     # Initialize Agents
     enforcer = EnforcerAgent(vector_search_service, gemini_service)
-    validator = ValidatorAgent(gemini_service)
+    validator = ValidatorAgent()
     
     # Session ID (unique per request for isolation)
     import uuid
     session_id = str(uuid.uuid4())
-    app_name = "creative_studio"
+    app_name = "agents"
     
     # Create Session
-    await session_service.create_session(app_name=app_name, user_id=current_user.uid, session_id=session_id)
+    await session_service.create_session(app_name=app_name, user_id=current_user.id, session_id=session_id)
     
     # --- Step 1: Enforcer Agent ---
     enforcer_runner = Runner(agent=enforcer, app_name=app_name, session_service=session_service)
     
     user_query = f"User Request: {request.prompt}\nWorkspace ID: {request.workspace_id or 'Global'}"
-    content = types.Content(role="user", parts=[types.Part(text=user_query)])
+    
+    parts = [types.Part(text=user_query)]
+    
+    # Add reference image if provided
+    if request.reference_image_uri:
+        logger.info(f"Adding reference image to Enforcer context: {request.reference_image_uri}")
+        parts.append(types.Part.from_uri(file_uri=request.reference_image_uri, mime_type="image/png"))
+        
+    content = types.Content(role="user", parts=parts)
     
     enhanced_prompt = request.prompt
     applied_rules = []
     
-    async for event in enforcer_runner.run_async(user_id=current_user.uid, session_id=session_id, new_message=content):
+    async for event in enforcer_runner.run_async(user_id=current_user.id, session_id=session_id, new_message=content):
+        logger.info(f"Enforcer Agent Event: {event}")
         if event.is_final_response() and event.content and event.content.parts:
             response_text = event.content.parts[0].text
+            logger.info(f"Enforcer Agent Raw Response: {response_text}")
             # Parse JSON output from Enforcer
             try:
-                # Remove markdown code blocks if present
-                clean_text = response_text.replace("```json", "").replace("```", "").strip()
-                data = json.loads(clean_text)
-                enhanced_prompt = data.get("enhanced_prompt", request.prompt)
-                applied_rules = data.get("applied_rules", [])
+                # Robust JSON extraction: find first '{' and last '}'
+                start_idx = response_text.find('{')
+                end_idx = response_text.rfind('}')
+                
+                if start_idx != -1 and end_idx != -1:
+                    json_str = response_text[start_idx:end_idx+1]
+                    data = json.loads(json_str)
+                    enhanced_prompt = data.get("enhanced_prompt", request.prompt)
+                    applied_rules = data.get("applied_rules", [])
+                    reference_image_uris = data.get("reference_image_uris", [])
+                    logger.info(f"Enforcer Agent Parsed - Enhanced Prompt: {enhanced_prompt}, Rules: {applied_rules}, Ref Images: {reference_image_uris}")
+                else:
+                    logger.warning("Enforcer response did not contain valid JSON brackets. Using raw text as prompt.")
+                    enhanced_prompt = response_text
+                    applied_rules = []
+                    reference_image_uris = []
             except Exception as e:
                 logger.error(f"Failed to parse Enforcer response: {e}")
                 enhanced_prompt = response_text # Fallback
+                applied_rules = []
+                reference_image_uris = []
 
     # --- Step 2: Generation ---
     generation_result_str = ""
@@ -107,7 +131,9 @@ async def generate_with_agents(
         generation_result_str = await tool.run(
             prompt=enhanced_prompt,
             aspect_ratio=request.aspect_ratio,
-            number_of_images=request.number_of_images
+            number_of_images=request.number_of_images,
+            reference_image_gcs_uris=reference_image_uris[:5],
+            workspace_id=request.workspace_id or "Global"
         )
     elif request.media_type == MediaTypeEnum.VIDEO:
         tool = VideoGenerationTool(veo_service, current_user, executor)
@@ -115,14 +141,16 @@ async def generate_with_agents(
             prompt=enhanced_prompt,
             aspect_ratio=request.aspect_ratio,
             duration_seconds=request.duration_seconds,
-            generate_audio=request.generate_audio
+            generate_audio=request.generate_audio,
+            workspace_id=request.workspace_id or "Global"
         )
     elif request.media_type == MediaTypeEnum.AUDIO:
         tool = AudioGenerationTool(audio_service, current_user)
         generation_result_str = await tool.run(
             prompt=enhanced_prompt,
             type=request.audio_type,
-            voice_name=request.voice_name
+            voice_name=request.voice_name,
+            workspace_id=request.workspace_id or "Global"
         )
     
     # Parse URIs or Status from tool output
@@ -132,33 +160,28 @@ async def generate_with_agents(
         if "Successfully generated" in generation_result_str:
             # Extract URIs
             # Format: "Successfully generated ...: uri1, uri2"
-            parts = generation_result_str.split(":")
+            parts = generation_result_str.split(":", 1)
             if len(parts) > 1:
                 uris_str = parts[1].strip()
                 generated_uris = [u.strip() for u in uris_str.split(",")]
-        else:
-             raise HTTPException(status_code=500, detail=f"Generation failed: {generation_result_str}")
-             
-    elif request.media_type == MediaTypeEnum.VIDEO:
         # Video generation is async. The tool returns a status message with Job ID.
         # We cannot validate immediately.
-        # Return the status message as the "asset" for now, or handle differently.
-        # For this agentic flow, we might want to wait? But video takes minutes.
-        # Let's return the job info and skip validation for now, OR 
+        # Return the status message as the "asset" for now,
         # we accept that validation happens LATER (out of scope for this sync endpoint).
         
         # For the purpose of this demo/POC, we will return the status message.
         # Validator Agent cannot run on a pending job.
         
-        return AgentGenerationResponse(
-            original_prompt=request.prompt,
-            enhanced_prompt=enhanced_prompt,
-            generated_assets=[{
-                "uri": "PENDING",
-                "validation_status": "PENDING",
-                "validation_reasoning": generation_result_str
-            }]
-        )
+        if not generated_uris:
+            return AgentGenerationResponse(
+                original_prompt=request.prompt,
+                enhanced_prompt=enhanced_prompt,
+                generated_assets=[{
+                    "uri": "PENDING",
+                    "validation_status": "PENDING",
+                    "validation_reasoning": generation_result_str
+                }]
+            )
 
     # --- Step 3: Validator Agent (Only for immediate assets) ---
     validator_runner = Runner(agent=validator, app_name=app_name, session_service=session_service)
@@ -167,7 +190,7 @@ async def generate_with_agents(
     for uri in generated_uris:
         # Construct validation prompt with image
         validation_prompt = f"""
-        Validate this image against the following rules:
+        Validate this media asset against the following rules:
         {json.dumps(applied_rules, indent=2)}
         """
         
@@ -177,27 +200,57 @@ async def generate_with_agents(
         if request.media_type == MediaTypeEnum.AUDIO:
             mime_type = "audio/wav" # Assuming wav for now
             
-        image_part = types.Part.from_uri(file_uri=uri, mime_type=mime_type)
-        text_part = types.Part(text=validation_prompt)
-        val_content = types.Content(role="user", parts=[image_part, text_part])
+        parts = []
+        
+        # 1. The Generated Asset
+        parts.append(types.Part.from_uri(file_uri=uri, mime_type=mime_type))
+        
+        # 2. Reference Images (if any) - for style comparison
+        if reference_image_uris:
+            validation_prompt += "\n\nReference Images provided for style comparison:"
+            for i, ref_uri in enumerate(reference_image_uris):
+                try:
+                    parts.append(types.Part.from_uri(file_uri=ref_uri, mime_type="image/png"))
+                    validation_prompt += f"\n- Reference Image {i+1}"
+                except Exception as e:
+                    logger.warning(f"Failed to attach reference image {ref_uri} to validator: {e}")
+
+        # 3. The Prompt/Instructions
+        parts.append(types.Part(text=validation_prompt))
+        
+        val_content = types.Content(role="user", parts=parts)
         
         is_compliant = False
         reasoning = "Validation failed to run."
         
-        async for event in validator_runner.run_async(user_id=current_user.uid, session_id=session_id, new_message=val_content):
+        async for event in validator_runner.run_async(user_id=current_user.id, session_id=session_id, new_message=val_content):
             if event.is_final_response() and event.content and event.content.parts:
                 val_resp_text = event.content.parts[0].text
+                logger.info(f"Validator Agent Raw Response: {val_resp_text}")
                 try:
-                    clean_val = val_resp_text.replace("```json", "").replace("```", "").strip()
-                    val_data = json.loads(clean_val)
-                    is_compliant = val_data.get("is_compliant", False)
-                    reasoning = val_data.get("reasoning", "No reasoning provided.")
+                    start_idx = val_resp_text.find('{')
+                    end_idx = val_resp_text.rfind('}')
+                    
+                    if start_idx != -1 and end_idx != -1:
+                        json_str = val_resp_text[start_idx:end_idx+1]
+                        val_data = json.loads(json_str)
+                        is_compliant = val_data.get("is_compliant", False)
+                        reasoning = val_data.get("reasoning", "No reasoning provided.")
+                        logger.info(f"Validator Agent Parsed - Compliant: {is_compliant}, Reasoning: {reasoning}")
+                    else:
+                        logger.warning("Validator response did not contain valid JSON brackets.")
+                        reasoning = val_resp_text
                 except Exception as e:
                     logger.error(f"Failed to parse Validator response: {e}")
                     reasoning = val_resp_text
 
+        # Generate presigned URL for frontend display
+        signer = IamSignerCredentials()
+        presigned_url = signer.generate_presigned_url(uri)
+        
         generated_assets.append({
-            "uri": uri,
+            "uri": presigned_url, # Use presigned URL for display
+            "gcs_uri": uri, # Keep original GCS URI for reference
             "validation_status": "APPROVED" if is_compliant else "REJECTED",
             "validation_reasoning": reasoning
         })

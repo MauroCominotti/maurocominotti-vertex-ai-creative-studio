@@ -1,7 +1,9 @@
+import os
 import logging
 from typing import List, Dict, Any
 from google.adk.agents.llm_agent import Agent as LlmAgent
 from src.multimodal.gemini_service import GeminiService
+from src.config.config_service import config_service
 
 logger = logging.getLogger(__name__)
 
@@ -11,37 +13,43 @@ class ValidatorAgent(LlmAgent):
     Audits generated assets against branding rules using Gemini Vision.
     """
 
-    def __init__(self, gemini_service: GeminiService):
+    def __init__(self):
         
-        # Note: For the Validator, we might not need a tool if we pass the image URI in the prompt 
-        # and let the multimodal model handle it directly.
-        # However, ADK's LlmAgent handles text-based interaction. 
-        # To handle images, we need to ensure the `Runner` or the agent can accept multimodal content.
-        # The ADK `Runner.run` accepts `types.Content`, which can include image parts.
+        # Note: For the Validator, we rely on the multimodal model's native capabilities.
+        # The ADK `Runner.run` accepts `types.Content`, which can include image/audio parts.
+
+        os.environ["GOOGLE_CLOUD_PROJECT"] = config_service.PROJECT_ID
+        os.environ["GOOGLE_CLOUD_LOCATION"] = config_service.LOCATION
+        os.environ["ADK_LOG_LEVEL"] = "DEBUG"
+            
+        # Set this to ensure the SDK uses Vertex AI path, not AI Studio path
+        os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "true" 
         
         instruction = """
         You are a strict Brand Compliance Auditor.
-        Your task is to verify if the provided image strictly adheres to the branding rules provided in the context.
+        Your task is to verify if the provided media asset (image or audio) strictly adheres to the branding rules provided in the context.
         
         Input Context:
-        - You will receive an image (or a reference to it).
-        - You will receive a list of "Applied Rules" that the image must follow.
+        - You will receive a media asset (image or audio).
+        - You will receive a list of "Applied Rules" that the asset must follow.
         
         Task:
-        1. Analyze the image visually.
-        2. Check each rule one by one.
-        3. Determine if the image is compliant.
+        1. **Visual/Audio Inspection**: Analyze the asset thoroughly.
+        2. **Rule Verification**: Check each rule one by one against the asset.
+           - Example: If rule says "Logo bottom-right", check if logo is actually there.
+           - Example: If rule says "No people", check if people are present.
+        3. **Decision**: Determine if the asset is compliant.
         
         Output a JSON object:
         {
             "is_compliant": boolean,
-            "reasoning": "Detailed explanation of which rules passed and which failed."
+            "reasoning": "Detailed explanation of which rules passed and which failed. Be specific."
         }
-        """
-        
+        """        
+
         super().__init__(
             name="ValidatorAgent",
-            model="gemini-2.5-flash", # Vision capable model
+            model="gemini-2.5-flash", # Multimodal capable model
             instruction=instruction,
-            description="Visually audits images against branding rules."
+            description="Audits media assets against branding rules."
         )

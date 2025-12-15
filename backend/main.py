@@ -18,7 +18,7 @@ from src.config.logger_config import setup_logging
 setup_logging()
 
 import logging
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from os import getenv
 
@@ -98,6 +98,9 @@ async def lifespan(app: FastAPI):
     # Create the pool and attach it to the app's state
     app.state.executor = ThreadPoolExecutor(max_workers=4)
 
+    logger.info("Creating ProcessPoolExecutor...")
+    app.state.process_pool = ProcessPoolExecutor(max_workers=2)
+
     yield
 
     # Code here runs on shutdown
@@ -105,6 +108,9 @@ async def lifespan(app: FastAPI):
 
     logger.info("Closing ThreadPoolExecutor...")
     app.state.executor.shutdown(wait=True)
+
+    logger.info("Closing ProcessPoolExecutor...")
+    app.state.process_pool.shutdown(wait=True)
     # Your shutdown logic here, e.g., closing database connections
 
 

@@ -23,8 +23,8 @@ import uuid
 from typing import List, Optional
 
 from google.cloud import aiplatform
-from google.genai import Client, types
-from PIL import Image as PILImage
+from google.genai import Client, types, errors
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from src.auth.iam_signer_credentials_service import IamSignerCredentials
 from src.common.base_dto import AspectRatioEnum, GenerationModelEnum, MimeTypeEnum
@@ -55,11 +55,18 @@ from src.users.user_model import UserModel
 logger = logging.getLogger(__name__)
 
 
-def gemini_flash_image_preview_generate_image(
+@retry(
+    retry=retry_if_exception_type(errors.ClientError),
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    reraise=True,
+)
+def gemini_image_preview_generate_image(
     gcs_service: GcsService,
     vertexai_client: Client,
     prompt: str,
     bucket_name: str,
+    model_name: str,
     reference_images: Optional[List[types.Image]] = None,
 ) -> types.GeneratedImage | None:
     """
@@ -69,8 +76,6 @@ def gemini_flash_image_preview_generate_image(
     Returns:
         A types.GeneratedImage object, or None if failed.
     """
-    model = GenerationModelEnum.GEMINI_2_5_FLASH_IMAGE_PREVIEW
-
     # Build the parts for the content, including the prompt and any reference images
     parts = [types.Part.from_text(text=prompt)]
     if reference_images:
@@ -83,6 +88,12 @@ def gemini_flash_image_preview_generate_image(
                         file_uri=img.gcs_uri, mime_type=img.mime_type
                     )
                 )
+            elif img.image_bytes:
+                 parts.append(
+                    types.Part.from_bytes(
+                        data=img.image_bytes, mime_type=img.mime_type
+                    )
+                )
 
     contents: list[types.ContentUnionDict] = [
         types.Content(role="user", parts=parts)
@@ -91,7 +102,7 @@ def gemini_flash_image_preview_generate_image(
         response_modalities=["TEXT", "IMAGE"]
     )
     stream = vertexai_client.models.generate_content_stream(
-        model=model,
+        model=model_name,
         contents=contents,
         config=generate_content_config,
     )
@@ -204,23 +215,32 @@ class ImagenService:
                         f"Could not find or use generated_input: {gen_input.media_item_id} at index {gen_input.media_index}"
                     )
 
+        # Add raw GCS URIs if provided (e.g. from Enforcer Agent)
+        if request_dto.reference_image_gcs_uris:
+            for uri in request_dto.reference_image_gcs_uris:
+                reference_images_for_api.append(
+                    types.Image(gcs_uri=uri, mime_type="image/png") # Defaulting to png, SDK might auto-detect
+                )
+
         all_generated_images: List[types.GeneratedImage] = []
 
         try:
             # --- PATH 1: TEXT-TO-IMAGE GENERATION ---
             if not reference_images_for_api:
-                if (
-                    request_dto.generation_model
-                    == GenerationModelEnum.GEMINI_2_5_FLASH_IMAGE_PREVIEW
-                ):
-                    # --- GEMINI FLASH TEXT-TO-IMAGE ---
+                if request_dto.generation_model in [
+                    GenerationModelEnum.GEMINI_2_5_FLASH_IMAGE_PREVIEW,
+                    GenerationModelEnum.GEMINI_3_PRO_IMAGE_PREVIEW,
+                    GenerationModelEnum.GEMINI_2_0_FLASH_EXP,
+                ]:
+                    # --- GEMINI TEXT-TO-IMAGE ---
                     tasks = [
                         asyncio.to_thread(
-                            gemini_flash_image_preview_generate_image,
+                            gemini_image_preview_generate_image,
                             gcs_service=self.gcs_service,
                             vertexai_client=client,
                             prompt=request_dto.prompt,
                             bucket_name=self.gcs_service.bucket_name,
+                            model_name=request_dto.generation_model,
                         )
                         for _ in range(request_dto.number_of_media)
                     ]
@@ -248,18 +268,20 @@ class ImagenService:
                     )
             # --- PATH 2: IMAGE EDITING (IMAGE-TO-IMAGE) ---
             else:
-                if (
-                    request_dto.generation_model
-                    == GenerationModelEnum.GEMINI_2_5_FLASH_IMAGE_PREVIEW
-                ):
-                    # --- GEMINI FLASH IMAGE-TO-IMAGE ---
+                if request_dto.generation_model in [
+                    GenerationModelEnum.GEMINI_2_5_FLASH_IMAGE_PREVIEW,
+                    GenerationModelEnum.GEMINI_3_PRO_IMAGE_PREVIEW,
+                    GenerationModelEnum.GEMINI_2_0_FLASH_EXP,
+                ]:
+                    # --- GEMINI IMAGE-TO-IMAGE ---
                     tasks = [
                         asyncio.to_thread(
-                            gemini_flash_image_preview_generate_image,
+                            gemini_image_preview_generate_image,
                             gcs_service=self.gcs_service,
                             vertexai_client=client,
                             prompt=request_dto.prompt,
                             bucket_name=self.gcs_service.bucket_name,
+                            model_name=request_dto.generation_model,
                             reference_images=reference_images_for_api,
                         )
                         for _ in range(request_dto.number_of_media)
@@ -271,9 +293,30 @@ class ImagenService:
                 else:
                     # --- IMAGEN MODELS (IMAGE-TO-IMAGE) ---
                     # The DTO validation ensures we only have one source image here.
-                    raw_ref_image = types._ReferenceImageAPI(
+                    # Download the image bytes from GCS to avoid "No uri or raw bytes" error
+                    ref_img_obj = reference_images_for_api[0]
+                    final_ref_image = ref_img_obj
+                    
+                    # --- IMAGEN MODELS (IMAGE-TO-IMAGE) ---
+                    # The DTO validation ensures we only have one source image here.
+                    # Download the image bytes from GCS to avoid "No uri or raw bytes" error
+                    ref_img_uri = reference_images_for_api[0].gcs_uri
+                    if ref_img_uri:
+                        logger.info(f"Attempting to download bytes for reference image: {ref_img_uri}")
+                        image_bytes = self.gcs_service.download_bytes_from_gcs(ref_img_uri)
+                        if image_bytes:
+                            logger.info(f"Successfully downloaded {len(image_bytes)} bytes for reference image.")
+                            ref_img_obj = types.Image(image_bytes=image_bytes, mime_type=reference_images_for_api[0].mime_type)
+                        else:
+                            logger.warning(f"Failed to download bytes for {ref_img_uri}, falling back to URI.")
+                            ref_img_obj = reference_images_for_api[0]
+                    else:
+                        logger.warning("No GCS URI found for reference image, using original object.")
+                        ref_img_obj = reference_images_for_api[0]
+                    
+                    raw_ref_image = types.RawReferenceImage(
                         reference_id=1,
-                        reference_image=reference_images_for_api[0],
+                        reference_image=ref_img_obj,
                     )
                     response = await asyncio.to_thread(
                         client.models.edit_image,

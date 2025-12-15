@@ -14,36 +14,13 @@ class VideoGenerationTool(BaseTool):
     def __init__(self, veo_service: VeoService, current_user: UserModel, executor: ThreadPoolExecutor):
         super().__init__(
             name="generate_video",
-            description="Generates a video based on a text prompt. Use this to create video assets.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "prompt": {
-                        "type": "string",
-                        "description": "The text prompt describing the video to generate."
-                    },
-                    "aspect_ratio": {
-                        "type": "string",
-                        "enum": ["16:9", "9:16"],
-                        "description": "The aspect ratio of the generated video."
-                    },
-                    "duration_seconds": {
-                        "type": "integer",
-                        "description": "Duration of the video in seconds (1-8)."
-                    },
-                    "generate_audio": {
-                        "type": "boolean",
-                        "description": "Whether to generate audio for the video."
-                    }
-                },
-                "required": ["prompt"]
-            }
+            description="Generates a video based on a text prompt. Use this to create video assets."
         )
         self.veo_service = veo_service
         self.current_user = current_user
         self.executor = executor
 
-    def run(self, prompt: str, aspect_ratio: str = "16:9", duration_seconds: int = 5, generate_audio: bool = False) -> str:
+    def run(self, prompt: str, aspect_ratio: str = "16:9", duration_seconds: int = 5, generate_audio: bool = False, workspace_id: str = "Global") -> str:
         """
         Executes the video generation.
         """
@@ -53,8 +30,8 @@ class VideoGenerationTool(BaseTool):
                 aspect_ratio=AspectRatioEnum(aspect_ratio),
                 duration_seconds=duration_seconds,
                 generate_audio=generate_audio,
-                workspace_id="Global", # Defaulting for now, ideally passed in context
-                generation_model=GenerationModelEnum.VEO_3_1_PREVIEW # Default to latest
+                workspace_id=workspace_id,
+                generation_model=GenerationModelEnum.VEO_3_QUALITY # Default to latest
             )
             
             # VeoService.start_video_generation_job returns a MediaItemResponse immediately (placeholder)

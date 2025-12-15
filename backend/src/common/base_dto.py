@@ -41,9 +41,12 @@ class GenerationModelEnum(str, Enum):
     IMAGEGEN_006 = "imagegeneration@006"
     IMAGEGEN_005 = "imagegeneration@005"
     IMAGEGEN_002 = "imagegeneration@002"
-    GEMINI_2_5_FLASH_IMAGE_PREVIEW = "gemini-2.5-flash-image-preview"
+    GEMINI_2_5_FLASH_IMAGE_PREVIEW = "gemini-2.5-flash-image"
+    GEMINI_2_5_FLASH_IMAGE = "gemini-2.5-flash-image"
     GEMINI_2_5_PRO = "gemini-2.5-pro"
     GEMINI_2_5_FLASH = "gemini-2.5-flash"
+    GEMINI_2_5_FLASH_EXP = "gemini-2.5-flash-exp"
+    GEMINI_3_PRO_IMAGE_PREVIEW = "gemini-3.0-pro-image-preview"
     VTO = "virtual-try-on-preview-08-04"
 
     # Video-Specific Models
@@ -54,6 +57,7 @@ class GenerationModelEnum(str, Enum):
     VEO_2_FAST = "veo-2.0-generate-001"
     VEO_2_QUALITY = "veo-2.0-fast-generate-001"
     VEO_2_GENERATE_EXP = "veo-2.0-generate-exp"
+    GEMINI_2_0_FLASH_EXP = "gemini-2.0-flash-exp"
 
     # Audio-Specific Models
     LYRIA_002 = "lyria-002"

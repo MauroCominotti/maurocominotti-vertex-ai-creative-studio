@@ -38,7 +38,7 @@ class ConfigService(BaseSettings):
 
     # --- Core Project Settings ---
     PROJECT_ID: str = ""
-    LOCATION: str = "global"
+    LOCATION: str = "us-central1"
     ENVIRONMENT: str = "development"
     FRONTEND_URL: str = "http://localhost:4200"
     LOG_LEVEL: str = "INFO"
@@ -57,6 +57,9 @@ class ConfigService(BaseSettings):
     # --- Gemini ---
     GEMINI_MODEL_ID: str = "gemini-2.5-pro"
     GEMINI_AUDIO_ANALYSIS_MODEL_ID: str = "gemini-2.5-pro"
+    GEMINI_AUDIO_ANALYSIS_MODEL_ID: str = "gemini-2.5-pro"
+    TEXT_EMBEDDING_MODEL_ID: str = "text-embedding-004"
+    MULTIMODAL_EMBEDDING_MODEL_ID: str = "multimodalembedding@001"
 
     # --- Collections ---
     FIREBASE_DB: str = "cstudio-development"
@@ -80,9 +83,17 @@ class ConfigService(BaseSettings):
     IMAGEN_RECONTEXT_SUBFOLDER: str = "recontext_images"
 
     # --- Vector Search ---
-    VECTOR_SEARCH_INDEX_ID: str = ""
-    VECTOR_SEARCH_INDEX_ENDPOINT_ID: str = ""
-    VECTOR_SEARCH_DEPLOYED_INDEX_ID: str = "creative_studio_deployed_index"
+    VECTOR_SEARCH_INDEX_ENDPOINT_ID: str = "projects/cloudninja-339304/locations/us-central1/indexEndpoints/6938202045266526208"
+    VECTOR_SEARCH_DEPLOYED_INDEX_ID: str = "creative_studio_deployed_index" # Legacy/Unused
+    
+    # Dual Index Configuration
+    # Text Index (768 dim) for brand guideline text chunks
+    VECTOR_SEARCH_TEXT_INDEX_ID: str = "projects/cloudninja-339304/locations/us-central1/indexes/1963369326417281024"
+    VECTOR_SEARCH_DEPLOYED_TEXT_INDEX_ID: str = "creative_studio_deployed_index_text"
+    
+    # Image Index (1408 dim) for reference images
+    VECTOR_SEARCH_IMAGE_INDEX_ID: str = "projects/cloudninja-339304/locations/us-central1/indexes/9158995631048491008"
+    VECTOR_SEARCH_DEPLOYED_IMAGE_INDEX_ID: str = "creative_studio_deployed_index_image"
 
     # --- Email Service ---
     SENDER_EMAIL: str = (
@@ -116,7 +127,14 @@ class ConfigService(BaseSettings):
 
         # If these fields were not set by environment variables, set their default now.
         if not self.GENMEDIA_BUCKET:
-            self.GENMEDIA_BUCKET = f"{self.PROJECT_ID}-assets"
+            self.GENMEDIA_BUCKET = f"{self.PROJECT_ID}-cs-development-bucket"
+
+        # Ensure these are set in the environment for libraries that rely on them (like google.adk/genai)
+        import os
+        os.environ["GOOGLE_CLOUD_PROJECT"] = self.PROJECT_ID
+        os.environ["GOOGLE_CLOUD_LOCATION"] = self.LOCATION
+        # Also set GOOGLE_GENAI_USE_VERTEXAI to true if possible, though the library might not use this exact var.
+        # But setting project/location is the standard way.
 
         return self
 

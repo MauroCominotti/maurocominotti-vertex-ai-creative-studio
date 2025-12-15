@@ -75,3 +75,8 @@ class BrandGuidelineModel(BaseDocument):
         default_factory=list,
         description="A list of specific branding rules or constraints extracted from the PDF (e.g., 'Logo must be black on light backgrounds').",
     )
+
+    reference_image_uris: List[str] = Field(
+        default_factory=list,
+        description="List of GCS URIs for images extracted from the source PDF.",
+    )

@@ -415,6 +415,7 @@ class GeminiService:
         2.  "toneOfVoiceSummary": A detailed and comprehensive summary of the brand's tone of voice, approximately 200-250 words, formatted in Markdown. This summary should be suitable for use as a prefix in a text generation prompt, capturing nuances like personality, vocabulary, and attitude.
         3.  "visualStyleSummary": A detailed and comprehensive summary of the brand's visual style, aesthetics, and imagery, approximately 5000-6000 words, formatted in Markdown. This summary should be suitable for use as a prefix in an image generation prompt, covering aspects like photography style, graphic elements, and overall mood.
         4.  "brand_rules": A list of specific, actionable branding rules or constraints found in the text (e.g., "Logo must always be in the top right corner", "Use only the primary color palette for backgrounds"). Extract as many distinct rules as possible.
+        5.  "guideline_text": The full, raw text content extracted from the PDF page(s).
 
         Your response MUST be a single, valid JSON object and nothing else.
         """
@@ -491,6 +492,14 @@ class GeminiService:
             if "brand_rules" in r and r["brand_rules"]:
                 all_rules.extend(r["brand_rules"])
 
+        # Collect all raw text
+        all_text_content = [
+            r.get("guideline_text")
+            for r in partial_results
+            if r.get("guideline_text")
+        ]
+        full_guideline_text = "\n\n".join(all_text_content)
+
         # --- Step 2: AI-powered Aggregation for Summaries ---
         # Ask Gemini to synthesize the text fields into final summaries.
         prompt = f"""
@@ -530,9 +539,95 @@ class GeminiService:
 
             # --- Step 3: Combine Python and AI results ---
             aggregated_data = json.loads(response.text or "{}")
+            
+            # Add the concatenated raw text
+            aggregated_data["guideline_text"] = full_guideline_text
+            
             return BrandGuidelineModel(**aggregated_data)
         except Exception as e:
             logger.error(
                 f"Failed to aggregate brand info summaries with Gemini: {e}"
             )
             return None
+
+    def generate_embedding(
+        self, 
+        content: Union[str, List[types.Part]], 
+        model_type: str = "text"
+    ) -> List[float]:
+        """
+        Generates an embedding for the given text or image content using Vertex AI.
+        
+        Args:
+            content: The text string or list of Parts (for images) to embed.
+            model_type: "text" (default) uses TEXT_EMBEDDING_MODEL_ID (768 dim).
+                        "multimodal" uses MULTIMODAL_EMBEDDING_MODEL_ID (1408 dim).
+            
+        Returns:
+            A list of floats representing the embedding vector.
+        """
+        try:
+            # Case 1: Text Embedding (using google-genai SDK) - Default
+            if isinstance(content, str) and model_type == "text":
+                model = self.cfg.TEXT_EMBEDDING_MODEL_ID
+                response = self.client.models.embed_content(
+                    model=model,
+                    contents=content,
+                )
+                if response.embeddings:
+                    return response.embeddings[0].values
+                return []
+
+            # Case 2: Multimodal Embedding (Text or Image) - using vertexai SDK
+            # Used for:
+            # - Image embedding (content is list of Parts)
+            # - Text embedding for Multimodal Index (content is str, model_type="multimodal")
+            elif isinstance(content, list) or (isinstance(content, str) and model_type == "multimodal"):
+                import vertexai
+                from vertexai.vision_models import Image as VertexImage, MultiModalEmbeddingModel
+
+                # Initialize Vertex AI SDK if not already done (idempotent)
+                vertexai.init(project=self.cfg.PROJECT_ID, location=self.cfg.LOCATION)
+
+                model = MultiModalEmbeddingModel.from_pretrained(self.cfg.MULTIMODAL_EMBEDDING_MODEL_ID)
+                
+                # Sub-case 2a: Image Content
+                if isinstance(content, list):
+                    # Extract image URI from the Parts
+                    image_uri = None
+                    for part in content:
+                        if part.file_data and part.file_data.file_uri:
+                            image_uri = part.file_data.file_uri
+                            break
+                    
+                    if not image_uri:
+                        logger.warning("No image URI found in content parts for embedding.")
+                        return []
+
+                    # Load image from GCS
+                    image = VertexImage.load_from_file(image_uri)
+                    
+                    # Generate embedding
+                    embeddings = model.get_embeddings(
+                        image=image,
+                        dimension=1408
+                    )
+                    if embeddings.image_embedding:
+                        return embeddings.image_embedding
+
+                # Sub-case 2b: Text Content (for Multimodal Index)
+                elif isinstance(content, str):
+                    embeddings = model.get_embeddings(
+                        contextual_text=content,
+                        dimension=1408
+                    )
+                    if embeddings.text_embedding:
+                        return embeddings.text_embedding
+                
+                return []
+
+            return []
+
+        except Exception as e:
+            logger.error(f"Failed to generate embedding for content: {e}")
+            return []

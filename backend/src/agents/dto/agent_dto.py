@@ -23,6 +23,9 @@ class AgentGenerationRequest(BaseModel):
     # Audio Specific
     audio_type: str = "SPEECH" # MUSIC or SPEECH
     voice_name: Optional[str] = "Puck"
+    
+    # Multimodal
+    reference_image_uri: Optional[str] = None
 
 class AgentGenerationResponse(BaseModel):
     original_prompt: str

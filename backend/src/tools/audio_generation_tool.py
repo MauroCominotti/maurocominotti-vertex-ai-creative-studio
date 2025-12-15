@@ -14,31 +14,12 @@ class AudioGenerationTool(BaseTool):
     def __init__(self, audio_service: AudioService, current_user: UserModel):
         super().__init__(
             name="generate_audio",
-            description="Generates audio (music or speech) based on a text prompt.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "prompt": {
-                        "type": "string",
-                        "description": "The text prompt. For music, describe the sound. For TTS, this is the text to speak."
-                    },
-                    "type": {
-                        "type": "string",
-                        "enum": ["MUSIC", "SPEECH"],
-                        "description": "The type of audio to generate."
-                    },
-                    "voice_name": {
-                        "type": "string",
-                        "description": "For SPEECH only. The voice to use (e.g., 'Puck', 'Fenrir')."
-                    }
-                },
-                "required": ["prompt", "type"]
-            }
+            description="Generates audio (music or speech) based on a text prompt."
         )
         self.audio_service = audio_service
         self.current_user = current_user
 
-    async def run(self, prompt: str, type: str, voice_name: Optional[str] = "Puck") -> str:
+    async def run(self, prompt: str, type: str, voice_name: Optional[str] = "Puck", workspace_id: str = "Global") -> str:
         """
         Executes the audio generation.
         """
@@ -57,7 +38,7 @@ class AudioGenerationTool(BaseTool):
             dto = CreateAudioDto(
                 prompt=prompt,
                 model=model,
-                workspace_id="Global", # Defaulting
+                workspace_id=workspace_id,
                 voice_name=voice_enum if type == "SPEECH" else None,
                 language_code=LanguageEnum.EN_US if type == "SPEECH" else None
             )

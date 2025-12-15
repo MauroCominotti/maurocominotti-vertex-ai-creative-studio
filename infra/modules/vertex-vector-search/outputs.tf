@@ -1,5 +1,9 @@
-output "index_id" {
-  value = google_vertex_ai_index.index.name
+output "text_index_id" {
+  value = google_vertex_ai_index.text_index.name
+}
+
+output "image_index_id" {
+  value = google_vertex_ai_index.image_index.name
 }
 
 output "index_endpoint_id" {

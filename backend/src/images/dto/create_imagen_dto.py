@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal, Optional, List
 
 from fastapi import Query
 from google.genai import types
@@ -80,6 +80,10 @@ class CreateImagenDto(BaseDto):
         default=False,
         description="Whether to prepend brand guidelines to the prompt.",
     )
+    reference_image_gcs_uris: Optional[List[str]] = Field(
+        default=None,
+        description="List of GCS URIs to use as reference images (e.g. for style or subject).",
+    )
 
     @field_validator("prompt")
     def prompt_must_not_be_empty(cls, value: str) -> str:
@@ -103,6 +107,9 @@ class CreateImagenDto(BaseDto):
             GenerationModelEnum.IMAGEN_4_ULTRA,
             GenerationModelEnum.IMAGEN_4_001,
             GenerationModelEnum.GEMINI_2_5_FLASH_IMAGE_PREVIEW,
+            GenerationModelEnum.GEMINI_2_5_FLASH_IMAGE,
+            GenerationModelEnum.GEMINI_3_PRO_IMAGE_PREVIEW,
+            GenerationModelEnum.GEMINI_2_0_FLASH_EXP,
         ]
         if value not in valid_generation_models:
             raise ValueError("Invalid generation model for imagen.")

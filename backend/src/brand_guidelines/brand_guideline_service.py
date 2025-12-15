@@ -1,17 +1,3 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import asyncio
 import datetime
 import io
@@ -32,15 +18,21 @@ from fastapi import HTTPException, UploadFile, status
 from google.cloud.firestore_v1.base_query import FieldFilter
 from google.cloud.logging import Client as LoggerClient
 from google.cloud.logging.handlers import CloudLoggingHandler
+from google.genai import types
 from pypdf import PdfReader, PdfWriter
+import json
 
-from src.workspaces.schema.workspace_model import WorkspaceScopeEnum
 from src.auth.iam_signer_credentials_service import IamSignerCredentials
 from src.brand_guidelines.dto.brand_guideline_response_dto import (
     BrandGuidelineResponseDto,
 )
 from src.brand_guidelines.dto.brand_guideline_search_dto import (
     BrandGuidelineSearchDto,
+)
+from src.brand_guidelines.dto.finalize_upload_dto import FinalizeUploadDto
+from src.brand_guidelines.dto.generate_upload_url_dto import (
+    GenerateUploadUrlDto,
+    GenerateUploadUrlResponseDto,
 )
 from src.brand_guidelines.repository.brand_guideline_repository import (
     BrandGuidelineRepository,
@@ -64,14 +56,14 @@ GEMINI_PDF_LIMIT_BYTES = 50 * 1024 * 1024
 def _process_brand_guideline_in_background(
     guideline_id: str,
     name: str,
-    file_contents: bytes,
     original_filename: str,
+    source_gcs_uri: str,
     workspace_id: Optional[str],
 ):
     """
     This is the long-running worker task that runs in a separate process.
-    It handles PDF splitting, uploading, AI extraction, and database updates.
     """
+    print(f"DEBUG: _process_brand_guideline_in_background started for {guideline_id}", flush=True)
     worker_logger = logging.getLogger(f"brand_guideline_worker.{guideline_id}")
     worker_logger.setLevel(logging.INFO)
 
@@ -89,7 +81,7 @@ def _process_brand_guideline_in_background(
         else:
             handler = logging.StreamHandler(sys.stdout)
             formatter = logging.Formatter(
-                "%(asctime)s - [BRAND_GUIDELINE_WORKER] - %(levelname)s - %(message)s"
+                "%(asctime)s - [BG_WORKER] - %(levelname)s - %(message)s"
             )
             handler.setFormatter(formatter)
             worker_logger.addHandler(handler)
@@ -98,14 +90,21 @@ def _process_brand_guideline_in_background(
         repo = BrandGuidelineRepository()
         gcs_service = GcsService()
         gemini_service = GeminiService()
+        gcs_service = GcsService()
+        gemini_service = GeminiService()
         vector_search_service = VectorSearchService()
 
         try:
+            # 0. Download the source PDF from GCS
+            worker_logger.info(f"Downloading source PDF from {source_gcs_uri}")
+            file_contents = gcs_service.download_bytes_from_gcs(source_gcs_uri)
+            worker_logger.info(f"Downloaded {len(file_contents) if file_contents else 0} bytes from GCS.")
+
             # 1. Split if necessary and upload file(s) to GCS
             gcs_uris = asyncio.run(
                 BrandGuidelineService._split_and_upload_pdf(
                     gcs_service,
-                    file_contents,
+                    file_contents or b"",
                     workspace_id,
                     original_filename,
                 )
@@ -120,30 +119,60 @@ def _process_brand_guideline_in_background(
                 f"PDF(s) uploaded to {gcs_uris}. Starting AI extraction."
             )
 
+            # 1.5 Extract Images
+            worker_logger.info("Extracting reference images from PDF...")
+            extracted_image_uris = asyncio.run(
+                BrandGuidelineService._extract_and_upload_images(
+                    gcs_service,
+                    file_contents or b"",
+                    workspace_id,
+                    original_filename
+                )
+            )
+            worker_logger.info(f"Extracted {len(extracted_image_uris)} reference images.")
+
             # 2. Call Gemini for each chunk to extract structured data
             # Use a ThreadPoolExecutor to run extractions in parallel.
+            worker_logger.info(f"Starting AI extraction for {len(gcs_uris)} chunks.")
             successful_partial_results = []
+            successful_chunks_metadata = [] # To store metadata for indexing
+
             with ThreadPoolExecutor(max_workers=len(gcs_uris)) as executor:
                 # Create a future for each extraction task
-                future_to_uri = {
+                future_to_index = {
                     executor.submit(
                         gemini_service.extract_brand_info_from_pdf, uri
-                    ): uri
-                    for uri in gcs_uris
+                    ): i
+                    for i, uri in enumerate(gcs_uris)
                 }
 
-                for future in as_completed(future_to_uri):
-                    uri = future_to_uri[future]
+                for future in as_completed(future_to_index):
+                    i = future_to_index[future]
                     try:
                         result = future.result()
                         if result:
                             successful_partial_results.append(result)
+                            
+                            # Save chunk JSON to GCS
+                            chunk_json_path = f"brand-guidelines/{workspace_id or 'global'}/processed/{guideline_id}/text/chunk_{i}.json"
+                            gcs_service.upload_bytes_to_gcs(
+                                json.dumps(result).encode('utf-8'),
+                                chunk_json_path,
+                                "application/json"
+                            )
+                            successful_chunks_metadata.append({
+                                "index": i,
+                                "data": result,
+                                "gcs_uri": f"gs://{gcs_service.bucket_name}/{chunk_json_path}"
+                            })
+
                     except Exception as exc:
                         worker_logger.error(
-                            f"Extraction for PDF chunk {uri} failed: {exc}"
+                            f"Extraction for PDF chunk {i} failed: {exc}"
                         )
 
-            # 3. Aggregate the results
+            # 3. Aggregate the results (for the main document)
+            worker_logger.info(f"Aggregating results from {len(successful_partial_results)} successful extractions.")
             extracted_data: BrandGuidelineModel | None = (
                 gemini_service.aggregate_brand_info(successful_partial_results)
             )
@@ -156,16 +185,27 @@ def _process_brand_guideline_in_background(
                     "AI processing failed to extract data from the PDF."
                 )
 
-            # 4. Index extracted rules into Vector Search
-            if extracted_data.brand_rules:
-                worker_logger.info(f"Indexing {len(extracted_data.brand_rules)} rules for guideline {guideline_id}")
-                vectors = []
-                for i, rule in enumerate(extracted_data.brand_rules):
+            # 4. Index Content into Vector Search (Multimodal RAG)
+            text_vectors = []
+            image_vectors = []
+
+            # 4a. Index Text Chunks
+            for chunk in successful_chunks_metadata:
+                # Embed the guideline text from the chunk
+                text_content = chunk["data"].get("guideline_text", "")
+                # Fallback to rules if text is empty, or combine them
+                if not text_content and chunk["data"].get("brand_rules"):
+                    text_content = "\n".join(chunk["data"]["brand_rules"])
+                
+                worker_logger.info(f"Chunk {chunk['index']} text content length: {len(text_content)}")
+                
+                if text_content:
                     try:
-                        embedding = gemini_service.generate_embedding(rule)
+                        embedding = gemini_service.generate_embedding(text_content)
                         if embedding:
-                            vectors.append({
-                                "id": f"{guideline_id}_rule_{i}",
+                            worker_logger.info(f"Generated embedding for chunk {chunk['index']}, length: {len(embedding)}")
+                            text_vectors.append({
+                                "id": f"{guideline_id}_text_{chunk['index']}",
                                 "embedding": embedding,
                                 "restricts": [
                                     {"namespace": "scope", "allow_list": [workspace_id or "Global"]},
@@ -173,11 +213,50 @@ def _process_brand_guideline_in_background(
                                     {"namespace": "guideline_id", "allow_list": [guideline_id]},
                                 ]
                             })
+                        else:
+                            worker_logger.warning(f"Embedding generation returned None for chunk {chunk['index']}")
                     except Exception as e:
-                        worker_logger.error(f"Failed to embed rule '{rule}': {e}")
+                        worker_logger.error(f"Failed to embed text chunk {chunk['index']}: {e}")
+                else:
+                    worker_logger.warning(f"No text content found for chunk {chunk['index']}")
 
-                if vectors:
-                    vector_search_service.upsert_vectors(vectors)
+            # 4b. Index Images
+            for i, img_uri in enumerate(extracted_image_uris):
+                try:
+                    # Determine mime type from extension
+                    mime_type = "image/png"
+                    if img_uri.lower().endswith(".jpg") or img_uri.lower().endswith(".jpeg"):
+                        mime_type = "image/jpeg"
+                    
+                    img_part = types.Part.from_uri(file_uri=img_uri, mime_type=mime_type)
+                    embedding = gemini_service.generate_embedding([img_part])
+                    
+                    if embedding:
+                        image_vectors.append({
+                            "id": f"{guideline_id}_image_{i}",
+                            "embedding": embedding,
+                            "restricts": [
+                                {"namespace": "scope", "allow_list": [workspace_id or "Global"]},
+                                {"namespace": "type", "allow_list": ["image"]},
+                                {"namespace": "guideline_id", "allow_list": [guideline_id]},
+                            ]
+                        })
+                except Exception as e:
+                    worker_logger.error(f"Failed to embed image {img_uri}: {e}")
+
+            # 4c. Upsert to respective indices
+            if text_vectors:
+                worker_logger.info(f"Upserting {len(text_vectors)} text vectors to Text Index.")
+                vector_search_service.upsert_vectors(text_vectors, index_type="text")
+            
+            if image_vectors:
+                worker_logger.info(f"Upserting {len(image_vectors)} image vectors to Image Index.")
+                vector_search_service.upsert_vectors(image_vectors, index_type="image")
+
+            worker_logger.info("Vector upsert complete.")
+
+            logger.info("Brand guideline processing complete.")
+            logger.info(extracted_data)
 
             # 5. Update the final, fully-populated Firestore document
             update_data = {
@@ -188,6 +267,7 @@ def _process_brand_guideline_in_background(
                 "visual_style_summary": extracted_data.visual_style_summary,
                 "guideline_text": extracted_data.guideline_text,
                 "brand_rules": extracted_data.brand_rules,
+                "reference_image_uris": extracted_image_uris,
             }
             repo.update(guideline_id, update_data)
             worker_logger.info(
@@ -234,6 +314,7 @@ class BrandGuidelineService:
         self.gemini_service = GeminiService()
         self.workspace_repo = WorkspaceRepository()
         self.iam_signer_credentials = IamSignerCredentials()
+        self.vector_search_service = VectorSearchService()
 
     @staticmethod
     async def _split_and_upload_pdf(
@@ -302,6 +383,78 @@ class BrandGuidelineService:
 
         return await asyncio.gather(*upload_tasks)
 
+    @staticmethod
+    async def _extract_and_upload_images(
+        gcs_service: GcsService,
+        file_contents: bytes,
+        workspace_id: Optional[str],
+        original_filename: str,
+    ) -> list[str]:
+        """
+        Extracts images from the PDF bytes, converts them to PNG, and uploads them to GCS.
+        Returns a list of GCS URIs for the extracted images.
+        """
+        logger.info("Starting image extraction from PDF...")
+        extracted_uris = []
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
+        file_uuid = uuid.uuid4()
+        
+        try:
+            from PIL import Image as PILImage
+            
+            reader = PdfReader(io.BytesIO(file_contents))
+            
+            image_upload_tasks = []
+            
+            for page_num, page in enumerate(reader.pages):
+                if "/XObject" in page["/Resources"]:
+                    xObject = page["/Resources"]["/XObject"].get_object()
+                    for obj in xObject:
+                        if xObject[obj]["/Subtype"] == "/Image":
+                            try:
+                                size = (xObject[obj]["/Width"], xObject[obj]["/Height"])
+                                # Filter out small icons/logos (e.g. < 100x100)
+                                if size[0] < 100 or size[1] < 100:
+                                    continue
+
+                                data = xObject[obj].get_data()
+                                
+                                # Convert to PNG using Pillow to ensure compatibility
+                                try:
+                                    img = PILImage.open(io.BytesIO(data))
+                                    output_buffer = io.BytesIO()
+                                    img.save(output_buffer, format="PNG")
+                                    png_data = output_buffer.getvalue()
+                                except Exception as conversion_error:
+                                    logger.warning(f"Failed to convert image {obj} to PNG: {conversion_error}")
+                                    continue
+                                    
+                                image_filename = f"{timestamp}-{file_uuid}-img-p{page_num}-{obj}.png"
+                                dest_blob_name = f"brand-guidelines/{workspace_id or 'global'}/images/{image_filename}"
+                                
+                                image_upload_tasks.append(
+                                    asyncio.to_thread(
+                                        gcs_service.upload_bytes_to_gcs,
+                                        png_data,
+                                        destination_blob_name=dest_blob_name,
+                                        mime_type="image/png"
+                                    )
+                                )
+                            except Exception as e:
+                                logger.warning(f"Failed to extract image {obj} on page {page_num}: {e}")
+
+            if image_upload_tasks:
+                logger.info(f"Found {len(image_upload_tasks)} images to upload.")
+                results = await asyncio.gather(*image_upload_tasks)
+                extracted_uris = [uri for uri in results if uri]
+            else:
+                logger.info("No extractable images found in PDF.")
+                
+        except Exception as e:
+            logger.error(f"Image extraction failed: {e}")
+            
+        return extracted_uris
+
     async def _delete_guideline_and_assets(
         self, guideline: BrandGuidelineModel
     ):
@@ -314,6 +467,21 @@ class BrandGuidelineService:
             for uri in guideline.source_pdf_gcs_uris
         ]
         await asyncio.gather(*delete_tasks)
+
+        # Delete vectors from Vector Search
+        # Delete Text Vectors
+        if guideline.source_pdf_gcs_uris:
+            # Assuming 1 chunk per URI, but might be more if we indexed rules separately.
+            # Using a safe range or querying would be better, but for now we rely on the chunk count.
+            text_vector_ids = [f"{guideline.id}_text_{i}" for i in range(len(guideline.source_pdf_gcs_uris))]
+            logger.info(f"Deleting {len(text_vector_ids)} text vectors for guideline {guideline.id}")
+            await asyncio.to_thread(self.vector_search_service.delete_vectors, text_vector_ids, index_type="text")
+
+        # Delete Image Vectors
+        if guideline.reference_image_uris:
+            image_vector_ids = [f"{guideline.id}_image_{i}" for i in range(len(guideline.reference_image_uris))]
+            logger.info(f"Deleting {len(image_vector_ids)} image vectors for guideline {guideline.id}")
+            await asyncio.to_thread(self.vector_search_service.delete_vectors, image_vector_ids, index_type="image")
 
         # Delete the Firestore document
         if guideline.id:
@@ -337,11 +505,47 @@ class BrandGuidelineService:
             **guideline.model_dump(), presigned_source_pdf_urls=presigned_urls
         )
 
+    async def generate_signed_upload_url(
+        self, request_dto: GenerateUploadUrlDto, current_user: UserModel
+    ) -> GenerateUploadUrlResponseDto:
+        """
+        Generates a GCS v4 signed URL for a client-side upload.
+        """
+        # Authorize the user for the workspace before generating a URL
+        if request_dto.workspace_id:
+            workspace = self.workspace_repo.get_by_id(request_dto.workspace_id)
+            if not workspace:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Workspace with ID '{request_dto.workspace_id}' not found.",
+                )
+
+        file_uuid = uuid.uuid4()
+        destination_blob_name = f"brand-guidelines/{request_dto.workspace_id or 'global'}/uploads/{file_uuid}/{request_dto.filename}"
+
+        signed_url, gcs_uri = await asyncio.to_thread(
+            self.iam_signer_credentials.generate_v4_upload_signed_url,
+            destination_blob_name,
+            request_dto.content_type,
+            self.gcs_service.bucket_name,
+        )
+
+        if not signed_url or not gcs_uri:
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "Could not generate upload URL.",
+            )
+
+        return GenerateUploadUrlResponseDto(
+            upload_url=signed_url, gcs_uri=gcs_uri
+        )
+
     async def start_brand_guideline_processing_job(
         self,
         name: str,
-        file: UploadFile,
         workspace_id: Optional[str],
+        gcs_uri: str,
+        original_filename: str,
         current_user: UserModel,
         executor: ProcessPoolExecutor,
     ) -> BrandGuidelineResponseDto:
@@ -387,8 +591,8 @@ class BrandGuidelineService:
                     existing_guidelines_response.data[0]
                 )
 
-        # 3. Read file contents into memory for the background process
-        file_contents = await file.read()
+        # 3. (Step removed) Read file contents into memory for the background process
+        # file_contents = await file.read()
 
         # 4. Create and save a placeholder document
         guideline_id = str(uuid.uuid4())
@@ -397,17 +601,19 @@ class BrandGuidelineService:
             name=name,
             workspace_id=workspace_id,
             status=JobStatusEnum.PROCESSING,
+            source_pdf_gcs_uris=[gcs_uri],  # Store the initial upload URI
         )
         self.repo.save(placeholder_guideline)
 
+        logger.info(f"Submitting background job for guideline {guideline_id} to executor...")
         # 5. Submit the job to the background process pool
         executor.submit(
             _process_brand_guideline_in_background,
             guideline_id=guideline_id,
             name=name,
-            file_contents=file_contents,
-            original_filename=file.filename or "guideline.pdf",
+            original_filename=original_filename,
             workspace_id=workspace_id,
+            source_gcs_uri=gcs_uri,
         )
 
         logger.info(
@@ -471,16 +677,12 @@ class BrandGuidelineService:
                 detail=f"Workspace with ID '{workspace_id}' not found.",
             )
 
-        if not workspace.scope == WorkspaceScopeEnum.PUBLIC:
-            is_system_admin = UserRoleEnum.ADMIN in current_user.roles
-            if (
-                not is_system_admin
-                and current_user.id not in workspace.member_ids
-            ):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You are not a member of this workspace.",
-                )
+        is_system_admin = UserRoleEnum.ADMIN in current_user.roles
+        if not is_system_admin and current_user.id not in workspace.member_ids:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not a member of this workspace.",
+            )
 
         search_dto = BrandGuidelineSearchDto(workspace_id=workspace_id, limit=1)
         workspace_filter = FieldFilter("workspace_id", "==", workspace_id)

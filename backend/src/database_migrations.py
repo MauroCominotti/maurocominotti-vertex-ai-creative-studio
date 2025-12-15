@@ -55,9 +55,14 @@ async def run_pending_migrations():
         # Run Alembic migrations in a subprocess
         # We use subprocess to avoid event loop conflicts with the running app
         # and to ensure a clean environment for Alembic.
-        logger.info("Running 'alembic upgrade head'...")
+        # Resolve alembic executable path relative to the current python interpreter
+        import sys
+        import os
+        alembic_cmd = os.path.join(os.path.dirname(sys.executable), "alembic")
+        
+        logger.info(f"Running '{alembic_cmd} upgrade head'...")
         process = await asyncio.create_subprocess_exec(
-            "python", "-m", "alembic", "upgrade", "head",
+            alembic_cmd, "upgrade", "head",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )

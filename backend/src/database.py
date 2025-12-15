@@ -94,6 +94,17 @@ async def get_connection():
     """
     Helper function to get a connection object for the AsyncEngine.
     """
+    if config_service.USE_CLOUD_SQL_AUTH_PROXY:
+        import asyncpg
+        conn = await asyncpg.connect(
+            user=config_service.DB_USER,
+            password=config_service.DB_PASS,
+            database=config_service.DB_NAME,
+            host=config_service.DB_HOST,
+            port=config_service.DB_PORT,
+        )
+        return conn
+
     connector = DatabaseConnector.get_instance().get_connector()
 
     conn = await connector.connect_async(

@@ -30,6 +30,10 @@ from pydantic import BaseModel, Field
 
 from src.common.base_dto import BaseDto
 from src.common.base_repository import BaseDocument
+from src.database import Base
+from sqlalchemy import JSON, Integer, String, func, ForeignKey, DateTime
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class NodeTypes(str, Enum):
@@ -271,11 +275,37 @@ class WorkflowRunStatusEnum(str, Enum):
     SCHEDULED = "scheduled"
 
 
+class Workflow(Base):
+    """
+    SQLAlchemy model for the 'workflows' table.
+    """
+    __tablename__ = "workflows"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    name: Mapped[str] = mapped_column(nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(nullable=True)
+    steps: Mapped[List[Dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+    
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True),
+        insert_default=func.now(),
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True),
+        insert_default=func.now(),
+        onupdate=func.now(),
+        server_default=func.now()
+    )
+
+
 class WorkflowBase(BaseModel):
     """Base model with fields common to both creating and representing a workflow."""
     name: str
-    description: str
-    workspace_id: str
+    description: Optional[str] = None
+    workspace_id: int
     steps: List[WorkflowStep]
 
 
@@ -284,13 +314,14 @@ class WorkflowModel(BaseDocument, WorkflowBase):
     The editable workflow *definition* (template).
     This is what the user edits in the UI.
     """
-    user_id: str
+    id: str  # Explicitly override to str
+    user_id: int
 
 
 class WorkflowCreateDto(WorkflowBase, BaseDto):
     """DTO for creating a new workflow. Inherits fields from WorkflowBase."""
-
     pass
+
 
 class WorkflowExecuteDto(BaseModel):
     args: dict[str, Any]

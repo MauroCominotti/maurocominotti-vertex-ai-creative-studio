@@ -200,26 +200,40 @@ class WorkflowService:
             logger.warning(f"Workflow '{workflow_id}' not found in GCP. Proceeding with local deletion.")
             return None
 
-    def create_workflow(
+    async def create_workflow(
         self, workflow_dto: WorkflowCreateDto, user: UserModel
     ) -> WorkflowModel:
         """Creates a new workflow definition."""
         try:
+            # 1. Generate the ID manually
+            workflow_id = f"id-{uuid.uuid4()}"
+            
+            # 2. Create the workflow in the database
             workflow_model = WorkflowModel(
-                id=f"id-{uuid.uuid4()}",
+                id=workflow_id,
+                user_id=user.id,
                 name=workflow_dto.name,
                 description=workflow_dto.description,
                 workspace_id=workflow_dto.workspace_id,
-
-                user_id=user.id,
                 steps=workflow_dto.steps,
             )
-
-            yaml_output = self._generate_workflow_yaml(workflow_model)
+            created_workflow = await self.workflow_repository.create_workflow(workflow_model)
+            
+            # 3. Generate GCP Workflow YAML (using the same ID)
+            yaml_output = self._generate_workflow_yaml(created_workflow)
             logger.info("Generated YAML:")
             logger.info(yaml_output)
-            self._create_gcp_workflow(yaml_output, workflow_model.id)
-            return self.workflow_repository.create_workflow(workflow_model)
+            
+            # 4. Create GCP Workflow
+            try:
+                self._create_gcp_workflow(yaml_output, workflow_id)
+            except Exception as e:
+                # Rollback DB creation if GCP creation fails
+                logger.error(f"Failed to create GCP workflow: {e}. Rolling back DB.")
+                await self.workflow_repository.delete(created_workflow.id)
+                raise e
+                
+            return created_workflow
         except ValidationError as e:
             raise ValueError(str(e))
         except Exception as e:
@@ -227,18 +241,18 @@ class WorkflowService:
             logging.error(e)
             raise e
 
-    def get_workflow(self, user_id: str, workflow_id: str):
+    async def get_workflow(self, user_id: int, workflow_id: str):
         #  Add logic here if needed before fetching from repository
-        return self.workflow_repository.get_workflow(user_id, workflow_id)
+        return await self.workflow_repository.get_workflow(user_id, workflow_id)
 
-    def get_by_id(self, workflow_id: str) -> WorkflowModel | None:
+    async def get_by_id(self, workflow_id: str) -> WorkflowModel | None:
         """Retrieves a workflow by its ID without any authorization checks."""
-        return self.workflow_repository.get_by_id(workflow_id)
+        return await self.workflow_repository.get_by_id(workflow_id)
 
-    def query_workflows(
-        self, user_id: str, workspace_id: str, search_dto: WorkflowSearchDto
+    async def query_workflows(
+        self, user_id: int, workspace_id: int, search_dto: WorkflowSearchDto
     ) -> PaginationResponseDto[WorkflowModel]:
-        return self.workflow_repository.query(user_id, workspace_id, search_dto)
+        return await self.workflow_repository.query(user_id, workspace_id, search_dto)
 
     def update_workflow(
         self, workflow_id: str, workflow_dto: WorkflowCreateDto, user: UserModel
@@ -258,6 +272,8 @@ class WorkflowService:
             yaml_output = self._generate_workflow_yaml(updated_model)
             logger.info("Generated YAML for update:")
             logger.info(yaml_output)
+            
+            # The GCP workflow ID matches the DB ID (which is already in the format id-UUID)
             self._update_gcp_workflow(yaml_output, workflow_id)
 
             return self.workflow_repository.update_workflow(updated_model)
@@ -266,6 +282,7 @@ class WorkflowService:
 
     def delete_by_id(self, workflow_id: str) -> bool:
         """Deletes a workflow from the system."""
+        # The GCP workflow ID matches the DB ID
         response = self._delete_gcp_workflow(workflow_id)
         return self.workflow_repository.delete(workflow_id)
 
@@ -277,6 +294,7 @@ class WorkflowService:
         workflows_client = workflows_v1.WorkflowsClient()
 
         # Construct the fully qualified location path.
+        # Ensure we use the correct ID (it assumes workflow_id is already the full ID string)
         parent = workflows_client.workflow_path(
             config_service.PROJECT_ID, config_service.WORKFLOWS_LOCATION, workflow_id
         )
@@ -293,16 +311,9 @@ class WorkflowService:
         execution_id = response.name.split('/')[-1]
         return execution_id
 
-    def get_execution_details(self, workflow_id: str, execution_id: str) -> dict:
+    async def get_execution_details(self, workflow_id: str, execution_id: str) -> dict:
         """Retrieves the details of a workflow execution."""
         client = executions_v1.ExecutionsClient()
-        
-        # The execution_id passed here is expected to be the full resource name
-        # If it's just the ID, we might need to construct the path, but let's assume full name for now
-        # or handle both. The controller should probably pass the full name or we construct it.
-        # Let's assume the controller passes the ID and we construct the path, 
-        # BUT the execute_workflow returns the full name. 
-        # Let's try to parse it or assume it is the full name if it starts with projects/
         
         if not execution_id.startswith("projects/"):
              parent = client.workflow_path(
@@ -323,7 +334,6 @@ class WorkflowService:
             result = execution.result
         
         # Fetch step entries using REST API
-        step_entries = []
         try:
             credentials, project = google.auth.default(
                 scopes=['https://www.googleapis.com/auth/cloud-platform']
@@ -350,7 +360,19 @@ class WorkflowService:
                 duration = time.time() - start_timestamp
 
         # Fetch workflow definition for input resolution
-        workflow_model = self.get_by_id(workflow_id)
+        workflow_model = await self.get_by_id(workflow_id)
+        if not workflow_model:
+            # If workflow definition is missing, we might still return basic execution details
+            logger.warning(f"Workflow definition {workflow_id} not found for execution {execution_id}")
+            return {
+                "id": execution.name,
+                "state": execution.state.name,
+                "result": result,
+                "duration": round(duration, 2),
+                "error": execution.error.context if execution.error else None,
+                "step_entries": [] # Cannot map steps without definition
+            }
+
         user_input_step_id = workflow_model.steps[0].step_id
 
         previous_outputs = {}
@@ -359,8 +381,12 @@ class WorkflowService:
             step_id = entry.get("step")
             if step_id == "end":
                 continue
+            
+            # Find the step definition
+            current_step = next((step for step in workflow_model.steps if step.step_id == step_id), None)
+            if not current_step:
+                continue
 
-            current_step = [step for step in workflow_model.steps if step.step_id == step_id][0]            
             step_state = entry.get("state")
             
             # Extract inputs from step

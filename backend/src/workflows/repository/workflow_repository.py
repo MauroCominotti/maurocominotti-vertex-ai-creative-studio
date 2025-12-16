@@ -11,101 +11,82 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from google.cloud import firestore
-from google.cloud.firestore_v1.base_aggregation import AggregationResult
-from google.cloud.firestore_v1.base_query import FieldFilter
-from google.cloud.firestore_v1.query_results import QueryResultsList
+from typing import Optional
+
+from fastapi import Depends
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.common.base_repository import BaseRepository
 from src.common.dto.pagination_response_dto import PaginationResponseDto
+from src.database import get_db
 from src.workflows.dto.workflow_search_dto import WorkflowSearchDto
-from src.workflows.schema.workflow_model import WorkflowModel
+from src.workflows.schema.workflow_model import Workflow, WorkflowModel
 
 
-class WorkflowRepository(BaseRepository[WorkflowModel]):
-    """Handles persistence for workflow definitions in Firestore."""
+class WorkflowRepository(BaseRepository[Workflow, WorkflowModel]):
+    """Handles persistence for workflow definitions in PostgreSQL."""
 
-    def __init__(self):
-        """Initializes the Firestore client and a reference to the 'workflows' collection."""
-        super().__init__(collection_name="workflows", model=WorkflowModel)
+    def __init__(self, db: AsyncSession = Depends(get_db)):
+        super().__init__(model=Workflow, schema=WorkflowModel, db=db)
 
-    def create_workflow(self, workflow_model: WorkflowModel) -> WorkflowModel:
-        """Creates a new workflow document in Firestore using the workflow_id as the document ID."""
-        doc_ref = self.collection_ref.document(workflow_model.id)
-        doc_ref.set(workflow_model.model_dump())
-        return workflow_model
-
-    def get_workflow(
-        self, user_id: str, workflow_id: str
-    ) -> WorkflowModel | None:
-        """Retrieves a single workflow document from Firestore by its ID."""
-        doc_ref = self.collection_ref.document(workflow_id)
-        doc = doc_ref.get()
-
-        if doc.exists:
-            workflow_data = doc.to_dict()
-            # Security check: Ensure the retrieved workflow belongs to the requesting user.
-            if workflow_data and workflow_data.get("user_id") == user_id:
-                return WorkflowModel(**workflow_data)
-        return None
-
-    def query(
-        self, user_id: str, workspace_id: str, search_dto: WorkflowSearchDto
+    async def query(
+        self, user_id: int, workspace_id: int, search_dto: WorkflowSearchDto
     ) -> PaginationResponseDto[WorkflowModel]:
         """Performs a paginated query for workflows."""
-        base_query = self.collection_ref.where(
-            filter=FieldFilter("user_id", "==", user_id)
-        ).where(filter=FieldFilter("workspace_id", "==", workspace_id))
-
-        if search_dto.name:
-            base_query = base_query.where(
-                filter=FieldFilter("name", "==", search_dto.name)
-            )
-
-
-        count_query = base_query.count(alias="total")
-        aggregation_result = count_query.get()
-
-        total_count = 0
-        if (
-            isinstance(aggregation_result, QueryResultsList)
-            and aggregation_result
-            and isinstance(aggregation_result[0][0], AggregationResult)
-        ):
-            total_count = int(aggregation_result[0][0].value)
-
-        data_query = base_query.order_by(
-            "created_at", direction=firestore.Query.DESCENDING
+        query = select(self.model).where(
+            self.model.user_id == user_id,
+            self.model.workspace_id == workspace_id
         )
 
-        if search_dto.start_after:
-            last_doc_snapshot = self.collection_ref.document(
-                search_dto.start_after
-            ).get()
-            if last_doc_snapshot.exists:
-                data_query = data_query.start_after(last_doc_snapshot)
+        if search_dto.name:
+            # Case-insensitive search
+            query = query.where(self.model.name.ilike(f"%{search_dto.name}%"))
 
-        data_query = data_query.limit(search_dto.limit)
+        # Count
+        count_query = select(func.count()).select_from(query.subquery())
+        count_result = await self.db.execute(count_query)
+        total_count = count_result.scalar_one()
 
-        documents = list(data_query.stream())
-        workflow_data = [
-            self.model.model_validate(doc.to_dict()) for doc in documents
-        ]
+        # Order and Pagination
+        query = query.order_by(self.model.created_at.desc())
+        
+        query = query.limit(search_dto.limit)
+        query = query.offset(search_dto.offset)
+        
+        result = await self.db.execute(query)
+        workflows = result.scalars().all()
+        workflow_data = [self.schema.model_validate(w) for w in workflows]
 
-        next_page_cursor = None
-        if len(documents) == search_dto.limit:
-            next_page_cursor = documents[-1].id
+        # Calculate pagination metadata
+        page = (search_dto.offset // search_dto.limit) + 1
+        page_size = search_dto.limit
+        total_pages = (total_count + page_size - 1) // page_size
 
         return PaginationResponseDto[WorkflowModel](
             count=total_count,
-            next_page_cursor=next_page_cursor,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
             data=workflow_data,
         )
 
-    def update_workflow(self, workflow_model: WorkflowModel) -> WorkflowModel:
-        """Updates (or creates) a workflow document in Firestore."""
-        doc_ref = self.collection_ref.document(workflow_model.id)
-        doc_ref.set(
-            workflow_model.model_dump()
-        )  # .set() overwrites the document, which is correct for an update.
-        return workflow_model
+    async def create_workflow(self, workflow_model: WorkflowModel) -> WorkflowModel:
+        """Creates a new workflow in the DB."""
+        return await self.create(workflow_model)
+
+    async def get_workflow(self, user_id: int, workflow_id: str) -> Optional[WorkflowModel]:
+        """Retrieves a workflow by ID and User ID."""
+        query = select(self.model).where(
+            self.model.id == workflow_id,
+            self.model.user_id == user_id
+        )
+        result = await self.db.execute(query)
+        item = result.scalar_one_or_none()
+        if not item:
+            return None
+        return self.schema.model_validate(item)
+
+    async def update_workflow(self, workflow_model: WorkflowModel) -> WorkflowModel:
+        """Updates a workflow."""
+        return await self.update(workflow_model.id, workflow_model)

@@ -25,6 +25,10 @@ class MimeTypeEnum(str, Enum):
     IMAGE_PNG = "image/png"
     VIDEO_MP4 = "video/mp4"
     AUDIO_WAV = "audio/wav"
+    AUDIO_MPEG = "audio/mpeg"
+    AUDIO_MP3 = "audio/mp3"
+    AUDIO_OGG = "audio/ogg"
+    AUDIO_WEBM = "audio/webm"
 
 
 class GenerationModelEnum(str, Enum):

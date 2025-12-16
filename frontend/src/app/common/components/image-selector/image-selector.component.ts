@@ -51,7 +51,7 @@ export class ImageSelectorComponent {
     private dialog: MatDialog, // Inject MatDialog to open the new dialog
     @Inject(MAT_DIALOG_DATA)
     public data: {
-      mimeType: 'image/*' | 'image/png' | 'video/mp4' | null;
+      mimeType: 'image/*' | 'image/png' | 'video/mp4' | 'video/*' | 'audio/*' | 'audio/mpeg' | null;
       assetType: AssetTypeEnum;
     },
   ) {}
@@ -75,10 +75,10 @@ export class ImageSelectorComponent {
             this.dialogRef.close(asset);
           }
         });
-    } else if (file.type.startsWith('video/')) {
-      // If it's a video, upload it directly from here
+    } else if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
+      // If it's a video or audio, upload it directly from here
       this.isUploading = true;
-      this.uploadVideoDirectly(file)
+      this.uploadMediaDirectly(file)
         .pipe(finalize(() => (this.isUploading = false)))
         .subscribe(asset => {
           this.dialogRef.close(asset);
@@ -88,9 +88,14 @@ export class ImageSelectorComponent {
     }
   }
 
-  private uploadVideoDirectly(file: File): Observable<SourceAssetResponseDto> {
-    // No options needed; backend handles video aspect ratio
+  private uploadMediaDirectly(file: File): Observable<SourceAssetResponseDto> {
+    // No options needed; backend handles video/audio aspect ratio
     return this.sourceAssetService.uploadAsset(file);
+  }
+
+  // Keep for backwards compatibility
+  private uploadVideoDirectly(file: File): Observable<SourceAssetResponseDto> {
+    return this.uploadMediaDirectly(file);
   }
 
   // Update onFileSelected and onDrop to use the new handler
@@ -137,5 +142,26 @@ export class ImageSelectorComponent {
   onDragOver(event: DragEvent) {
     event.preventDefault();
     event.stopPropagation();
+  }
+
+  /**
+   * Returns the accept types for the file input.
+   * Uses explicit file extensions for better browser/OS compatibility.
+   */
+  getAcceptTypes(): string {
+    if (!this.data.mimeType) {
+      return 'image/*,video/*,audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.wma';
+    }
+    
+    if (this.data.mimeType === 'audio/*' || this.data.mimeType === 'audio/mpeg') {
+      // Include explicit audio extensions for better compatibility
+      return 'audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.wma,.webm';
+    }
+    
+    if (this.data.mimeType === 'video/*' || this.data.mimeType === 'video/mp4') {
+      return 'video/*,.mp4,.webm,.mov,.avi,.mkv';
+    }
+    
+    return this.data.mimeType;
   }
 }

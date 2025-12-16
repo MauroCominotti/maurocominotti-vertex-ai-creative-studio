@@ -18,6 +18,7 @@ import { Component, ElementRef, ViewChild } from '@angular/core';
 import { AudioService, CreateAudioDto, GenerationModelEnum } from '../services/audio/audio.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSelectChange } from '@angular/material/select';
 import { finalize } from 'rxjs';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
@@ -174,7 +175,8 @@ export class AudioComponent {
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 
-  onVoiceSelectionChange(value: string) {
+  onVoiceSelectionChange(event: MatSelectChange) {
+    const value = event.value as string;
     if (value === 'add-new-voice') {
       this.openAddVoiceDialog();
       this.selectedVoice = '';

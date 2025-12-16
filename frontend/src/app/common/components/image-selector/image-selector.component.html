@@ -44,7 +44,7 @@
           type="file"
           #fileInput
           (change)="onFileSelected($event)"
-          [accept]="data.mimeType || 'image/*,video/mp4'"
+          [accept]="getAcceptTypes()"
           [disabled]="isUploading"
         />
       </div>

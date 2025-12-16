@@ -25,7 +25,7 @@ import {provideFirestore, getFirestore} from '@angular/fire/firestore';
 import {environment} from '../environments/environment';
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatButtonModule} from '@angular/material/button';
-import {MatIconModule} from '@angular/material/icon';
+import {MatIcon, MatIconModule} from '@angular/material/icon';
 import {MatChipsModule} from '@angular/material/chips';
 import {MatExpansionModule} from '@angular/material/expansion';
 import {MatTabsModule} from '@angular/material/tabs';
@@ -85,6 +85,7 @@ import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 import {MatSliderModule} from '@angular/material/slider';
 import {ImageCropperComponent} from 'ngx-image-cropper';
 import {ImageCropperDialogComponent} from './common/components/image-cropper-dialog/image-cropper-dialog.component';
+import { WorkbenchComponent } from './workbench/workbench.component';
 import {AudioComponent} from './audio/audio.component';
 import {AddVoiceDialogComponent} from './components/add-voice-dialog/add-voice-dialog.component';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
@@ -108,6 +109,7 @@ import { FlowPromptBoxComponent } from "./common/components/flow-prompt-box/flow
     ImageSelectorComponent,
     SourceAssetGalleryComponent,
     ImageCropperDialogComponent,
+    WorkbenchComponent,
     AudioComponent,
     AddVoiceDialogComponent,
   ],
@@ -145,7 +147,7 @@ import { FlowPromptBoxComponent } from "./common/components/flow-prompt-box/flow
     MatButtonToggleModule,
     MatSliderModule,
     NotificationContainerComponent,
-    FlowPromptBoxComponent
+    FlowPromptBoxComponent,
 ],
   providers: [
     provideClientHydration(),

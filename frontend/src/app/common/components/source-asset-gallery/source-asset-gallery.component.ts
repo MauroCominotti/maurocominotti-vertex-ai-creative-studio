@@ -53,6 +53,8 @@ export class SourceAssetGalleryComponent
     | 'image/*'
     | 'image/png'
     | 'video/mp4'
+    | 'video/*'
+    | 'audio/*'
     | 'audio/mpeg'
     | null = null;
   @ViewChild('sentinel') private sentinel!: ElementRef<HTMLElement>;
@@ -110,6 +112,8 @@ export class SourceAssetGalleryComponent
     if (this.filterByMimeType) {
       filters.mimeType = this.filterByMimeType;
     }
+    console.log('[SourceAssetGallery] Setting filters:', JSON.stringify(filters));
+    console.log('[SourceAssetGallery] filterByMimeType input:', this.filterByMimeType);
     this.sourceAssetService.setFilters(filters);
 
     // --- Start: Add Resize Handling ---

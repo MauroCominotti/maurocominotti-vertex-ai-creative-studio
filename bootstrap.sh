@@ -122,7 +122,9 @@ start_sql_proxy() {
 
     # 2. Download Proxy (if missing)
     if [ ! -f "cloud-sql-proxy" ]; then
-        curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.8.0/cloud-sql-proxy.linux.amd64
+        PLATFORM_ARCH=$(get_platform_arch | tr '_' '.')
+        info "Downloading Cloud SQL Proxy for ${PLATFORM_ARCH}..."
+        curl -o cloud-sql-proxy "https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.8.0/cloud-sql-proxy.${PLATFORM_ARCH}"
         chmod +x cloud-sql-proxy
     fi
 

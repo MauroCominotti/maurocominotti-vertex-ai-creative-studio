@@ -120,8 +120,12 @@ start_sql_proxy() {
 
     export INSTANCE_CONNECTION_NAME="$DB_INSTANCE_NAME"
 
-    # 2. Download Proxy (if missing)
-    if [ ! -f "cloud-sql-proxy" ]; then
+    # 2. Download Proxy (if missing or empty)
+    if [ ! -s "cloud-sql-proxy" ]; then
+        if [ -f "cloud-sql-proxy" ]; then
+             warn "cloud-sql-proxy exists but size is 0. Re-downloading..."
+             rm "cloud-sql-proxy"
+        fi
         PLATFORM_ARCH=$(get_platform_arch | tr '_' '.')
         info "Downloading Cloud SQL Proxy for ${PLATFORM_ARCH}..."
         curl -o cloud-sql-proxy "https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.8.0/cloud-sql-proxy.${PLATFORM_ARCH}"
@@ -129,22 +133,44 @@ start_sql_proxy() {
     fi
 
     # 3. Start Proxy in Background (Port 5432)
-    ./cloud-sql-proxy --address 0.0.0.0 --port 5432 "$DB_INSTANCE_NAME" > /dev/null 2>&1 &
+    PROXY_LOG="/tmp/cstudio_proxy.log"
+    info "Logging proxy output to: $PROXY_LOG"
+    ./cloud-sql-proxy --address 0.0.0.0 --port 5432 "$DB_INSTANCE_NAME" > "$PROXY_LOG" 2>&1 &
     PROXY_PID=$!
     export PROXY_PID
     
+    # Quick check if it died immediately
+    sleep 1
+    if ! kill -0 "$PROXY_PID" 2>/dev/null; then
+         echo -e "${C_RED}Proxy process died immediately:${C_RESET}"
+         cat "$PROXY_LOG"
+         fail "Cloud SQL Proxy failed to start."
+    fi
+    
     # 4. Wait for Readiness
     echo -n "   Waiting for proxy connection..."
-    for i in {1..15}; do
+    for i in {1..30}; do
         if nc -z 127.0.0.1 5432 2>/dev/null; then
             echo " Connected!"
             return 0
         fi
+        
+        # Check if process is still alive
+        if ! kill -0 "$PROXY_PID" 2>/dev/null; then
+             echo
+             echo -e "${C_RED}Proxy process died while waiting:${C_RESET}"
+             cat "$PROXY_LOG"
+             fail "Cloud SQL Proxy stopped running."
+        fi
+        
         echo -n "."
         sleep 1
     done
     echo
-    warn "Proxy connection check timed out, but proceeding..."
+    
+    echo -e "${C_RED}Proxy connection timed out. Logs:${C_RESET}"
+    cat "$PROXY_LOG"
+    fail "Could not connect to Cloud SQL Proxy."
 }
 
 stop_sql_proxy() {

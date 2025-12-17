@@ -54,14 +54,14 @@ class NodeTypes(str, Enum):
 
 
 class SourceMediaItemLink(BaseModel):
-    mediaItemId: str
+    mediaItemId: int
     mediaIndex: int
     role: str
 
 
 class ReferenceImage(BaseModel):
     previewUrl: str
-    sourceAssetId: Optional[str] = None
+    sourceAssetId: Optional[int] = None
     sourceMediaItem: Optional[SourceMediaItemLink] = None
 
 class StepOutputReference(BaseModel):
@@ -173,7 +173,7 @@ class GenerateImageStep(BaseStep[GenerateImageInputs, GenerateImageSettings]):
 
 # --- Edit Image ---
 class EditImageInputs(BaseModel):
-    input_images: Union[StepOutputReference, List[ReferenceImage], List[str], str]
+    input_images: Union[StepOutputReference, List[ReferenceImage], List[int], int]
     prompt: Union[StepOutputReference, str]
 
 
@@ -192,7 +192,7 @@ class EditImageStep(BaseStep[EditImageInputs, EditImageSettings]):
 # --- Generate Video ---
 class GenerateVideoInputs(BaseModel):
     prompt: Union[StepOutputReference, str]
-    input_images: Optional[Union[StepOutputReference, List[ReferenceImage]]] = None
+    input_images: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
 
 
 class GenerateVideoSettings(BaseModel):
@@ -208,7 +208,7 @@ class GenerateVideoStep(BaseStep[GenerateVideoInputs, GenerateVideoSettings]):
 
 # --- Crop Image ---
 class CropImageInputs(BaseModel):
-    input_image: Union[StepOutputReference, List[ReferenceImage]]
+    input_image: Union[StepOutputReference, List[ReferenceImage], List[int], int]
 
 
 class CropImageSettings(BaseModel):
@@ -225,11 +225,11 @@ class CropImageStep(BaseStep[CropImageInputs, CropImageSettings]):
 
 # --- Virtual Try-On ---
 class VirtualTryOnInputs(BaseModel):
-    model_image: Union[StepOutputReference, List[ReferenceImage]]
-    top_image: Optional[Union[StepOutputReference, List[ReferenceImage]]] = None
-    bottom_image: Optional[Union[StepOutputReference, List[ReferenceImage]]] = None
-    dress_image: Optional[Union[StepOutputReference, List[ReferenceImage]]] = None
-    shoes_image: Optional[Union[StepOutputReference, List[ReferenceImage]]] = None
+    model_image: Union[StepOutputReference, List[ReferenceImage], List[int], int]
+    top_image: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
+    bottom_image: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
+    dress_image: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
+    shoes_image: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
 
 
 class VirtualTryOnSettings(BaseModel):

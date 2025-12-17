@@ -63,7 +63,7 @@ class WorkflowsExecutorService:
                 text += chunk.text
         return {"generated_text": text}
 
-    async def _poll_job_status(self, media_id: str, authorization: str | None = None):
+    async def _poll_job_status(self, media_id: int, authorization: str | None = None):
         """
         Polls the gallery endpoint until the job is completed or failed.
         """
@@ -163,13 +163,13 @@ class WorkflowsExecutorService:
         source_asset_ids = []
         
         # Handle different input types for input_images
-        if isinstance(input_images, str):
+        if isinstance(input_images, int):
             source_media_items = [
                 {"media_item_id": input_images, "media_index": 0, "role": "input"}
             ]
         elif isinstance(input_images, list):
             for image in input_images:
-                if isinstance(image, str):
+                if isinstance(image, int):
                     source_media_items.append({"media_item_id": image, "media_index": 0, "role": "input"})
                 elif isinstance(image, ReferenceImage):
                     if image.sourceMediaItem:
@@ -222,7 +222,7 @@ class WorkflowsExecutorService:
         # logic here
         return {"cropped_image": "https://example.com/cropped_image.png"}
 
-    def _map_to_vto_input_link(self, input_data: Optional[str | list | ReferenceImage]) -> Optional[dict]:
+    def _map_to_vto_input_link(self, input_data: int | list | ReferenceImage) -> Optional[dict]:
         if not input_data:
             return None
             
@@ -244,10 +244,7 @@ class WorkflowsExecutorService:
             elif input_data.sourceAssetId:
                 return {"source_asset_id": input_data.sourceAssetId}
                 
-        # Handle string (legacy/direct ID) - assume it's a media item ID if it's a string?
-        # Or should we support asset ID as string? 
-        # Based on edit_image, string is treated as media_item_id with index 0.
-        if isinstance(input_data, str):
+        if isinstance(input_data, int):
             return {
                 "source_media_item": {
                     "media_item_id": input_data,

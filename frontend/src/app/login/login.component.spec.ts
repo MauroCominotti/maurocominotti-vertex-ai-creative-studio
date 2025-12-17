@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick,
+} from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of, throwError } from 'rxjs';
 import { LoginComponent } from './login.component';
@@ -22,12 +27,14 @@ import { AuthService } from './../common/services/auth.service';
 import { UserModel } from './../common/models/user.model';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
-import { NgZone } from '@angular/core';
+import { Injector, NgZone } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { AppInjector, setAppInjector } from '../app-injector';
+import { NotificationService } from '../common/services/notification.service';
 
 describe('LoginComponent', () => {
   let component: LoginComponent;
@@ -36,6 +43,7 @@ describe('LoginComponent', () => {
   let router: Router;
   let ngZone: NgZone;
   let snackBar: jasmine.SpyObj<MatSnackBar>;
+  let notificationService: jasmine.SpyObj<NotificationService>;
 
   const mockUser: UserModel = {
     id: '123',
@@ -50,21 +58,29 @@ describe('LoginComponent', () => {
       'signInForGoogleIdentityPlatform',
     ]);
     const snackBarSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
+    const notificationServiceSpy = jasmine.createSpyObj('NotificationService', [
+      'show',
+    ]);
 
     await TestBed.configureTestingModule({
       imports: [
-        RouterTestingModule.withRoutes([{ path: '', component: LoginComponent }]),
+        RouterTestingModule.withRoutes([
+          { path: '', component: LoginComponent },
+        ]),
         MatCardModule,
         MatFormFieldModule,
         MatInputModule,
-        NoopAnimationsModule
+        NoopAnimationsModule,
       ],
       declarations: [LoginComponent],
       providers: [
         { provide: AuthService, useValue: authServiceSpy },
         { provide: MatSnackBar, useValue: snackBarSpy },
+        { provide: NotificationService, useValue: notificationServiceSpy },
       ],
     }).compileComponents();
+
+    setAppInjector(TestBed.inject(Injector));
 
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;
@@ -72,6 +88,9 @@ describe('LoginComponent', () => {
     router = TestBed.inject(Router);
     ngZone = TestBed.inject(NgZone);
     snackBar = TestBed.inject(MatSnackBar) as jasmine.SpyObj<MatSnackBar>;
+    notificationService = TestBed.inject(
+      NotificationService,
+    ) as jasmine.SpyObj<NotificationService>;
   });
 
   it('should create the component', () => {
@@ -99,7 +118,9 @@ describe('LoginComponent', () => {
       });
 
       it('should call signInWithGoogleFirebase and navigate on success', fakeAsync(() => {
-        authService.signInWithGoogleFirebase.and.returnValue(of('test-token'));
+        authService.signInWithGoogleFirebase.and.returnValue(
+          of('test-token'),
+        );
         spyOn(router, 'navigate');
 
         component.loginWithGoogle();
@@ -112,14 +133,18 @@ describe('LoginComponent', () => {
 
       it('should handle error from signInWithGoogleFirebase', fakeAsync(() => {
         const error = new Error('Access Denied');
-        authService.signInWithGoogleFirebase.and.returnValue(throwError(() => error));
+        authService.signInWithGoogleFirebase.and.returnValue(
+          throwError(() => error),
+        );
         spyOn(component, 'handleLoginError' as any);
 
         component.loginWithGoogle();
         tick();
 
         expect(component.loader).toBeFalse();
-        expect(component['handleLoginError']).toHaveBeenCalledWith(error.message);
+        expect(component['handleLoginError']).toHaveBeenCalledWith(
+          error.message,
+        );
       }));
     });
 
@@ -129,27 +154,37 @@ describe('LoginComponent', () => {
       });
 
       it('should call signInForGoogleIdentityPlatform and navigate on success', fakeAsync(() => {
-        authService.signInForGoogleIdentityPlatform.and.returnValue(of('test-token'));
+        authService.signInForGoogleIdentityPlatform.and.returnValue(
+          of('test-token'),
+        );
         spyOn(router, 'navigate');
 
         component.loginWithGoogle();
         tick();
 
-        expect(authService.signInForGoogleIdentityPlatform).toHaveBeenCalled();
+        expect(
+          authService.signInForGoogleIdentityPlatform,
+        ).toHaveBeenCalled();
         expect(component.loader).toBeFalse();
         expect(router.navigate).toHaveBeenCalledWith(['/']);
       }));
 
       it('should handle error from signInForGoogleIdentityPlatform', fakeAsync(() => {
-        const error = new Error('An unexpected error occurred during sign-in. Please try again.');
-        authService.signInForGoogleIdentityPlatform.and.returnValue(throwError(() => error));
+        const error = new Error(
+          'An unexpected error occurred during sign-in. Please try again.',
+        );
+        authService.signInForGoogleIdentityPlatform.and.returnValue(
+          throwError(() => error),
+        );
         spyOn(component, 'handleLoginError' as any);
 
         component.loginWithGoogle();
         tick();
 
         expect(component.loader).toBeFalse();
-        expect(component['handleLoginError']).toHaveBeenCalledWith(error.message);
+        expect(component['handleLoginError']).toHaveBeenCalledWith(
+          error.message,
+        );
       }));
     });
   });
@@ -162,10 +197,12 @@ describe('LoginComponent', () => {
       component['handleLoginError'](errorMessage);
 
       expect(component.loader).toBeFalse();
-      expect(snackBar.open).toHaveBeenCalledWith(
-        jasmine.any(String), // The snackbar message is constructed with handleErrorSnackbar
-        'Login Error',
-        jasmine.any(Object)
+      expect(notificationService.show).toHaveBeenCalledWith(
+        errorMessage,
+        'error',
+        'cross-in-circle-white',
+        undefined,
+        20000,
       );
     });
 
@@ -184,7 +221,10 @@ describe('LoginComponent', () => {
 
       component.redirect(mockUser);
 
-      expect(localStorage.setItem).toHaveBeenCalledWith('USER_DETAILS', JSON.stringify(mockUser));
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        'USER_DETAILS',
+        JSON.stringify(mockUser),
+      );
       expect(component.loader).toBeFalse();
       expect(router.navigate).toHaveBeenCalledWith(['/']);
     });

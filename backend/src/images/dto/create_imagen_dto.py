@@ -99,6 +99,7 @@ class CreateImagenDto(BaseDto):
     reference_image_gcs_uris: Optional[List[str]] = Field(
         default=None,
         description="List of GCS URIs to use as reference images (e.g. for style or subject).",
+    )
     google_search: bool = Field(
         default=False,
         description="Whether to use Google Search for image generation.",

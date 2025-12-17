@@ -42,8 +42,8 @@ class EnforcerAgent(Agent):
         5. Simply generate a standard function call for the tool.
         
         Step-by-Step Logic:
-        1. **Analyze**: Understand the user's core intent (e.g., "social media ad for Product X").
-        2. **Retrieve**: Call `search_branding_guidelines(query=...)` with specific terms.
+        1. **Analyze**: Understand the user's core intent (e.g., "social media ad for Product X") and **IDENTIFY the Workspace ID** from the context.
+        2. **Retrieve**: Call `search_branding_guidelines(query=..., workspace_id=...)`. **ALWAYS** pass the Workspace ID from the context.
         3. **Deep Dive (Optional)**: If needed, call `fetch_full_guideline(guideline_id=...)`.
         4. **Synthesize**: Construct an "Enhanced Prompt" that combines user intent with strict branding constraints.
         5. **Execute**: Output the final response as a JSON object.

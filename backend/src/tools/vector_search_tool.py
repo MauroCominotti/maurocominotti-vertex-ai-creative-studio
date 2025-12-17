@@ -50,7 +50,12 @@ def create_search_branding_guidelines_tool(vector_search_service: VectorSearchSe
             if scope_filter == "Global":
                 query_ref = query_ref.where(filter=FieldFilter("workspace_id", "==", None))
             else:
-                query_ref = query_ref.where(filter=FieldFilter("workspace_id", "==", scope_filter))
+                # Ensure workspace_id is an integer for Firestore if possible
+                try:
+                    scope_val = int(scope_filter)
+                except ValueError:
+                    scope_val = scope_filter
+                query_ref = query_ref.where(filter=FieldFilter("workspace_id", "==", scope_val))
                 
             docs = list(query_ref.stream())
             active_guideline_ids = [doc.id for doc in docs]

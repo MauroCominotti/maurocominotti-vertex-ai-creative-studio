@@ -41,7 +41,7 @@ router = APIRouter(
 
 
 @router.post("/search", response_model=PaginationResponseDto[WorkflowModel])
-def search_workflows(
+async def search_workflows(
     search_params: WorkflowSearchDto,
     current_user: UserModel = Depends(get_current_user),
     workflow_service: WorkflowService = Depends(),
@@ -50,7 +50,7 @@ def search_workflows(
     workspace_auth_service.authorize(
         workspace_id=search_params.workspace_id, user=current_user
     )
-    return workflow_service.query_workflows(
+    return await workflow_service.query_workflows(
         user_id=current_user.id,
         workspace_id=search_params.workspace_id,
         search_dto=search_params,
@@ -58,7 +58,7 @@ def search_workflows(
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_workflow(
+async def create_workflow(
     workflow_data: WorkflowCreateDto,
     current_user: UserModel = Depends(get_current_user),
     workflow_service: WorkflowService = Depends(),
@@ -68,7 +68,7 @@ def create_workflow(
         workspace_id=workflow_data.workspace_id, user=current_user
     )
 
-    created_workflow = workflow_service.create_workflow(
+    created_workflow = await workflow_service.create_workflow(
         workflow_data, current_user
     )
 
@@ -76,7 +76,7 @@ def create_workflow(
 
 
 @router.put("/{workflow_id}", response_model=WorkflowModel)
-def update_workflow(
+async def update_workflow(
     workflow_id: str,
     workflow_data: WorkflowCreateDto,
     current_user: UserModel = Depends(get_current_user),
@@ -84,7 +84,7 @@ def update_workflow(
 ):
     """Updates an existing workflow definition."""
     # 1. Fetch the existing workflow first to ensure it exists.
-    existing_workflow = workflow_service.get_by_id(workflow_id)
+    existing_workflow = await workflow_service.get_by_id(workflow_id)
     if not existing_workflow:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -104,19 +104,20 @@ def update_workflow(
         )
 
     # 4. Pass the DTO to the service to handle the update logic.
-    return workflow_service.update_workflow(
+    # Service update_workflow returns the coroutine from repo.update_workflow, so we await it.
+    return await workflow_service.update_workflow(
         workflow_id, workflow_data, current_user
     )
 
 
 @router.get("/{workflow_id}", response_model=WorkflowModel)
-def get_workflow(
+async def get_workflow(
     workflow_id,
     current_user: UserModel = Depends(get_current_user),
     workflow_service: WorkflowService = Depends(),
 ):
     try:
-        workflow = workflow_service.get_workflow(current_user.id, workflow_id)
+        workflow = await workflow_service.get_workflow(current_user.id, workflow_id)
         if workflow:
             return workflow
         return Response(status_code=status.HTTP_404_NOT_FOUND)
@@ -140,7 +141,7 @@ async def delete_workflow(
     Permanently deletes a workflow from the database.
     This functionality is restricted to owners of the workflow.
     """
-    workflow = workflow_service.get_workflow(
+    workflow = await workflow_service.get_workflow(
         current_user.id, workflow_id  # type: ignore
     )
 
@@ -173,7 +174,7 @@ async def execute_workflow(
 
 
 @router.get("/{workflow_id}/executions/{execution_id}")
-def get_execution(
+async def get_execution(
     workflow_id: str,
     execution_id: str,
     current_user: UserModel = Depends(get_current_user),
@@ -182,11 +183,11 @@ def get_execution(
     """Retrieves the details of a workflow execution."""
     # We might want to authorize against the workspace of the workflow here
     # But for now let's just check if the user has access to the workflow
-    workflow = workflow_service.get_workflow(current_user.id, workflow_id)
+    workflow = await workflow_service.get_workflow(current_user.id, workflow_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
         
-    execution = workflow_service.get_execution_details(workflow_id, execution_id)
+    execution = await workflow_service.get_execution_details(workflow_id, execution_id)
     if not execution:
         raise HTTPException(status_code=404, detail="Execution not found")
     

@@ -106,7 +106,7 @@ export enum WorkflowRunStatusEnum {
 export interface WorkflowBase {
   name: string;
   description: string;
-  workspaceId: string;
+  workspaceId: number;
   steps: WorkflowStep[];
 }
 
@@ -125,9 +125,9 @@ export interface WorkflowUpdateDto extends WorkflowBase {
 }
 
 export interface WorkflowSearchDto {
-  workspaceId: string;
+  workspaceId: number;
   limit?: number;
-  startAfter?: string;
+  offset?: number;
   name?: string;
 
 }
@@ -141,7 +141,7 @@ export interface PaginatedWorkflowsResponse {
 export interface WorkflowRunModel {
   id: string;
   userId: string;
-  workspaceId: string;
+  workspaceId: number;
   status: WorkflowRunStatusEnum;
   workflowSnapshot: WorkflowBase;
 }

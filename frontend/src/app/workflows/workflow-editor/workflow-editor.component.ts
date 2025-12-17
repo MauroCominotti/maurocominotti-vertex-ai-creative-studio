@@ -225,7 +225,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       id: [''],
       name: ['Untitled Workflow', Validators.required],
       description: [''],
-      workspaceId: [''],
+      workspaceId: [null],
       userId: ['user123'],
       userInput: this.fb.group({
         stepId: ['user_input'],

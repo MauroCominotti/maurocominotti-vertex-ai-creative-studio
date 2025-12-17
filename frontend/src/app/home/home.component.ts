@@ -69,7 +69,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
   showDefaultDocuments = false;
   referenceImages: ReferenceImage[] = [];
   sourceMediaItems: (SourceMediaItemLink | null)[] = [];
-  activeWorkspaceId$: Observable<string | null>;
+  activeWorkspaceId$: Observable<number | null>;
 
   @HostListener('window:keydown.control.enter', ['$event'])
   handleCtrlEnter(event: KeyboardEvent) {

@@ -20,12 +20,12 @@ class GenerateTextRequest(BaseModel):
     config: GenerateTextSettings
 
 class GenerateImageRequest(BaseModel):
-    workspace_id: str
+    workspace_id: int
     inputs: GenerateImageInputs
     config: GenerateImageSettings
 
 class EditImageRequest(BaseModel):
-    workspace_id: str
+    workspace_id: int
     inputs: EditImageInputs
     config: EditImageSettings
 
@@ -38,6 +38,6 @@ class CropImageRequest(BaseModel):
     config: CropImageSettings
 
 class VirtualTryOnRequest(BaseModel):
-    workspace_id: str
+    workspace_id: int
     inputs: VirtualTryOnInputs
     config: VirtualTryOnSettings

@@ -335,8 +335,8 @@ class WorkflowRunModel(BaseDocument):
 
     # --- Contextual Info ---
     workflow_id: str  # ID of the WorkflowModel definition this run was based on
-    user_id: str
-    workspace_id: str  # Denormalized for easier querying
+    user_id: int
+    workspace_id: int  # Denormalized for easier querying
 
     # --- Execution Status ---
     status: WorkflowRunStatusEnum = Field(default=WorkflowRunStatusEnum.RUNNING)

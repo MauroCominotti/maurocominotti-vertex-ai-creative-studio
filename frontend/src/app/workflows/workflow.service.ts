@@ -40,7 +40,8 @@ export class WorkflowService implements OnDestroy {
   readonly allWorkflowsLoaded$: Observable<boolean> =
     this._allWorkflowsLoaded.asObservable();
 
-  private nextPageCursor: string | null = null;
+  private currentPage = 0;
+  private pageSize = 12;
   private currentFilter = '';
   private dataLoadingSubscription!: Subscription;
 
@@ -106,7 +107,7 @@ export class WorkflowService implements OnDestroy {
     }
 
     if (reset) {
-      this.nextPageCursor = null;
+      this.currentPage = 0;
       this._workflows.next([]);
       this._allWorkflowsLoaded.next(false);
     }
@@ -120,17 +121,25 @@ export class WorkflowService implements OnDestroy {
       this._isLoading.next(false);
       return;
     }
+
+    const offset = this.currentPage * this.pageSize;
+
     this.searchWorkflows({
       name: this.currentFilter,
-      startAfter: this.nextPageCursor ?? undefined,
+      limit: this.pageSize,
+      offset: offset,
     }).subscribe(
       response => {
-        this.nextPageCursor = response.nextPageCursor ?? null;
         const currentWorkflows = reset ? [] : this._workflows.getValue();
         this._workflows.next([...currentWorkflows, ...response.data]);
-        if (!this.nextPageCursor) {
+
+        // Check if we have loaded all workflows
+        if (response.data.length < this.pageSize) {
           this._allWorkflowsLoaded.next(true);
+        } else {
+          this.currentPage++;
         }
+
         this._isLoading.next(false);
       },
       error => {

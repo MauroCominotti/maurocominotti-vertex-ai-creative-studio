@@ -14,27 +14,23 @@
  * limitations under the License.
  */
 
-import {Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import {
   BehaviorSubject,
   catchError,
   EMPTY,
-  finalize,
-  interval,
   map,
   Observable,
-  startWith,
   Subscription,
   switchMap,
-  takeWhile,
   tap,
-  timer,
+  timer
 } from 'rxjs';
-import {environment} from '../../../environments/environment';
-import {ImagenRequest, VeoRequest} from '../../common/models/search.model';
-import {JobStatus, MediaItem} from '../../common/models/media-item.model';
-import {MatSnackBar} from '@angular/material/snack-bar';
+import { environment } from '../../../environments/environment';
+import { JobStatus, MediaItem } from '../../common/models/media-item.model';
+import { ImagenRequest, VeoRequest } from '../../common/models/search.model';
 import {
   handleErrorSnackbar,
   handleSuccessSnackbar,
@@ -49,7 +45,7 @@ export interface ConcatenationInput {
   type: 'media_item' | 'source_asset';
 }
 export interface ConcatenateVideosDto {
-  workspaceId: string;
+  workspaceId: number;
   name: string;
   inputs: ConcatenationInput[];
   aspectRatio: string;

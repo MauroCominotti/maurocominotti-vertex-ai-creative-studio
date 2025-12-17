@@ -115,7 +115,7 @@ export class SourceAssetService {
 
     const activeWorkspaceId = this.workspaceStateService.getActiveWorkspaceId();
     if (activeWorkspaceId) {
-      formData.append('workspaceId', activeWorkspaceId);
+      formData.append('workspaceId', activeWorkspaceId.toString());
     }
 
     if (options.aspectRatio) {

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from fastapi import Depends
 import logging
 import uuid
 import json
@@ -49,9 +50,9 @@ BACKEND_EXECUTOR_URL = config_service.WORKFLOWS_EXECUTOR_URL
 class WorkflowService:
     """Orchestrates multi-step generative AI workflows."""
 
-    def __init__(self):
+    def __init__(self, workflow_repository: WorkflowRepository = Depends()):
         self.imagen_service = ImagenService()
-        self.workflow_repository = WorkflowRepository()
+        self.workflow_repository = workflow_repository
 
     def _generate_workflow_yaml(
         self,

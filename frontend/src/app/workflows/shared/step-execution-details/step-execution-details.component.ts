@@ -18,9 +18,9 @@ export class StepExecutionDetailsComponent implements OnInit {
   @Input() stepType: string = '';
   @Input() inputs: any = {};
   @Input() outputs: any = {};
-  @Input() mediaUrlMap: Map<string, string> = new Map();
+  @Input() mediaUrlMap: Map<number, string> = new Map();
 
-  loadedMedia = new Set<string>();
+  loadedMedia = new Set<number>();
   NodeTypes = NodeTypes;
 
   stepConfigs = {
@@ -47,7 +47,7 @@ export class StepExecutionDetailsComponent implements OnInit {
       return value.previewUrl;
     }
 
-    return typeof value === 'string' ? value : '';
+    return '';
   }
 
   onMediaLoaded(value: any): void {
@@ -61,18 +61,19 @@ export class StepExecutionDetailsComponent implements OnInit {
     const id = this.getIdFromValue(value);
     if (!id) return;
 
-    if (this.mediaUrlMap.has(id) || id.length > 0) {
+    if (this.mediaUrlMap.has(id)) {
       const urlTree = this.router.createUrlTree(['/gallery', id]);
       const url = this.router.serializeUrl(urlTree);
       window.open(url, '_blank');
     }
   }
 
-  private getIdFromValue(value: any): string | null {
-    if (typeof value === 'string') {
+  private getIdFromValue(value: any): number | null {
+    if (typeof value === 'number') {
       return value;
     } else if (value && typeof value === 'object') {
-      return value.sourceAssetId || value.sourceMediaItem?.mediaItemId || null;
+      const id = value.sourceAssetId ?? value.sourceMediaItem?.mediaItemId;
+      return (typeof id === 'number') ? id : null;
     }
     return null;
   }

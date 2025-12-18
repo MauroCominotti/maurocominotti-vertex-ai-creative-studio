@@ -6,7 +6,7 @@ import { ImageCropperDialogComponent } from '../../../common/components/image-cr
 import { ImageSelectorComponent, MediaItemSelection } from '../../../common/components/image-selector/image-selector.component';
 import { ReferenceImage } from '../../../common/models/search.model';
 import { SourceAssetResponseDto } from '../../../common/services/source-asset.service';
-import { UserInputStep } from '../../workflow.models';
+import { WorkflowStep } from '../../workflow.models';
 
 @Component({
     selector: 'app-run-workflow-modal',
@@ -15,7 +15,7 @@ import { UserInputStep } from '../../workflow.models';
 })
 export class RunWorkflowModalComponent implements OnInit {
     runForm!: FormGroup;
-    userInputStep: UserInputStep;
+    userInputStep: WorkflowStep;
     inputDefinitions: { name: string; type: string }[] = [];
     referenceImages: { [key: string]: ReferenceImage[] } = {};
 
@@ -23,7 +23,7 @@ export class RunWorkflowModalComponent implements OnInit {
         private fb: FormBuilder,
         private dialogRef: MatDialogRef<RunWorkflowModalComponent>,
         private dialog: MatDialog,
-        @Inject(MAT_DIALOG_DATA) public data: { userInputStep: UserInputStep }
+        @Inject(MAT_DIALOG_DATA) public data: { userInputStep: WorkflowStep }
     ) {
         this.userInputStep = data.userInputStep;
     }
@@ -32,7 +32,7 @@ export class RunWorkflowModalComponent implements OnInit {
         this.runForm = this.fb.group({});
 
         if (this.userInputStep && this.userInputStep.outputs) {
-            Object.entries(this.userInputStep.outputs).forEach(([key, value]) => {
+            Object.entries(this.userInputStep.outputs).forEach(([key, value]: [string, any]) => {
                 this.inputDefinitions.push({ name: key, type: value.type });
 
                 if (value.type === 'image') {

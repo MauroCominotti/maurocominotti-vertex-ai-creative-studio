@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-import {Component, OnDestroy} from '@angular/core';
-import {ActivatedRoute, NavigationExtras, Router} from '@angular/router';
-import {first, Subscription} from 'rxjs';
+import { Component, OnDestroy } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { ActivatedRoute, NavigationExtras, Router } from '@angular/router';
+import { first, Subscription } from 'rxjs';
 import {
+  EnrichedSourceAsset,
   MediaItem,
 } from '../../common/models/media-item.model';
-import {GalleryService} from '../gallery.service';
-import {LoadingService} from '../../common/services/loading.service';
-import {MatSnackBar} from '@angular/material/snack-bar';
-import {CreatePromptMediaDto} from '../../common/models/prompt.model';
-import {AuthService} from '../../common/services/auth.service';
-import {SourceMediaItemLink} from '../../common/models/search.model';
-import {MimeTypeEnum} from '../../fun-templates/media-template.model';
-import {EnrichedSourceAsset} from '../../common/models/media-item.model';
-import {DomSanitizer, SafeHtml} from '@angular/platform-browser';
+import { CreatePromptMediaDto } from '../../common/models/prompt.model';
+import { SourceMediaItemLink } from '../../common/models/search.model';
+import { AuthService } from '../../common/services/auth.service';
+import { LoadingService } from '../../common/services/loading.service';
+import { MimeTypeEnum } from '../../fun-templates/media-template.model';
 import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
+import { GalleryService } from '../gallery.service';
 
 @Component({
   selector: 'app-media-detail',
@@ -81,7 +81,7 @@ export class MediaDetailComponent implements OnDestroy {
     this.routeSub = this.route.paramMap.subscribe(params => {
       const id = params.get('id');
       if (id) {
-        this.fetchMediaDetails(id);
+        this.fetchMediaDetails(Number(id));
       }
     });
   }
@@ -91,7 +91,7 @@ export class MediaDetailComponent implements OnDestroy {
     this.mediaSub?.unsubscribe();
   }
 
-  fetchMediaDetails(id: string): void {
+  fetchMediaDetails(id: number): void {
     this.mediaSub = this.galleryService.getMedia(id).subscribe({
       next: data => {
         this.mediaItem = data;
@@ -187,7 +187,7 @@ export class MediaDetailComponent implements OnDestroy {
     // Note: The 'createTemplateFromMediaItem' method should be implemented in a relevant service (e.g., TemplateService or GalleryService).
     // It should perform a POST request to the `/from-media-item/{media_item_id}` endpoint.
     this.galleryService
-      .createTemplateFromMediaItem(this.mediaItem.id.toString())
+      .createTemplateFromMediaItem(Number(this.mediaItem.id))
       .pipe(first())
       .subscribe({
         next: (newTemplate: {id: string}) => {

@@ -23,9 +23,9 @@ export enum StepStatusEnum {
 }
 
 // Base Step
-interface BaseStep<T, S> {
+interface BaseStep<T = Record<string, any>, S = Record<string, any>> {
   stepId: string;
-  type: NodeTypes;
+  type: NodeTypes | string;
 
   // --- Execution State ---
   status: StepStatusEnum;
@@ -38,61 +38,10 @@ interface BaseStep<T, S> {
   settings: S;
 }
 
-// --- User Input ---
-export interface UserInputInputs { }
-export interface UserInputSettings { }
-export type UserInputStep = BaseStep<UserInputInputs, UserInputSettings> & {
-  type: NodeTypes.USER_INPUT;
-};
 
-// --- Generate Text ---
-export interface GenerateTextInputs {
-  prompt: StepOutputReference | string;
-}
-export interface GenerateTextSettings {
-  model: string;
-  temperature: number;
-}
-export type GenerateTextStep = BaseStep<
-  GenerateTextInputs,
-  GenerateTextSettings
-> & { type: NodeTypes.GENERATE_TEXT };
 
-// --- Generate Image ---
-export interface GenerateImageInputs {
-  prompt: StepOutputReference | string;
-}
-export interface GenerateImageSettings {
-  model: string;
-  brandGuidelines: boolean;
-  aspectRatio: string;
-  saveOutputToGallery: boolean;
-}
-export type GenerateImageStep = BaseStep<
-  GenerateImageInputs,
-  GenerateImageSettings
-> & { type: NodeTypes.GENERATE_IMAGE };
-
-// --- Edit Image ---
-export interface EditImageInputs {
-  input_images: StepOutputReference | string[] | string;
-  prompt: StepOutputReference | string;
-}
-export interface EditImageSettings {
-  brandGuidelines: boolean;
-  aspectRatio: string;
-  saveOutputToGallery: boolean;
-}
-export type EditImageStep = BaseStep<EditImageInputs, EditImageSettings> & {
-  type: NodeTypes.EDIT_IMAGE;
-};
-
-// --- Union of all step types ---
-export type WorkflowStep =
-  | UserInputStep
-  | GenerateTextStep
-  | GenerateImageStep
-  | EditImageStep;
+// --- Union of all step types (Dynamic by default) ---
+export type WorkflowStep = BaseStep;
 
 
 

@@ -20,7 +20,7 @@ export class ExecutionDetailsModalComponent implements OnInit {
     workflow: WorkflowModel | null = null;
     NodeTypes = NodeTypes;
     expandedSteps = new Set<string>();
-    mediaUrlMap = new Map<string, string>();
+    mediaUrlMap = new Map<number, string>();
     loadedMedia = new Set<string>();
 
     constructor(
@@ -59,7 +59,7 @@ export class ExecutionDetailsModalComponent implements OnInit {
     resolveMediaUrls(): void {
         if (!this.details || !this.details.step_entries || !this.workflow) return;
 
-        const stepTypeMap = new Map<string, NodeTypes>();
+        const stepTypeMap = new Map<string, NodeTypes | string>();
         this.workflow.steps.forEach(s => stepTypeMap.set(s.stepId, s.type));
 
         this.mediaResolutionService.resolveMediaUrls(this.details.step_entries, stepTypeMap, this.mediaUrlMap);
@@ -89,7 +89,7 @@ export class ExecutionDetailsModalComponent implements OnInit {
         }
     }
 
-    getStepType(stepId: string): NodeTypes | undefined {
+    getStepType(stepId: string): NodeTypes | string | undefined {
         return this.workflow?.steps.find(s => s.stepId === stepId)?.type;
     }
 

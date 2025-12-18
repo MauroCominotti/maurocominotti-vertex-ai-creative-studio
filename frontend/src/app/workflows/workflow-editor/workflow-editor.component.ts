@@ -76,8 +76,8 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   currentExecutionId: string | null = null;
   currentExecutionState: string | null = null;
   executionStepEntries: any[] = [];
-  mediaUrlMap = new Map<string, string>();
-  loadedMedia = new Set<string>();
+  mediaUrlMap = new Map<number, string>();
+  loadedMedia = new Set<number>();
 
   stepConfigs = {
     [NodeTypes.GENERATE_TEXT]: GENERATE_TEXT_STEP_CONFIG,
@@ -167,7 +167,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   resolveMediaUrls(details: any): void {
     if (!details || !details.step_entries) return;
 
-    const stepTypeMap = new Map<string, NodeTypes>();
+    const stepTypeMap = new Map<string, NodeTypes | string>();
     // In workflow editor, we have the form, so we can get types from there or from the loaded workflow.
     // Ideally we use the current form state to get types, or the workflow definition if available.
     // But details.step_entries has step_id.
@@ -191,7 +191,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       type === NodeTypes.VIRTUAL_TRY_ON;
   }
 
-  getStepType(stepId: string): NodeTypes | undefined {
+  getStepType(stepId: string): NodeTypes | string | undefined {
     // Check if it's the user input step
     if (stepId === NodeTypes.USER_INPUT) return NodeTypes.USER_INPUT;
 

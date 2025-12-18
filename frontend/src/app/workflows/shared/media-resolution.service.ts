@@ -19,14 +19,14 @@ export class MediaResolutionService {
   /**
    * Resolves media URLs for the given step entries.
    * @param stepEntries The execution details step entries.
-   * @param stepTypeMap A map of stepId -> stepType (NodeTypes).
+   * @param stepTypeMap A map of stepId -> stepType (NodeTypes | string).
    * @param mediaUrlMap The map to populate with resolved URLs.
    */
-  resolveMediaUrls(stepEntries: any[], stepTypeMap: Map<string, NodeTypes>, mediaUrlMap: Map<string, string>): void {
+  resolveMediaUrls(stepEntries: any[], stepTypeMap: Map<string, NodeTypes | string>, mediaUrlMap: Map<number, string>): void {
     if (!stepEntries) return;
 
-    const mediaItemIds = new Set<string>();
-    const sourceAssetIds = new Set<string>();
+    const mediaItemIds = new Set<number>();
+    const sourceAssetIds = new Set<number>();
 
     stepEntries.forEach((step: any) => {
       const type = stepTypeMap.get(step.step_id);
@@ -86,13 +86,10 @@ export class MediaResolutionService {
     });
   }
 
-  private collectMediaIds(val: any, mediaItemIds: Set<string>, sourceAssetIds: Set<string>): void {
+  private collectMediaIds(val: any, mediaItemIds: Set<number>, sourceAssetIds: Set<number>): void {
     if (!val) return;
 
-    if (typeof val === 'string' && val.length > 0) {
-      // If it's a raw string, we assume it's a MediaItem ID for backward compatibility,
-      // unless we have a way to distinguish.
-      // However, usually raw strings in our system are MediaItem IDs.
+    if (typeof val === 'number') {
       mediaItemIds.add(val);
     } else if (Array.isArray(val)) {
       val.forEach(v => this.collectMediaIds(v, mediaItemIds, sourceAssetIds));

@@ -231,7 +231,7 @@ export class SourceAssetService {
       );
   }
 
-  getAsset(assetId: string): Observable<SourceAssetResponseDto> {
+  getAsset(assetId: number): Observable<SourceAssetResponseDto> {
     return this.http.get<SourceAssetResponseDto>(
       `${environment.backendURL}/source_assets/${assetId}`,
     );

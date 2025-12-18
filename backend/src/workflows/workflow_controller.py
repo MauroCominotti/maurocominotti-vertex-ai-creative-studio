@@ -136,8 +136,7 @@ async def delete_workflow(
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
 
-
-    if not workflow_service.delete_by_id(workflow_id):
+    if not await workflow_service.delete_by_id(workflow_id):
         raise HTTPException(status_code=404, detail="Workflow not found")
     return
 

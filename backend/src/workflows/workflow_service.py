@@ -278,11 +278,12 @@ class WorkflowService:
         except ValidationError as e:
             raise ValueError(str(e))
 
-    def delete_by_id(self, workflow_id: str) -> bool:
+    async def delete_by_id(self, workflow_id: str) -> bool:
         """Deletes a workflow from the system."""
         # The GCP workflow ID matches the DB ID
-        response = self._delete_gcp_workflow(workflow_id)
-        return self.workflow_repository.delete(workflow_id)
+        self._delete_gcp_workflow(workflow_id)
+        response = await self.workflow_repository.delete(workflow_id)
+        return response
 
     def execute_workflow(self, workflow_id: str, args: dict) -> str:
         """Executes a workflow."""

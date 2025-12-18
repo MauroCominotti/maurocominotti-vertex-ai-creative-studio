@@ -62,9 +62,8 @@ class WorkflowService:
         This function contains the business logic for generating the workflow.
         """
         user_id = workflow.user_id
-        workspace_id = workflow.workspace_id
         logger.info(
-            f"Received workflow generation request for user {user_id} in workspace {workspace_id}"
+            f"Received workflow generation request for user {user_id}"
         )
         # A very basic transformation to a GCP-like workflow structure
         step_outputs = {}
@@ -110,7 +109,7 @@ class WorkflowService:
                     resolved_inputs[input_name] = input_value
 
             body = {
-                "workspace_id": workspace_id,  # Harcoded in all bodies, even if not used in some nodes for simplicity
+                "workspace_id": "${args.workspace_id}",  # Dynamically injected from workspaceId passed at execution
                 "inputs": resolved_inputs,
                 "config": config,
             }
@@ -215,7 +214,6 @@ class WorkflowService:
                 user_id=user.id,
                 name=workflow_dto.name,
                 description=workflow_dto.description,
-                workspace_id=workflow_dto.workspace_id,
                 steps=workflow_dto.steps,
             )
             created_workflow = await self.workflow_repository.create_workflow(workflow_model)
@@ -251,9 +249,9 @@ class WorkflowService:
         return await self.workflow_repository.get_by_id(workflow_id)
 
     async def query_workflows(
-        self, user_id: int, workspace_id: int, search_dto: WorkflowSearchDto
+        self, user_id: int, search_dto: WorkflowSearchDto
     ) -> PaginationResponseDto[WorkflowModel]:
-        return await self.workflow_repository.query(user_id, workspace_id, search_dto)
+        return await self.workflow_repository.query(user_id, search_dto)
 
     def update_workflow(
         self, workflow_id: str, workflow_dto: WorkflowCreateDto, user: UserModel
@@ -266,7 +264,6 @@ class WorkflowService:
                 user_id=user.id,
                 name=workflow_dto.name,
                 description=workflow_dto.description,
-                workspace_id=workflow_dto.workspace_id,
                 steps=workflow_dto.steps,
             )
 

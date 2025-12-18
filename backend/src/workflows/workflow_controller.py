@@ -46,13 +46,9 @@ async def search_workflows(
     current_user: UserModel = Depends(get_current_user),
     workflow_service: WorkflowService = Depends(),
 ):
-    """Lists all workflows for the current user within a specific workspace."""
-    workspace_auth_service.authorize(
-        workspace_id=search_params.workspace_id, user=current_user
-    )
+    """Lists all workflows for the current user."""
     return await workflow_service.query_workflows(
         user_id=current_user.id,
-        workspace_id=search_params.workspace_id,
         search_dto=search_params,
     )
 
@@ -64,10 +60,6 @@ async def create_workflow(
     workflow_service: WorkflowService = Depends(),
 ):
     """Creates a new workflow definition."""
-    workspace_auth_service.authorize(
-        workspace_id=workflow_data.workspace_id, user=current_user
-    )
-
     created_workflow = await workflow_service.create_workflow(
         workflow_data, current_user
     )
@@ -91,16 +83,12 @@ async def update_workflow(
             detail=f"Workflow with ID '{workflow_id}' not found.",
         )
 
-    # 2. Authorize the user against the workspace of the *existing* workflow.
-    workspace_auth_service.authorize(
-        workspace_id=existing_workflow.workspace_id, user=current_user
-    )
-
-    # 3. Verify that the workspace ID is not being changed.
-    if workflow_data.workspace_id != existing_workflow.workspace_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The workspace ID of a workflow cannot be changed.",
+    # 2. Verify that the workflow belongs to the user or handle auth as needed.
+    # (Since it's shared across workspaces, we use user-level auth)
+    if existing_workflow.user_id != current_user.id:
+         raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update this workflow.",
         )
 
     # 4. Pass the DTO to the service to handle the update logic.

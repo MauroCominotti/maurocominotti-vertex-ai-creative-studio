@@ -225,7 +225,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       id: [''],
       name: ['Untitled Workflow', Validators.required],
       description: [''],
-      workspaceId: [null],
       userId: ['user123'],
       userInput: this.fb.group({
         stepId: ['user_input'],
@@ -445,8 +444,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         name: formValue.name,
         description: formValue.description || '',
         steps: steps,
-
-        workspaceId: formValue.workspaceId,
       };
       request$ = this.workflowService.updateWorkflow(formValue.id, updateDto);
     } else {
@@ -454,7 +451,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         name: formValue.name,
         description: formValue.description || '',
         steps: steps,
-        workspaceId: formValue.workspaceId,
       };
       request$ = this.workflowService.createWorkflow(createDto);
     }
@@ -508,8 +504,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         name: formValue.name,
         description: formValue.description || '',
         steps: steps,
-
-        workspaceId: formValue.workspaceId,
       };
       saveRequest$ = this.workflowService.updateWorkflow(formValue.id, updateDto);
     } else {
@@ -517,7 +511,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         name: formValue.name,
         description: formValue.description || '',
         steps: steps,
-        workspaceId: formValue.workspaceId,
       };
       saveRequest$ = this.workflowService.createWorkflow(createDto);
     }

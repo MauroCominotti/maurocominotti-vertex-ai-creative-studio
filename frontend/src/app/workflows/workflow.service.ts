@@ -88,16 +88,11 @@ export class WorkflowService implements OnDestroy {
   }
 
   searchWorkflows(
-    searchDto: Omit<WorkflowSearchDto, 'workspaceId'>,
+    searchDto: WorkflowSearchDto,
   ): Observable<PaginationResponseDto<WorkflowModel>> {
-    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
-    if (!workspaceId) {
-      return throwError(() => new Error('No active workspace ID found.'));
-    }
-    const body: WorkflowSearchDto = { ...searchDto, workspaceId };
     return this.http.post<PaginationResponseDto<WorkflowModel>>(
       `${this.API_BASE_URL}/workflows/search`,
-      body,
+      searchDto,
     );
   }
 
@@ -113,15 +108,6 @@ export class WorkflowService implements OnDestroy {
     }
 
     this._isLoading.next(true);
-    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
-    if (!workspaceId) {
-      this._errorMessage.next(
-        'Cannot load workflows without an active workspace.',
-      );
-      this._isLoading.next(false);
-      return;
-    }
-
     const offset = this.currentPage * this.pageSize;
 
     this.searchWorkflows({
@@ -155,17 +141,10 @@ export class WorkflowService implements OnDestroy {
   }
 
   createWorkflow(
-    workflowData: Omit<WorkflowCreateDto, 'workspaceId'>,
+    workflowData: WorkflowCreateDto,
   ): Observable<WorkflowModel> {
-    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
-    if (!workspaceId) {
-      return throwError(
-        () => new Error('Cannot create workflow without an active workspace.'),
-      );
-    }
-    const payload = { ...workflowData, workspaceId };
     return this.http
-      .post<WorkflowModel>(`${this.API_BASE_URL}/workflows`, payload)
+      .post<WorkflowModel>(`${this.API_BASE_URL}/workflows`, workflowData)
       .pipe(tap(() => this.loadWorkflows(true)));
   }
 
@@ -173,12 +152,6 @@ export class WorkflowService implements OnDestroy {
     workflow_id: string,
     workflowData: WorkflowUpdateDto,
   ): Observable<{ message: string }> {
-    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
-    if (!workspaceId) {
-      return throwError(
-        () => new Error('Cannot update workflow without a workspaceId.'),
-      );
-    }
     return this.http
       .put<{
         message: string;
@@ -187,10 +160,6 @@ export class WorkflowService implements OnDestroy {
   }
 
   deleteWorkflow(workflowId: string): Observable<any> {
-    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
-    if (!workspaceId) {
-      return throwError(() => new Error('No active workspace ID found.'));
-    }
     return this.http
       .delete(`${this.API_BASE_URL}/workflows/${workflowId}`)
       .pipe(
@@ -209,9 +178,16 @@ export class WorkflowService implements OnDestroy {
     if (!workspaceId) {
       return throwError(() => new Error('No active workspace ID found.'));
     }
+    // Inject workspaceId into the arguments sent to the backend
+    const payload = {
+      args: {
+        ...args,
+        workspace_id: workspaceId
+      }
+    };
     return this.http.post<ExecutionResponse>(
       `${this.API_BASE_URL}/workflows/${workflowId}/workflow-execute`,
-      { args }
+      payload
     );
   }
 

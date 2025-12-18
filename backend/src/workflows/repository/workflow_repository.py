@@ -31,12 +31,11 @@ class WorkflowRepository(BaseRepository[Workflow, WorkflowModel]):
         super().__init__(model=Workflow, schema=WorkflowModel, db=db)
 
     async def query(
-        self, user_id: int, workspace_id: int, search_dto: WorkflowSearchDto
+        self, user_id: int, search_dto: WorkflowSearchDto
     ) -> PaginationResponseDto[WorkflowModel]:
         """Performs a paginated query for workflows."""
         query = select(self.model).where(
-            self.model.user_id == user_id,
-            self.model.workspace_id == workspace_id
+            self.model.user_id == user_id
         )
 
         if search_dto.name:

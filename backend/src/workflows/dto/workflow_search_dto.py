@@ -21,5 +21,4 @@ from pydantic import Field
 class WorkflowSearchDto(BaseSearchDto):
     """Data Transfer Object for searching and filtering workflows."""
 
-    workspace_id: int 
     name: Optional[str] = None

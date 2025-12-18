@@ -282,7 +282,6 @@ class Workflow(Base):
     __tablename__ = "workflows"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
-    workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[Optional[str]] = mapped_column(nullable=True)
@@ -305,7 +304,6 @@ class WorkflowBase(BaseModel):
     """Base model with fields common to both creating and representing a workflow."""
     name: str
     description: Optional[str] = None
-    workspace_id: int
     steps: List[WorkflowStep]
 
 

@@ -55,7 +55,6 @@ export enum WorkflowRunStatusEnum {
 export interface WorkflowBase {
   name: string;
   description: string;
-  workspaceId: number;
   steps: WorkflowStep[];
 }
 
@@ -74,7 +73,6 @@ export interface WorkflowUpdateDto extends WorkflowBase {
 }
 
 export interface WorkflowSearchDto {
-  workspaceId: number;
   limit?: number;
   offset?: number;
   name?: string;

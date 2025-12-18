@@ -9,10 +9,22 @@ import { HomeComponent } from './home.component';
 import { SearchService } from '../services/search/search.service';
 import { ImageStateService } from '../services/image-state.service';
 import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { GenerationModelConfig, MODEL_CONFIGS } from '../common/config/model-config';
+import {
+  GenerationModelConfig,
+  MODEL_CONFIGS,
+} from '../common/config/model-config';
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 
-fdescribe('HomeComponent', () => {
+describe('HomeComponent', () => {
   let component: HomeComponent;
   let fixture: ComponentFixture<HomeComponent>;
   let mockSearchService: jasmine.SpyObj<SearchService>;
@@ -40,21 +52,49 @@ fdescribe('HomeComponent', () => {
   };
 
   beforeEach(async () => {
-    mockSearchService = jasmine.createSpyObj('SearchService', ['startImagenGeneration', 'rewritePrompt', 'getRandomPrompt'], {
-      activeImageJob$: of(null),
-      imagePrompt: ''
-    });
-    mockImageStateService = jasmine.createSpyObj('ImageStateService', ['updateState', 'getState', 'resetState'], {
-      state$: of(initialState),
-    });
-    mockWorkspaceStateService = jasmine.createSpyObj('WorkspaceStateService', ['getActiveWorkspaceId']);
-    mockRouter = jasmine.createSpyObj('Router', ['navigate', 'getCurrentNavigation']);
+    mockSearchService = jasmine.createSpyObj(
+      'SearchService',
+      ['startImagenGeneration', 'rewritePrompt', 'getRandomPrompt'],
+      {
+        activeImageJob$: of(null),
+        imagePrompt: '',
+      },
+    );
+    mockImageStateService = jasmine.createSpyObj(
+      'ImageStateService',
+      ['updateState', 'getState', 'resetState'],
+      {
+        state$: of(initialState),
+      },
+    );
+    mockWorkspaceStateService = jasmine.createSpyObj('WorkspaceStateService', [
+      'getActiveWorkspaceId',
+    ]);
+    mockRouter = jasmine.createSpyObj('Router', [
+      'navigate',
+      'getCurrentNavigation',
+    ]);
     mockMatDialog = jasmine.createSpyObj('MatDialog', ['open']);
     mockMatSnackBar = jasmine.createSpyObj('MatSnackBar', ['open']);
 
+    mockRouter.getCurrentNavigation.and.returnValue({
+      extras: { state: {} },
+    } as any);
+
     await TestBed.configureTestingModule({
       declarations: [HomeComponent],
-      imports: [HttpClientTestingModule, NoopAnimationsModule],
+      imports: [
+        HttpClientTestingModule,
+        NoopAnimationsModule,
+        MatIconModule,
+        MatProgressSpinnerModule,
+        MatButtonModule,
+        MatMenuModule,
+        MatFormFieldModule,
+        MatChipsModule,
+        MatSlideToggleModule,
+        MatTooltipModule,
+      ],
       providers: [
         { provide: SearchService, useValue: mockSearchService },
         { provide: ImageStateService, useValue: mockImageStateService },
@@ -63,11 +103,11 @@ fdescribe('HomeComponent', () => {
         { provide: MatDialog, useValue: mockMatDialog },
         { provide: MatSnackBar, useValue: mockMatSnackBar },
       ],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
     }).compileComponents();
 
     fixture = TestBed.createComponent(HomeComponent);
     component = fixture.componentInstance;
-    mockRouter.getCurrentNavigation.and.returnValue({ extras: { state: {} } } as any);
     fixture.detectChanges();
   });
 
@@ -115,44 +155,44 @@ fdescribe('HomeComponent', () => {
     expect(component.searchRequest.generationModel).toBe('imagen-3.0-generate-002');
   });
 
-  it('should apply remixState from router navigation extras', () => {
-    const remixState = {
-      prompt: 'remix prompt',
-      generationModel: 'imagen-3.0-generate-002',
-      aspectRatio: '16:9',
-      negativePrompt: 'blurry',
-      sourceAssetIds: [123],
-      previewUrls: ['http://example.com/image.png']
-    };
-    mockRouter.getCurrentNavigation.and.returnValue({ extras: { state: { remixState } } } as any);
-    component.ngOnInit(); // Re-run ngOnInit to simulate navigation
-    // Have to manually call applyRemixState as constructor is not re-run
-    component.applyRemixState(remixState);
-    fixture.detectChanges();
+  describe('with router navigation extras', () => {
+    it('should apply remixState', () => {
+      const remixState = {
+        prompt: 'remix prompt',
+        generationModel: 'imagen-3.0-generate-002',
+        aspectRatio: '16:9',
+        negativePrompt: 'blurry',
+        sourceAssetIds: [123],
+        previewUrls: ['http://example.com/image.png']
+      };
+      mockRouter.getCurrentNavigation.and.returnValue({ extras: { state: { remixState } } } as any);
+      component.applyRemixState(remixState);
+      fixture.detectChanges();
 
-    expect(component.searchRequest.prompt).toBe('remix prompt');
-    expect(component.searchRequest.generationModel).toBe('imagen-3.0-generate-002');
-    expect(component.currentMode).toBe('Ingredients to Image');
-    expect(component.referenceImages.length).toBe(1);
-    expect(component.referenceImages[0].sourceAssetId).toBe(123);
+      expect(component.searchRequest.prompt).toBe('remix prompt');
+      expect(component.searchRequest.generationModel).toBe('imagen-3.0-generate-002');
+      expect(component.currentMode).toBe('Ingredients to Image');
+      expect(component.referenceImages.length).toBe(1);
+      expect(component.referenceImages[0].sourceAssetId).toBe(123);
+    });
+
+    it('should apply templateParams', () => {
+      const templateParams = {
+        prompt: 'template prompt',
+        model: 'imagen-3.0-generate-002',
+        aspectRatio: '9:16' as const,
+      };
+      mockRouter.getCurrentNavigation.and.returnValue({ extras: { state: { templateParams } } } as any);
+      component.templateParams = templateParams as any;
+      component['applyTemplateParameters']();
+      fixture.detectChanges();
+
+      expect(component.searchRequest.prompt).toBe('template prompt');
+      expect(component.searchRequest.generationModel).toBe('imagen-3.0-generate-002');
+      expect(component.searchRequest.aspectRatio).toBe('9:16');
+    });
   });
 
-  it('should apply templateParams from router navigation extras', () => {
-    const templateParams = {
-      prompt: 'template prompt',
-      model: 'imagen-3.0-generate-002',
-      aspectRatio: '9:16' as const,
-    };
-     mockRouter.getCurrentNavigation.and.returnValue({ extras: { state: { templateParams } } } as any);
-    // Have to manually call applyTemplateParameters as constructor is not re-run
-    component.templateParams = templateParams as any;
-    component['applyTemplateParameters']();
-    fixture.detectChanges();
-
-    expect(component.searchRequest.prompt).toBe('template prompt');
-    expect(component.searchRequest.generationModel).toBe('imagen-3.0-generate-002');
-    expect(component.searchRequest.aspectRatio).toBe('9:16');
-  });
 
   it('should update searchRequest and save state when selecting a model', () => {
     const model = MODEL_CONFIGS.find(m => m.value === 'imagen-3.0-generate-002')!;
@@ -180,15 +220,16 @@ fdescribe('HomeComponent', () => {
   it('should add a negative phrase and save state', () => {
     const event = { value: 'blurry', chipInput: { clear: () => {} } } as any;
     component.addNegativePhrase(event);
-    expect(component.negativePhrases).toContain('blurry');
+    expect(component.negativePhrases).toEqual(['blurry']);
     expect(component.searchRequest.negativePrompt).toBe('blurry');
     expect(mockImageStateService.updateState).toHaveBeenCalled();
   });
 
   it('should remove a negative phrase and save state', () => {
     component.negativePhrases = ['blurry', 'dark'];
+    component.searchRequest.negativePrompt = 'blurry, dark';
     component.removeNegativePhrase('blurry');
-    expect(component.negativePhrases).not.toContain('blurry');
+    expect(component.negativePhrases).toEqual(['dark']);
     expect(component.searchRequest.negativePrompt).toBe('dark');
     expect(mockImageStateService.updateState).toHaveBeenCalled();
   });

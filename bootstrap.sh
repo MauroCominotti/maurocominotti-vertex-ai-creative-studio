@@ -26,7 +26,7 @@ set -e
 
 # --- Configuration ---
 REQUIRED_TERRAFORM_VERSION="1.14.1"
-UPSTREAM_REPO_URL="https://github.com/GoogleCloudPlatform/professional-services"
+UPSTREAM_REPO_URL="https://github.com/GoogleCloudPlatform/gcc-creative-studio"
 TEMPLATE_ENV_DIR="environments/dev-infra-example"
 DEFAULT_ENV_NAME="dev-infra"
 DEFAULT_BRANCH_NAME="pg-infra"
@@ -320,53 +320,24 @@ setup_repo() {
         warn "Directory '$REPO_CLONE_DIR' already exists."; prompt "Do you want to use this existing directory? (y/n)"; read -r REPLY < /dev/tty
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then fail "Please remove the directory or run the script from a different location."; fi
     else
-        info "Performing a sparse checkout of '$REPO_CLONE_DIR' (Branch: $SELECTED_BRANCH)..."
-        
-        # 1. Clone with -b branch_name
-        git clone --filter=blob:none --no-checkout --depth 1 --sparse -b "$SELECTED_BRANCH" "$GITHUB_REPO_URL" "$REPO_CLONE_DIR"
-        
-        cd "$REPO_CLONE_DIR"
-        
-        # 2. FIXED: Sparse checkout now includes ROOT folders AND the legacy subfolder
-        # This ensures it works for both the mono-repo upstream and your flattened fork.
-        git sparse-checkout set "examples/creative-studio" "infra" "backend" "frontend" "bootstrap.sh"
-        
-        git checkout
-        cd ..
-
+        info "Cloning repository '$REPO_CLONE_DIR' (Branch: $SELECTED_BRANCH)..."
+        git clone -b "$SELECTED_BRANCH" "$GITHUB_REPO_URL" "$REPO_CLONE_DIR"
         success "Repository cloned successfully."
     fi
 
-    # --- Automatic Project Path Detection ---
-    info "Automatically detecting project structure..."
-    local RELATIVE_PROJECT_PATH=""
-    local FALLBACK_PATH="examples/creative-studio"
+    # --- Project Path Verification ---
+    info "Verifying project structure..."
 
-    # Check if the project is at the top level (Flattened Fork)
+    # Check if the project is at the top level
     if [[ -d "$REPO_CLONE_DIR/infra" && -f "$REPO_CLONE_DIR/bootstrap.sh" ]]; then
-        info "Detected top-level project structure."
-        RELATIVE_PROJECT_PATH=""
-    # Check if the project is in the fallback nested path (Upstream Mono-repo)
-    elif [[ -d "$REPO_CLONE_DIR/$FALLBACK_PATH/infra" && -f "$REPO_CLONE_DIR/$FALLBACK_PATH/bootstrap.sh" ]]; then
-        info "Detected nested project structure at '$FALLBACK_PATH'."
-        RELATIVE_PROJECT_PATH="$FALLBACK_PATH"
+        info "Detected project structure."
     else
-        # Debugging aid if it fails again
         warn "Directory listing of clone:"
         ls -F "$REPO_CLONE_DIR/"
-        fail "Could not find a valid project structure. The script requires an 'infra' directory and 'bootstrap.sh' file."
+        fail "Could not find a valid project structure. The script requires an 'infra' directory and 'bootstrap.sh' file at the root."
     fi
 
-    # Define the final project path
-    local FINAL_PROJECT_PATH="$REPO_CLONE_DIR"
-    if [ -n "$RELATIVE_PROJECT_PATH" ]; then
-        FINAL_PROJECT_PATH="$FINAL_PROJECT_PATH/$RELATIVE_PROJECT_PATH"
-    fi
-
-    if [ ! -d "$FINAL_PROJECT_PATH" ]; then
-        fail "The specified project path '$FINAL_PROJECT_PATH' does not exist."
-    fi
-    cd "$FINAL_PROJECT_PATH"
+    cd "$REPO_CLONE_DIR"
 
     REPO_ROOT=$(pwd)
     export REPO_ROOT

@@ -107,8 +107,8 @@ module "backend_service" {
   github_repo_owner     = var.github_repo_owner
   github_repo_name      = var.github_repo_name
   github_branch_name    = var.github_branch_name
-  cloudbuild_yaml_path  = "examples/creative-studio/backend/cloudbuild.yaml"
-  included_files_glob   = ["**/creative-studio/backend/**"]
+  cloudbuild_yaml_path  = "backend/cloudbuild.yaml"
+  included_files_glob   = ["backend/**"]
   container_env_vars    = local.backend_env_vars
   runtime_secrets = var.backend_runtime_secrets
   custom_audiences      = var.backend_custom_audiences
@@ -148,8 +148,8 @@ module "frontend_service" {
   environment          = var.environment
   resource_prefix      = "cs-fe"
   github_branch_name   = var.github_branch_name
-  cloudbuild_yaml_path = "examples/creative-studio/frontend/cloudbuild-deploy.yaml"
-  included_files_glob  = ["**/creative-studio/frontend/**"]
+  cloudbuild_yaml_path = "frontend/cloudbuild-deploy.yaml"
+  included_files_glob  = ["frontend/**"]
 
   build_substitutions = merge(
     var.fe_build_substitutions,

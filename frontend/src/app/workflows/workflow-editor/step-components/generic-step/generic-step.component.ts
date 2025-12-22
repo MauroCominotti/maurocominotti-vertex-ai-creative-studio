@@ -34,7 +34,27 @@ export class GenericStepComponent implements OnInit, OnChanges {
   ) { }
 
   ngOnInit(): void {
+    this.initializeStepState();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['stepForm']) {
+      this.initializeStepState();
+    }
+    if (changes['availableOutputs']) {
+      this.updateCompatibleOutputs();
+    }
+  }
+
+  private initializeStepState(): void {
+    if (!this.stepForm) return;
+
+    this.inputModes = {};
+    this.referenceImages = {};
+
     const inputs = this.stepForm.get('inputs') as FormGroup;
+    if (!inputs) return;
+
     this.config.inputs.forEach(input => {
       const validators = input.required ? [Validators.required] : [];
 
@@ -69,27 +89,24 @@ export class GenericStepComponent implements OnInit, OnChanges {
     });
 
     const settings = this.stepForm.get('settings') as FormGroup;
-    this.config.settings.forEach(setting => {
-      if (!settings.contains(setting.name)) {
-        settings.addControl(setting.name, this.fb.control(setting.defaultValue));
-      }
-    });
+    if (settings) {
+      this.config.settings.forEach(setting => {
+        if (!settings.contains(setting.name)) {
+          settings.addControl(setting.name, this.fb.control(setting.defaultValue));
+        }
+      });
+    }
 
     const outputs = this.stepForm.get('outputs') as FormGroup;
-    this.config.outputs.forEach(output => {
-      if (!outputs.contains(output.name)) {
-        outputs.addControl(output.name, this.fb.control({ type: output.type }));
-      }
-    });
+    if (outputs) {
+      this.config.outputs.forEach(output => {
+        if (!outputs.contains(output.name)) {
+          outputs.addControl(output.name, this.fb.control({ type: output.type }));
+        }
+      });
+    }
 
     this.updateCompatibleOutputs();
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['availableOutputs']) {
-      console.log("ngOnChanges if (changes['availableOutputs'])")
-      this.updateCompatibleOutputs();
-    }
   }
 
   private updateCompatibleOutputs(): void {

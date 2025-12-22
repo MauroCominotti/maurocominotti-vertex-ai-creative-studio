@@ -60,7 +60,11 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   errorMessage: string | null = null;
   selectedStepIndex: number | null = null;
   get selectedStep(): any | null {
-    return this.selectedStepIndex !== null ? this.stepsArray.at(this.selectedStepIndex).value : null;
+    if (this.selectedStepIndex === null) return null;
+    if (this.selectedStepIndex < 0 || this.selectedStepIndex >= this.stepsArray.length) {
+      return null;
+    }
+    return this.stepsArray.at(this.selectedStepIndex).value;
   }
 
   get selectedStepExecution(): any | null {
@@ -411,8 +415,40 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   }
 
   deleteStep(index: number) {
+    const deletedStepId = this.stepsArray.at(index).get('stepId')?.value;
+
     this.stepsArray.removeAt(index);
+
+    // Update selectedStepIndex
+    if (this.selectedStepIndex === index) {
+      this.selectedStepIndex = null;
+    } else if (this.selectedStepIndex !== null && this.selectedStepIndex > index) {
+      this.selectedStepIndex--;
+    }
+
+    // Clear dependents
+    if (deletedStepId) {
+      this.clearDependents(deletedStepId);
+    }
+
     this.updateAvailableOutputs();
+  }
+
+  private clearDependents(deletedStepId: string) {
+    this.stepsArray.controls.forEach(stepControl => {
+      const inputs = stepControl.get('inputs') as FormGroup;
+      if (!inputs) return;
+
+      Object.keys(inputs.controls).forEach(inputKey => {
+        const control = inputs.get(inputKey);
+        const value = control?.value;
+        if (value && typeof value === 'object' && value.step === deletedStepId) {
+          control?.setValue(null);
+          control?.markAsDirty();
+          control?.updateValueAndValidity();
+        }
+      });
+    });
   }
 
   dropStep(event: CdkDragDrop<string[]>) {
@@ -421,6 +457,24 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       event.previousIndex,
       event.currentIndex,
     );
+
+    // Update selectedStepIndex if it was affected
+    if (this.selectedStepIndex !== null) {
+      if (this.selectedStepIndex === event.previousIndex) {
+        this.selectedStepIndex = event.currentIndex;
+      } else if (
+        event.previousIndex < this.selectedStepIndex &&
+        event.currentIndex >= this.selectedStepIndex
+      ) {
+        this.selectedStepIndex--;
+      } else if (
+        event.previousIndex > this.selectedStepIndex &&
+        event.currentIndex <= this.selectedStepIndex
+      ) {
+        this.selectedStepIndex++;
+      }
+    }
+
     this.updateAvailableOutputs();
   }
 

@@ -8,6 +8,10 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
+      <button mat-raised-button color="primary" (click)="runWorkflow()" [disabled]="isLoading">
+        <mat-icon class="mr-2">play_arrow</mat-icon>
+        Run Workflow
+      </button>
       <button mat-raised-button color="primary" (click)="loadExecutions(true)" [disabled]="isLoading">
         <mat-icon class="mr-2">refresh</mat-icon>
         Refresh

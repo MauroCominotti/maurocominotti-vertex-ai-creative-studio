@@ -1,6 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute } from '@angular/router';
+import { handleErrorSnackbar, handleSuccessSnackbar } from '../../utils/handleMessageSnackbar';
+import { RunWorkflowModalComponent } from '../workflow-editor/run-workflow-modal/run-workflow-modal.component';
+import { NodeTypes } from '../workflow.models';
 import { WorkflowService } from '../workflow.service';
 import { ExecutionDetailsModalComponent } from './execution-details-modal/execution-details-modal.component';
 
@@ -20,7 +24,8 @@ export class ExecutionHistoryComponent implements OnInit {
     constructor(
         private route: ActivatedRoute,
         private workflowService: WorkflowService,
-        private dialog: MatDialog
+        private dialog: MatDialog,
+        private snackBar: MatSnackBar
     ) { }
 
     ngOnInit(): void {
@@ -95,5 +100,43 @@ export class ExecutionHistoryComponent implements OnInit {
             case 'ACTIVE': return 'hourglass_top';
             default: return 'help_outline';
         }
+    }
+
+    runWorkflow(): void {
+        if (!this.workflowId || this.isLoading) return;
+
+        this.isLoading = true;
+        this.workflowService.getWorkflowById(this.workflowId).subscribe({
+            next: (workflow: any) => {
+                this.isLoading = false;
+                const userInputStep = workflow.steps?.find((s: any) => s.type === NodeTypes.USER_INPUT);
+
+                const dialogRef = this.dialog.open(RunWorkflowModalComponent, {
+                    width: '600px',
+                    data: { userInputStep }
+                });
+
+                dialogRef.afterClosed().subscribe(result => {
+                    if (result) {
+                        this.isLoading = true;
+                        this.workflowService.executeWorkflow(this.workflowId!, result).subscribe({
+                            next: (res) => {
+                                this.isLoading = false;
+                                handleSuccessSnackbar(this.snackBar, 'Workflow execution started!');
+                                this.loadExecutions(true);
+                            },
+                            error: (err) => {
+                                this.isLoading = false;
+                                handleErrorSnackbar(this.snackBar, err, 'Workflow execution');
+                            }
+                        });
+                    }
+                });
+            },
+            error: (err) => {
+                this.isLoading = false;
+                handleErrorSnackbar(this.snackBar, err, 'Load workflow');
+            }
+        });
     }
 }

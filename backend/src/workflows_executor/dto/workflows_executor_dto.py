@@ -30,6 +30,7 @@ class EditImageRequest(BaseModel):
     config: EditImageSettings
 
 class GenerateVideoRequest(BaseModel):
+    workspace_id: int
     inputs: GenerateVideoInputs
     config: GenerateVideoSettings
 

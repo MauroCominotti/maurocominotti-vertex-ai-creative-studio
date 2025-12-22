@@ -55,7 +55,6 @@ export class AddStepModalComponent {
       label: 'Generate Video',
       description: 'Generates a video clip from a prompt or image.',
       icon: 'movie',
-      disabled: true
     }
   ];
 

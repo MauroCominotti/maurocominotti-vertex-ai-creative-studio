@@ -214,9 +214,88 @@ class WorkflowsExecutorService:
         
         return {"edited_image": image_id}
 
-    async def generate_video(self, request: GenerateVideoRequest):
-        # logic here
-        return {"generated_video": "https://example.com/dummy_video.mp4"}
+    async def generate_video(self, request: GenerateVideoRequest, authorization: str | None = None):
+        logger.info(f"Generate video execution")
+
+        url = self.backend_url + "/api/videos/generate-videos"
+
+        input_images = request.inputs.input_images
+        source_media_items = []
+        source_asset_ids = []
+        reference_images = []
+
+        images_to_process = []
+        # Handle different input types for input_images
+        if isinstance(input_images, int):
+            source_media_items = [
+                {"media_item_id": input_images, "media_index": 0, "role": "input"}
+            ]
+        elif isinstance(input_images, list):
+            for image in input_images:
+                if isinstance(image, int):
+                    source_media_items.append({"media_item_id": image, "media_index": 0, "role": "input"})
+                elif isinstance(image, ReferenceImage):
+                    if image.sourceMediaItem:
+                        source_media_items.append({
+                            "media_item_id": image.sourceMediaItem.mediaItemId,
+                            "media_index": image.sourceMediaItem.mediaIndex,
+                            "role": image.sourceMediaItem.role
+                        })
+                    elif image.sourceAssetId:
+                        source_asset_ids.append(image.sourceAssetId)
+
+        for image in images_to_process:
+            if isinstance(image, int):
+                source_media_items.append({
+                    "media_item_id": image, 
+                    "media_index": 0, 
+                    "role": "image_reference_asset" 
+                })
+            elif isinstance(image, ReferenceImage):
+                if image.sourceMediaItem:
+                    source_media_items.append({
+                        "media_item_id": image.sourceMediaItem.mediaItemId,
+                        "media_index": image.sourceMediaItem.mediaIndex,
+                        "role": "image_reference_asset" # Mapping specific role if needed, or default
+                    })
+                elif image.sourceAssetId:
+                    reference_images.append({
+                         "asset_id": image.sourceAssetId,
+                         "reference_type": "ASSET"
+                    })
+
+        body = {
+            "prompt": request.inputs.prompt,
+            "workspace_id": request.workspace_id,
+            "generation_model": request.config.model,
+            "use_brand_guidelines": request.config.brand_guidelines,
+            "reference_images": reference_images,
+            "source_media_items": source_media_items,
+            "source_asset_ids": source_asset_ids,
+            "number_of_media": 1, 
+        }
+
+        headers = {"Authorization": authorization} if authorization else {}
+
+        logger.info(
+            f"Call backend with url: {url}, body: {body}, headers: {headers}"
+        )
+
+        response = self.rest_client.post(url, json=body, headers=headers)
+        
+        if response.status_code != 200:
+             logger.error(f"Backend error: {response.text}")
+             raise HTTPException(status_code=response.status_code, detail=f"Backend error: {response.text}")
+
+        dict_response = response.json()
+        video_id = dict_response.get("id", None)
+        if not video_id:
+            raise HTTPException(status_code=500, detail="Couldn't create video")
+        
+        # Poll for completion
+        await self._poll_job_status(video_id, authorization)
+        
+        return {"generated_video": video_id}
 
     async def crop_image(self, request: CropImageRequest):
         # logic here

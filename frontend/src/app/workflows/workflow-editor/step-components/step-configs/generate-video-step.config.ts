@@ -13,8 +13,8 @@ export const GENERATE_VIDEO_STEP_CONFIG: StepConfig = {
       required: true,
     },
     {
-      name: 'input_image',
-      label: 'Input Image (Optional)',
+      name: 'input_images',
+      label: 'Input Images (Reference)',
       type: 'image',
       required: false,
     },

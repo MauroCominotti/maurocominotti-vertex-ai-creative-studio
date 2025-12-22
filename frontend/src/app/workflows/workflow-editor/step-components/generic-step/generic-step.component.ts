@@ -2,9 +2,11 @@
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { Subscription } from 'rxjs';
 import { AssetTypeEnum } from '../../../../admin/source-assets-management/source-asset.model';
 import { ImageCropperDialogComponent } from '../../../../common/components/image-cropper-dialog/image-cropper-dialog.component';
 import { ImageSelectorComponent, MediaItemSelection } from '../../../../common/components/image-selector/image-selector.component';
+import { ASPECT_RATIO_LABELS, MODEL_CONFIGS } from '../../../../common/config/model-config';
 import { ReferenceImage } from '../../../../common/models/search.model';
 import { SourceAssetResponseDto } from '../../../../common/services/source-asset.service';
 import { StepConfig } from './step.model';
@@ -23,6 +25,11 @@ export class GenericStepComponent implements OnInit, OnChanges {
   @Input() showValidationErrors = false;
   @Output() delete = new EventEmitter<void>();
 
+  localConfig!: StepConfig;
+  private settingsSubscription?: Subscription;
+  private inputModeSubscription?: Subscription;
+  currentMaxReferenceImages = 3; // Default fallback
+
   isCollapsed = true;
   inputModes: { [key: string]: 'fixed' | 'linked' } = {};
   referenceImages: { [key: string]: ReferenceImage[] } = {};
@@ -37,6 +44,15 @@ export class GenericStepComponent implements OnInit, OnChanges {
     this.initializeStepState();
   }
 
+  ngOnDestroy(): void {
+    if (this.settingsSubscription) {
+      this.settingsSubscription.unsubscribe();
+    }
+    if (this.inputModeSubscription) {
+      this.inputModeSubscription.unsubscribe();
+    }
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['stepForm']) {
       this.initializeStepState();
@@ -49,13 +65,16 @@ export class GenericStepComponent implements OnInit, OnChanges {
   private initializeStepState(): void {
     if (!this.stepForm) return;
 
+    // Deep copy config to localConfig to allow per-instance modifications
+    this.localConfig = JSON.parse(JSON.stringify(this.config));
+
     this.inputModes = {};
     this.referenceImages = {};
 
     const inputs = this.stepForm.get('inputs') as FormGroup;
     if (!inputs) return;
 
-    this.config.inputs.forEach(input => {
+    this.localConfig.inputs.forEach(input => {
       const validators = input.required ? [Validators.required] : [];
 
       if (!inputs.contains(input.name)) {
@@ -95,11 +114,36 @@ export class GenericStepComponent implements OnInit, OnChanges {
           settings.addControl(setting.name, this.fb.control(setting.defaultValue));
         }
       });
+
+      // Subscribe to model changes
+      if (settings.contains('model')) {
+        const modelControl = settings.get('model');
+        if (this.settingsSubscription) {
+          this.settingsSubscription.unsubscribe();
+        }
+        this.settingsSubscription = modelControl?.valueChanges.subscribe(value => {
+          this.updateDynamicConfig(value);
+        });
+
+        // Initial update
+        this.updateDynamicConfig(modelControl?.value);
+      }
+
+      // Subscribe to input_mode changes
+      if (settings.contains('input_mode')) {
+        const modeControl = settings.get('input_mode');
+        if (this.inputModeSubscription) {
+          this.inputModeSubscription.unsubscribe();
+        }
+        this.inputModeSubscription = modeControl?.valueChanges.subscribe(() => {
+          this.updateInputVisibility();
+        });
+      }
     }
 
     const outputs = this.stepForm.get('outputs') as FormGroup;
     if (outputs) {
-      this.config.outputs.forEach(output => {
+      this.localConfig.outputs.forEach(output => {
         if (!outputs.contains(output.name)) {
           outputs.addControl(output.name, this.fb.control({ type: output.type }));
         }
@@ -109,8 +153,95 @@ export class GenericStepComponent implements OnInit, OnChanges {
     this.updateCompatibleOutputs();
   }
 
+  private updateDynamicConfig(modelValue: string | null): void {
+    if (!modelValue) return;
+
+    // Find config in MODEL_CONFIGS
+    const modelConfig = MODEL_CONFIGS.find(c => c.value === modelValue);
+
+    if (!modelConfig) return;
+
+    // Use capabilities
+    const modelMeta = modelConfig.capabilities;
+
+    // 1. Update Aspect Ratio options
+    if (modelMeta.supportedAspectRatios) {
+      const aspectRatioSetting = this.localConfig.settings.find(s => s.name === 'aspect_ratio');
+      if (aspectRatioSetting) {
+        // Generate options dynamically using ASPECT_RATIO_LABELS
+        aspectRatioSetting.options = modelMeta.supportedAspectRatios.map(ratio => ({
+          value: ratio,
+          label: ASPECT_RATIO_LABELS[ratio] || ratio
+        }));
+
+        // Reset value if current value is invalid
+        const currentAspectRatio = this.stepForm.get('settings.aspect_ratio')?.value;
+        if (currentAspectRatio && !modelMeta.supportedAspectRatios.includes(currentAspectRatio)) {
+          // Set to first available option
+          const firstOption = aspectRatioSetting.options?.[0]?.value;
+          if (firstOption) {
+            this.stepForm.get('settings.aspect_ratio')?.setValue(firstOption);
+          }
+        }
+      }
+    }
+
+    // 2. Update Generation Mode (input_mode)
+    if (modelMeta.supportedModes) {
+      const modeSetting = this.localConfig.settings.find(s => s.name === 'input_mode');
+      if (modeSetting) {
+        modeSetting.options = modelMeta.supportedModes.map(mode => ({
+          value: mode,
+          label: mode
+        }));
+
+        // Default to first mode if current is invalid
+        const currentMode = this.stepForm.get('settings.input_mode')?.value;
+        if (!currentMode || !modelMeta.supportedModes.includes(currentMode)) {
+          // Prefer 'Text to Video' if available, else first
+          const defaultMode = modelMeta.supportedModes.includes('Text to Video') ? 'Text to Video' : modelMeta.supportedModes[0];
+          this.stepForm.get('settings.input_mode')?.setValue(defaultMode);
+        }
+      }
+    }
+
+    // 3. Update Inputs based on Mode and Max Refs
+    const maxRefs = modelMeta.maxReferenceImages; // 0, 1, or more
+    this.currentMaxReferenceImages = maxRefs;
+
+    this.updateInputVisibility();
+  }
+
+  private updateInputVisibility(): void {
+    const currentMode = this.stepForm.get('settings.input_mode')?.value;
+    const maxRefs = this.currentMaxReferenceImages;
+
+    this.localConfig.inputs.forEach(input => {
+      // Logic for specific inputs
+      if (input.name === 'input_images' || input.name === 'reference_images') {
+        const showIngredients = currentMode === 'Ingredients to Video';
+
+        if (showIngredients && maxRefs > 0) {
+          input.hidden = false;
+          this.stepForm.get('inputs')?.get(input.name)?.enable();
+        } else {
+          input.hidden = true;
+          this.stepForm.get('inputs')?.get(input.name)?.disable();
+        }
+      } else if (input.name === 'start_frame' || input.name === 'end_frame') {
+        if (currentMode === 'Frames to Video') {
+          input.hidden = false;
+          this.stepForm.get('inputs')?.get(input.name)?.enable();
+        } else {
+          input.hidden = true;
+          this.stepForm.get('inputs')?.get(input.name)?.disable();
+        }
+      }
+    });
+  }
+
   private updateCompatibleOutputs(): void {
-    this.config.inputs.forEach(input => {
+    this.localConfig.inputs.forEach(input => {
       this.compatibleOutputs[input.name] = this.availableOutputs.filter(
         output => (output.type === input.type) || (output.type === "text" && input.type === "textarea")
       );
@@ -160,7 +291,7 @@ export class GenericStepComponent implements OnInit, OnChanges {
   }
 
   openImageSelectorForReference(inputName: string): void {
-    if ((this.referenceImages[inputName]?.length || 0) >= 3) return;
+    if ((this.referenceImages[inputName]?.length || 0) >= this.currentMaxReferenceImages) return;
     const dialogRef = this.dialog.open(ImageSelectorComponent, {
       width: '90vw',
       height: '80vh',
@@ -174,7 +305,7 @@ export class GenericStepComponent implements OnInit, OnChanges {
     dialogRef
       .afterClosed()
       .subscribe((result: MediaItemSelection | SourceAssetResponseDto) => {
-        if (result && (this.referenceImages[inputName]?.length || 0) < 3) {
+        if (result && (this.referenceImages[inputName]?.length || 0) < this.currentMaxReferenceImages) {
           if (!this.referenceImages[inputName]) this.referenceImages[inputName] = [];
 
           let newImage: ReferenceImage | null = null;
@@ -210,7 +341,7 @@ export class GenericStepComponent implements OnInit, OnChanges {
   // Called when DROPPING a file on the new drop zone
   onReferenceImageDrop(event: DragEvent, inputName: string) {
     event.preventDefault();
-    if ((this.referenceImages[inputName]?.length || 0) >= 3) return;
+    if ((this.referenceImages[inputName]?.length || 0) >= this.currentMaxReferenceImages) return;
     const file = event.dataTransfer?.files[0];
     if (file && file.type.startsWith('image/')) {
       // For a direct drop, go straight to the cropper

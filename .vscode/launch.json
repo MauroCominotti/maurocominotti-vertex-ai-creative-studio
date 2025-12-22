@@ -19,19 +19,6 @@
       "cwd": "${workspaceFolder}/backend",
       "envFile": "${workspaceFolder}/backend/.env",
       "jinja": true
-    },
-    {
-      "name": "Mesop: Run main.py",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/venv/bin/mesop",
-      // Load environment variables from a .env file in the project root.
-      "envFile": "${workspaceFolder}/.env",
-      "args": [
-        "main.py"
-      ],
-      "console": "integratedTerminal",
-      "justMyCode": true
     }
   ]
 }

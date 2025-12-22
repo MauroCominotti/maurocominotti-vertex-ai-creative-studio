@@ -193,6 +193,8 @@ class EditImageStep(BaseStep[EditImageInputs, EditImageSettings]):
 class GenerateVideoInputs(BaseModel):
     prompt: Union[StepOutputReference, str]
     input_images: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
+    start_frame: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
+    end_frame: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
 
 
 class GenerateVideoSettings(BaseModel):

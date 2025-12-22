@@ -8,8 +8,8 @@ from fastapi import Header, HTTPException
 from google import genai
 from google.genai import types
 from httpx import Client as RestClient
-
 from src.common.schema.genai_model_setup import GenAIModelSetup
+from src.common.schema.media_item_model import AssetRoleEnum
 from src.workflows_executor.dto.workflows_executor_dto import (
     GenerateTextRequest,
     GenerateImageRequest,
@@ -30,39 +30,37 @@ class WorkflowsExecutorService:
         self.rest_client = RestClient(timeout=300)
         self.genai_client = GenAIModelSetup.init()
 
-    async def generate_text(self, request: GenerateTextRequest):
-        generate_content_config = types.GenerateContentConfig(
-            temperature=request.config.temperature,
-            top_p=0.95,
-            max_output_tokens=65535,
-            safety_settings=[
-                types.SafetySetting(
-                    category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"
-                ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"
-                ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"
-                ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_HARASSMENT", threshold="OFF"
-                ),
-            ],
-        )
+    def _normalize_asset_inputs(self, inputs, default_role: AssetRoleEnum = "input"):
+        """
+        Normalizes mixed input types (int, list, ReferenceImage) into 
+        structured media items and asset IDs.
+        """
+        media_items = []
+        asset_ids = []
+        
+        # Wrap single items in a list for uniform processing
+        raw_list = inputs if isinstance(inputs, list) else [inputs] if inputs is not None else []
+        
+        for item in raw_list:
+            if isinstance(item, int):
+                media_items.append({
+                    "media_item_id": item, 
+                    "media_index": 0, 
+                    "role": default_role
+                })
+            elif isinstance(item, ReferenceImage):
+                if item.sourceMediaItem:
+                    media_items.append({
+                        "media_item_id": item.sourceMediaItem.mediaItemId,
+                        "media_index": item.sourceMediaItem.mediaIndex,
+                        "role": item.sourceMediaItem.role or default_role
+                    })
+                elif item.sourceAssetId:
+                    asset_ids.append(item.sourceAssetId)
+                    
+        return media_items, asset_ids
 
-        text = ""
-        # Note: The original code used a stream but returned the full text at the end.
-        # Keeping this behavior for now.
-        for chunk in self.genai_client.models.generate_content_stream(
-            model=request.config.model,
-            contents=request.inputs.prompt,
-            config=generate_content_config,
-        ):
-            if chunk.text:
-                text += chunk.text
-        return {"generated_text": text}
-
+    
     async def _poll_job_status(self, media_id: int, authorization: str | None = None):
         """
         Polls the gallery endpoint until the job is completed or failed.
@@ -117,6 +115,41 @@ class WorkflowsExecutorService:
             
             await asyncio.sleep(poll_interval)
 
+
+    async def generate_text(self, request: GenerateTextRequest):
+        generate_content_config = types.GenerateContentConfig(
+            temperature=request.config.temperature,
+            top_p=0.95,
+            max_output_tokens=65535,
+            safety_settings=[
+                types.SafetySetting(
+                    category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"
+                ),
+                types.SafetySetting(
+                    category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"
+                ),
+                types.SafetySetting(
+                    category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"
+                ),
+                types.SafetySetting(
+                    category="HARM_CATEGORY_HARASSMENT", threshold="OFF"
+                ),
+            ],
+        )
+
+        text = ""
+        # Note: The original code used a stream but returned the full text at the end.
+        # Keeping this behavior for now.
+        for chunk in self.genai_client.models.generate_content_stream(
+            model=request.config.model,
+            contents=request.inputs.prompt,
+            config=generate_content_config,
+        ):
+            if chunk.text:
+                text += chunk.text
+        return {"generated_text": text}
+
+
     async def generate_image(self, request: GenerateImageRequest, authorization: str | None = None):
         logger.info(f"Generate image execution")
 
@@ -158,28 +191,7 @@ class WorkflowsExecutorService:
 
         url = self.backend_url + "/api/images/generate-images"
 
-        input_images = request.inputs.input_images
-        source_media_items = []
-        source_asset_ids = []
-        
-        # Handle different input types for input_images
-        if isinstance(input_images, int):
-            source_media_items = [
-                {"media_item_id": input_images, "media_index": 0, "role": "input"}
-            ]
-        elif isinstance(input_images, list):
-            for image in input_images:
-                if isinstance(image, int):
-                    source_media_items.append({"media_item_id": image, "media_index": 0, "role": "input"})
-                elif isinstance(image, ReferenceImage):
-                    if image.sourceMediaItem:
-                        source_media_items.append({
-                            "media_item_id": image.sourceMediaItem.mediaItemId,
-                            "media_index": image.sourceMediaItem.mediaIndex,
-                            "role": image.sourceMediaItem.role
-                        })
-                    elif image.sourceAssetId:
-                        source_asset_ids.append(image.sourceAssetId)
+        media_items, asset_ids = self._normalize_asset_inputs(request.inputs.input_images)
 
         body = {
             "prompt": request.inputs.prompt,
@@ -188,8 +200,8 @@ class WorkflowsExecutorService:
             "aspect_ratio": request.config.aspect_ratio,
             "use_brand_guidelines": request.config.brand_guidelines,
             "number_of_media": 1,
-            "source_media_items": source_media_items,
-            "source_asset_ids": source_asset_ids,
+            "source_media_items": media_items,
+            "source_asset_ids": asset_ids,
         }
 
         headers = {"Authorization": authorization} if authorization else {}
@@ -219,50 +231,28 @@ class WorkflowsExecutorService:
 
         url = self.backend_url + "/api/videos/generate-videos"
 
-        input_images = request.inputs.input_images
-        source_media_items = []
-        source_asset_ids = []
-        reference_images = []
+        # 1. Process main reference images
+        media_items, asset_ids = self._normalize_asset_inputs(
+            request.inputs.input_images, 
+            default_role=AssetRoleEnum.IMAGE_REFERENCE_ASSET
+        )
 
-        images_to_process = []
-        # Handle different input types for input_images
-        if isinstance(input_images, int):
-            source_media_items = [
-                {"media_item_id": input_images, "media_index": 0, "role": "input"}
-            ]
-        elif isinstance(input_images, list):
-            for image in input_images:
-                if isinstance(image, int):
-                    source_media_items.append({"media_item_id": image, "media_index": 0, "role": "input"})
-                elif isinstance(image, ReferenceImage):
-                    if image.sourceMediaItem:
-                        source_media_items.append({
-                            "media_item_id": image.sourceMediaItem.mediaItemId,
-                            "media_index": image.sourceMediaItem.mediaIndex,
-                            "role": image.sourceMediaItem.role
-                        })
-                    elif image.sourceAssetId:
-                        source_asset_ids.append(image.sourceAssetId)
+        # 2. Process Start Frame
+        start_media, start_assets = self._normalize_asset_inputs(
+            request.inputs.start_frame, 
+            default_role=AssetRoleEnum.START_FRAME
+        )
+        media_items.extend(start_media)
+        start_image_asset_id = start_assets[0] if start_assets else None
 
-        for image in images_to_process:
-            if isinstance(image, int):
-                source_media_items.append({
-                    "media_item_id": image, 
-                    "media_index": 0, 
-                    "role": "image_reference_asset" 
-                })
-            elif isinstance(image, ReferenceImage):
-                if image.sourceMediaItem:
-                    source_media_items.append({
-                        "media_item_id": image.sourceMediaItem.mediaItemId,
-                        "media_index": image.sourceMediaItem.mediaIndex,
-                        "role": "image_reference_asset" # Mapping specific role if needed, or default
-                    })
-                elif image.sourceAssetId:
-                    reference_images.append({
-                         "asset_id": image.sourceAssetId,
-                         "reference_type": "ASSET"
-                    })
+        # 3. Process End Frame
+        end_media, end_assets = self._normalize_asset_inputs(
+            request.inputs.end_frame, 
+            default_role=AssetRoleEnum.END_FRAME
+        )
+        media_items.extend(end_media)
+        end_image_asset_id = end_assets[0] if end_assets else None
+
 
         body = {
             "prompt": request.inputs.prompt,
@@ -272,6 +262,8 @@ class WorkflowsExecutorService:
             "reference_images": reference_images,
             "source_media_items": source_media_items,
             "source_asset_ids": source_asset_ids,
+            "start_image_asset_id": start_image_asset_id,
+            "end_image_asset_id": end_image_asset_id,
             "number_of_media": 1, 
         }
 

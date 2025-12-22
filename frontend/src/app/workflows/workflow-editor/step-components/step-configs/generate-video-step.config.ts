@@ -1,5 +1,12 @@
-
+import { MODEL_CONFIGS } from '../../../../common/config/model-config';
 import { StepConfig } from '../generic-step/step.model';
+
+const model_options = MODEL_CONFIGS
+  .filter(model => model.type === 'VIDEO')
+  .map(model => ({
+    value: model.value,
+    label: model.viewValue
+  }));
 
 export const GENERATE_VIDEO_STEP_CONFIG: StepConfig = {
   type: 'generate-video',
@@ -18,25 +25,41 @@ export const GENERATE_VIDEO_STEP_CONFIG: StepConfig = {
       type: 'image',
       required: false,
     },
+    {
+      name: 'start_frame',
+      label: 'Start Frame',
+      type: 'image',
+      required: false,
+      hidden: true,
+    },
+    {
+      name: 'end_frame',
+      label: 'End Frame',
+      type: 'image',
+      required: false,
+      hidden: true,
+    },
   ],
   settings: [
     {
       name: 'model',
       label: 'Model',
       type: 'select',
-      options: [
-        { value: 'veo-3.0-generate-001', label: 'Veo 3.0' },
-      ],
+      options: model_options,
       defaultValue: 'veo-3.0-generate-001',
+    },
+    {
+      name: 'input_mode',
+      label: 'Generation Mode',
+      type: 'select',
+      options: [],
+      defaultValue: 'Text to Video',
     },
     {
       name: 'aspect_ratio',
       label: 'Aspect Ratio',
       type: 'select',
-      options: [
-        { value: '16:9', label: '16:9' },
-        { value: '9:16', label: '9:16' },
-      ],
+      options: [],
       defaultValue: '16:9',
     },
   ],

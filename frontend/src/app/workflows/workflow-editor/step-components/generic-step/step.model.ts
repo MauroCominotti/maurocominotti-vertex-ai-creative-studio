@@ -5,12 +5,13 @@ export interface StepInput {
   type: 'text' | 'textarea' | 'select' | 'image';
   options?: { value: string; label: string }[];
   required: boolean;
+  hidden?: boolean;
 }
 
 export interface StepSetting {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'checkbox' | 'slider';
+  type: 'text' | 'textarea' | 'select' | 'checkbox' | 'slider' | 'radio';
   options?: { value: string; label: string }[];
   defaultValue: any;
 }

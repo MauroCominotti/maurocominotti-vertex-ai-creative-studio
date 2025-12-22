@@ -1,11 +1,11 @@
-import { ImageGenerationModelConfig, ImageGenerationModelEnum } from '../../../../common/enums/image-generation-models';
+import { MODEL_CONFIGS } from '../../../../common/config/model-config';
 import { StepConfig } from '../generic-step/step.model';
 
-const model_options = Object.entries(ImageGenerationModelConfig)
-  .filter(([key]) => key === ImageGenerationModelEnum.NANO_BANANA || key === ImageGenerationModelEnum.NANO_BANANA_PRO)
-  .map(([key, meta]) => ({
-    value: key as ImageGenerationModelEnum,
-    label: meta.viewValue,
+const model_options = MODEL_CONFIGS
+  .filter(model => model.value === 'gemini-2.5-flash-image-preview' || model.value === 'gemini-3-pro-image-preview')
+  .map(model => ({
+    value: model.value,
+    label: model.viewValue,
   }));
 
 export const EDIT_IMAGE_STEP_CONFIG: StepConfig = {
@@ -32,15 +32,13 @@ export const EDIT_IMAGE_STEP_CONFIG: StepConfig = {
       label: 'Model',
       type: 'select',
       options: model_options,
-      defaultValue: ImageGenerationModelEnum.NANO_BANANA,
+      defaultValue: 'gemini-2.5-flash-image-preview',
     },
     {
       name: 'aspect_ratio',
       label: 'Aspect Ratio',
       type: 'select',
-      options: [
-        { value: '1:1', label: '1:1 (Square)' },
-      ],
+      options: [],
       defaultValue: '1:1',
     },
     {

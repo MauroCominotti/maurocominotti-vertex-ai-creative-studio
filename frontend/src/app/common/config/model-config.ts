@@ -137,7 +137,7 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
     type: 'VIDEO',
     icon: 'volume_up',
     capabilities: {
-      supportedModes: ['Text to Video', 'Ingredients to Video'], // Assuming ingredients = image-to-video
+      supportedModes: ['Text to Video', 'Ingredients to Video', 'Frames to Video'], // Assuming ingredients = image-to-video
       maxReferenceImages: 3,
       supportedAspectRatios: ['16:9', '9:16'],
       supportsAudio: true,
@@ -149,7 +149,7 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
     type: 'VIDEO',
     icon: 'volume_up',
     capabilities: {
-      supportedModes: ['Text to Video', 'Ingredients to Video'],
+      supportedModes: ['Text to Video'],
       maxReferenceImages: 3,
       supportedAspectRatios: ['16:9', '9:16'],
       supportsAudio: true,
@@ -161,7 +161,7 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
     type: 'VIDEO',
     icon: 'volume_up',
     capabilities: {
-      supportedModes: ['Text to Video', 'Ingredients to Video'],
+      supportedModes: ['Text to Video'],
       maxReferenceImages: 3,
       supportedAspectRatios: ['16:9', '9:16'],
       supportsAudio: true,
@@ -173,7 +173,7 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
     type: 'VIDEO',
     icon: 'videocam_off',
     capabilities: {
-      supportedModes: ['Text to Video', 'Ingredients to Video'],
+      supportedModes: ['Text to Video'],
       maxReferenceImages: 3,
       supportedAspectRatios: ['16:9', '9:16'],
       supportsAudio: false,
@@ -185,7 +185,7 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
     type: 'VIDEO',
     icon: 'videocam_off',
     capabilities: {
-      supportedModes: ['Text to Video', 'Ingredients to Video'],
+      supportedModes: ['Text to Video'],
       maxReferenceImages: 3,
       supportedAspectRatios: ['16:9', '9:16'],
       supportsAudio: false,
@@ -238,3 +238,16 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
     },
   },
 ];
+
+export const ASPECT_RATIO_LABELS: Record<string, string> = {
+  '1:1': '1:1 (Square)',
+  '16:9': '16:9 (Landscape)',
+  '9:16': '9:16 (Portrait)',
+  '4:3': '4:3 (Standard)',
+  '3:4': '3:4 (Portrait)',
+  '2:3': '2:3 (Classic)',
+  '3:2': '3:2 (Classic Landscape)',
+  '4:5': '4:5 (Social Portrait)',
+  '5:4': '5:4 (Social Landscape)',
+  '21:9': '21:9 (Cinematic)',
+};

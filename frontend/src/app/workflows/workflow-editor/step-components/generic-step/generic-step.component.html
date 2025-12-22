@@ -1,9 +1,9 @@
 
-<div class="step-card" [formGroup]="stepForm" [ngClass]="config.type" [class.invalid-step]="stepForm.invalid && showValidationErrors">
+<div class="step-card" [formGroup]="stepForm" [ngClass]="localConfig.type" [class.invalid-step]="stepForm.invalid && showValidationErrors">
   <div class="step-header" (click)="isCollapsed = !isCollapsed">
     <div class="step-title">
-      <mat-icon>{{ config.icon }}</mat-icon>
-      <span>{{ config.title }}</span>
+      <mat-icon>{{ localConfig.icon }}</mat-icon>
+      <span>{{ localConfig.title }}</span>
       <mat-icon *ngIf="stepForm.invalid && showValidationErrors" class="!text-red-500 ml-2" matTooltip="Step has errors">error</mat-icon>
       <span class="step-id-subtle">#{{ stepIndex + 1 }}</span>
       <!-- Status Chip -->
@@ -30,7 +30,8 @@
   <div class="step-body" *ngIf="!isCollapsed">
     <div class="section inputs" formGroupName="inputs">
       <h3>Inputs</h3>
-      <div *ngFor="let input of config.inputs" class="input-group">
+      <ng-container *ngFor="let input of localConfig.inputs">
+        <div class="input-group" *ngIf="!input.hidden">
         <label>{{ input.label }}</label>
         <div class="controls-row">
           <mat-form-field appearance="outline" class="mode-select">
@@ -61,13 +62,13 @@
                   'border-red-500 bg-red-500/10': stepForm.get('inputs')?.get(input.name)?.invalid && showValidationErrors,
                   'border-neutral-700 bg-neutral-800 hover:border-neutral-500 hover:bg-neutral-700': !(stepForm.get('inputs')?.get(input.name)?.invalid && showValidationErrors)
                 }"
-                [class.opacity-50]="(referenceImages[input.name].length || 0) >= 1"
-                (click)="(referenceImages[input.name].length || 0) < 1 && openImageSelectorForReference(input.name)"
+                [class.opacity-50]="(referenceImages[input.name].length || 0) >= currentMaxReferenceImages"
+                (click)="(referenceImages[input.name].length || 0) < currentMaxReferenceImages && openImageSelectorForReference(input.name)"
                 (dragover)="$event.preventDefault()"
                 (drop)="$event.preventDefault(); onReferenceImageDrop($event, input.name)"
                 >
                 <mat-icon class="text-neutral-500">add</mat-icon>
-                <span class="absolute bottom-0 text-[10px] text-neutral-500">{{ (referenceImages[input.name].length || 0) }}/1</span>
+                <span class="absolute bottom-0 text-[10px] text-neutral-500">{{ (referenceImages[input.name].length || 0) }}/{{ currentMaxReferenceImages }}</span>
               </div>
               <!-- Show small previews of reference images -->
               <div class="flex gap-1">
@@ -94,13 +95,14 @@
             </mat-error>
           </mat-form-field>
         </div>
-      </div>
+        </div>
+      </ng-container>
     </div>
 
     <div class="section settings" formGroupName="settings">
       <h3>Settings</h3>
       <div class="settings-grid">
-        <ng-container *ngFor="let setting of config.settings">
+        <ng-container *ngFor="let setting of localConfig.settings">
           <mat-form-field *ngIf="setting.type === 'select'" appearance="outline">
             <mat-label>{{ setting.label }}</mat-label>
             <mat-select [formControlName]="setting.name">
@@ -120,7 +122,7 @@
 
     <div class="section outputs">
       <h3>Outputs</h3>
-      <div *ngFor="let output of config.outputs" class="output-pill">
+      <div *ngFor="let output of localConfig.outputs" class="output-pill">
         <mat-icon>{{ output.type }}</mat-icon> {{ output.label }}
       </div>
     </div>

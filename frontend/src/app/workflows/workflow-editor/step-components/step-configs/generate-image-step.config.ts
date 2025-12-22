@@ -1,11 +1,13 @@
 
-import { ImageGenerationModelConfig, ImageGenerationModelEnum } from '../../../../common/enums/image-generation-models';
+import { MODEL_CONFIGS } from '../../../../common/config/model-config';
 import { StepConfig } from '../generic-step/step.model';
 
-const model_options = Object.entries(ImageGenerationModelConfig).map(([key, meta]) => ({
-  value: key as ImageGenerationModelEnum,
-  label: meta.viewValue
-}));
+const model_options = MODEL_CONFIGS
+  .filter(model => model.type === 'IMAGE')
+  .map(model => ({
+    value: model.value,
+    label: model.viewValue
+  }));
 
 export const GENERATE_IMAGE_STEP_CONFIG: StepConfig = {
   type: 'generate-image',
@@ -25,19 +27,13 @@ export const GENERATE_IMAGE_STEP_CONFIG: StepConfig = {
       label: 'Model',
       type: 'select',
       options: model_options,
-      defaultValue: ImageGenerationModelEnum.IMAGEN_4,
+      defaultValue: 'imagen-4.0-generate-001',
     },
     {
       name: 'aspect_ratio',
       label: 'Aspect Ratio',
       type: 'select',
-      options: [
-        { value: '1:1', label: '1:1 (Square)' },
-        { value: '16:9', label: '16:9 (Landscape)' },
-        { value: '9:16', label: '9:16 (Portrait)' },
-        { value: '4:3', label: '4:3' },
-        { value: '3:4', label: '3:4' },
-      ],
+      options: [],
       defaultValue: '1:1',
     },
     {

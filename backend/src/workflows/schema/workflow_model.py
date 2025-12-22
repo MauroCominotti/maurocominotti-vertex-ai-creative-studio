@@ -200,6 +200,8 @@ class GenerateVideoInputs(BaseModel):
 class GenerateVideoSettings(BaseModel):
     model: str
     brand_guidelines: bool
+    aspect_ratio: str
+    input_mode: Optional[str] = None
 
 
 class GenerateVideoStep(BaseStep[GenerateVideoInputs, GenerateVideoSettings]):

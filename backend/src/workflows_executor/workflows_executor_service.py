@@ -237,6 +237,10 @@ class WorkflowsExecutorService:
             default_role=AssetRoleEnum.IMAGE_REFERENCE_ASSET
         )
 
+        reference_images = []
+        for aid in asset_ids:
+            reference_images.append({"asset_id": aid, "reference_type": "ASSET"})
+
         # 2. Process Start Frame
         start_media, start_assets = self._normalize_asset_inputs(
             request.inputs.start_frame, 
@@ -260,8 +264,7 @@ class WorkflowsExecutorService:
             "generation_model": request.config.model,
             "use_brand_guidelines": request.config.brand_guidelines,
             "reference_images": reference_images,
-            "source_media_items": source_media_items,
-            "source_asset_ids": source_asset_ids,
+            "source_media_items": media_items,
             "start_image_asset_id": start_image_asset_id,
             "end_image_asset_id": end_image_asset_id,
             "number_of_media": 1, 

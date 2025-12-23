@@ -9,7 +9,7 @@ frontend_service_name = "cstudio-frontend-dev"
 # --- GitHub Repo Details ---
 github_conn_name   = "gh-repo-owner-con"
 github_repo_owner  = "RepoOwnerName"
-github_repo_name   = "repo-owner-vertex-ai-creative-studio"
+github_repo_name   = "repo-owner-gcc-creative-studio"
 github_branch_name = "develop"
 
 # --- Custom Audiences ---

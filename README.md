@@ -1,4 +1,4 @@
-# 🚀 GCC Creative Studio | Vertex AI
+# 🚀 GCC Creative Studio
 
 ![Angular](https://img.shields.io/badge/angular-%23DD0031.svg?style=for-the-badge&logo=angular&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
@@ -57,146 +57,59 @@ For better guidance, [we recorded a video](./screenshots/how_to_deploy_creative_
 </video>
 
 
-> **IMPORTANT:** In order to run this app, you will have to enable the [Vertex AI API](https://console.developers.google.com/apis/api/aiplatform.googleapis.com/overview) and the [IAM Service Account Credentials API](https://console.developers.google.com/apis/api/iamcredentials.googleapis.com/overview).
+## System Architecture
+![](./screenshots/creative-studio-architecture.png)
 
-## Run locally
+The backend follows a **Modular, Feature-Driven Architecture**, heavily inspired by the principles of Hexagonal Architecture (Ports & Adapters).
 
-Two environment variables are required to run this application:
+* **Structure:** Code is organized by feature domain (e.g., /images, /galleries, /users) rather than by technical layer (/controllers, /services).  
+* **Rationale:**  
+  * **Scalability:** This approach prevents individual directories from becoming unwieldy as the application grows.  
+  * **Maintainability:** All code related to a single feature is co-located, making it easier to understand, modify, and test.  
+  * **High Cohesion, Low Coupling:** Modules are self-contained and interact through well-defined interfaces (services and DTOs), making the system robust and flexible.
 
-`PROJECT_ID`
-Provide an environment variable for your Google Cloud Project ID
+### Technology Stack
 
-```
-export PROJECT_ID=$(gcloud config get project)
-```
-
-`GENMEDIA_BUCKET`
-You'll need Google Cloud Storage bucket for the generative media. Note that this has to exist prior to running the application.
-
-If an existing Google Cloud Storage bucket is available, please provide its name without the `"gs://"` prefix.
-
-```
-export GENMEDIA_BUCKET=$PROJECT_ID-genmedia
-```
-
-Otherwise, follow the next steps to create a storage bucket.
-
-### Create Storage Bucket (Optional)
-
-Please run the following command to obtain new credentials.
-
-```
-gcloud auth login
-or
-gcloud auth application-default login
-```
-
-If you have already logged in with a different account, run:
-
-```
-gcloud config set project $PROJECT_ID
-
-gcloud config set account <your gcp email account>
-```
-
-You may need to set the default quota project for your ADC Credentials
-```
-gcloud auth application-default set-quota-project $PROJECT_ID
-```
-
-Create the storage bucket and make the url images accessible to the frontend.
-
-```
-gcloud storage buckets create gs://$GENMEDIA_BUCKET --location=US --default-storage-class=STANDARD
-
-gcloud storage buckets add-iam-policy-binding gs://$GENMEDIA_BUCKET \
-    --member=allUsers \
-    --role=roles/storage.objectViewer
-```
-
-If you can't make the images accessible to anyone with the previous command, due to an error like the following:
-```
-ERROR: (gcloud.storage.buckets.add-iam-policy-binding) HTTPError 412: One or more users named in the policy do not belong to a permitted customer.
-```
-
-Probably is due to organizational restrictions, and the images/videos won't appear on the UI.
-In that case, you can configure Creative Studio to generate presigned url, and access them by setting up a separated service account.
-```
-export SA_NAME=sa-genmedia-creative-studio
-
-gcloud iam service-accounts create $SA_NAME \
-  --display-name="Image Signing Service Account" \
-  --project=$PROJECT_ID
-
-gcloud storage buckets add-iam-policy-binding gs://$GENMEDIA_BUCKET \
-  --member="serviceAccount:$SA_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/storage.objectViewer"
-
-# You can change the USER_EMAIL accordingly to your case
-export USER_EMAIL=$(gcloud config get account)
-gcloud iam service-accounts add-iam-policy-binding $SA_NAME@$PROJECT_ID.iam.gserviceaccount.com --member="user:$USER_EMAIL" --role="roles/iam.serviceAccountTokenCreator"
-```
-
-## Enable the GCP Services
-### 2. Enable required Google Cloud APIs
-```
-gcloud services enable \
-    run.googleapis.com \
-    compute.googleapis.com \
-    cloudfunctions.googleapis.com \
-    cloudbuild.googleapis.com \
-    artifactregistry.googleapis.com \
-    iamcredentials.googleapis.com \
-    aiplatform.googleapis.com
-```
-
-> **NOTE:** We have provided a `env_template` that you can use to in your development environment. Simply duplicate it, rename it to `.env` and replace `<YOUR_GCP_PROJECT_ID>` with your project ID.
-
-Then run `source .env` to add those variables into your environment.
+| Category | Technology / Service |
+| :---- | :---- |
+| **Frontend** | Angular, TypeScript, Angular Material, Tailwind CSS |
+| **Backend** | Python, FastAPI, Pydantic |
+| **Database** | Google Cloud SQL (PostgreSQL) |
+| **Cloud Provider** | Google Cloud Platform (GCP) |
+| **Deployment** | Cloud Run (for backend), Firebase Hosting (for frontend) |
+| **AI Models** | Imagen, Veo, Gemini (via Vertex AI SDK) |
 
 
-### Create Virtual Environment
+### Dependencies
 
-Create and activate a virtual environment for your solution.
-```
-python3 -m venv .venv
-source .venv/bin/activate
-```
+Regarding the dependencies of the APIs and Services we’ll use (the Google APIs `‘xxxx.googleapis.com’` will be enabled by the script automatically):
 
-### Install requirements
+* `Github Account` (You must have a Github Account to fork the repository)  
+* `Google Cloud Account` (A GCP Project)
+---
+* `aiplatform.googleapis.com` (Vertex AI)  
+* `artifactregistry.googleapis.com` (Artifact Registry)  
+* `cloudbuild.googleapis.com` (Cloud Build)  
+* `cloudfunctions.googleapis.com` (Cloud Functions)  
+* `compute.googleapis.com` (Compute Engine)  
+* `firebase.googleapis.com` (Firebase)  
+* `sqladmin.googleapis.com` (Cloud SQL)  
+* `iamcredentials.googleapis.com` (IAM Service API)  
+* `iap.googleapis.com` (Cloud Identity-Aware Proxy)  
+* `identitytoolkit.googleapis.com` (Identity Platform)  
+* `run.googleapis.com` (Cloud Run)  
+* `secretmanager.googleapis.com` (Secret Manager)  
+* `texttospeech.googleapis.com` (Text to Speech)
 
-Install the required Python libraries.
+For the deployment you can use CloudShell which already has all of the necessary, but in case of deploying from a computer, the script will automatically check for the following command-line tools and attempt to install them if they are missing or outdated.
 
-```
-pip install -r requirements.txt
-```
+* `gcloud` (Google Cloud SDK)  
+* `git`  
+* `jq` (JSON processor)  
+* `firebase-tools` (Firebase CLI)  
+* `uv` (Python package installer)  
+* `terraform` (version 1.13.0 or newer) 
 
-## Deploy to Cloud Run
-
-Deploy this application to a Cloud Run service.
-
-It's recommended that you create a separate service account to deploy a Cloud Run Service.
-
-
-```
-export SA_NAME=sa-genmedia-creative-studio
-export PROJECT_ID=$(gcloud config get project)
-
-gcloud iam service-accounts create $SA_NAME --description="genmedia creative studio" --display-name="$SA_NAME"
-
-gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_NAME@$PROJECT_ID.iam.gserviceaccount.com"  --role="roles/aiplatform.user"
-
-gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$SA_NAME@$PROJECT_ID.iam.gserviceaccount.com" --role="roles/storage.objectUser"
-```
-
-Deploy with the service account and environment variables created above; `PROJECT_ID` and `GENMEDIA_BUCKET`.
-
-```
-gcloud run deploy creative-studio --source . \
-  --allow-unauthenticated --region us-central1 \
-  --service-account $SA_NAME@$PROJECT_ID.iam.gserviceaccount.com \
-  --update-env-vars=GENMEDIA_BUCKET=$GENMEDIA_BUCKET,PROJECT_ID=$PROJECT_ID
-```
 
 ## Code Styling & Commit Guidelines
 
@@ -290,8 +203,8 @@ For more detailed contribution guidelines, please refer to the `CONTRIBUTING.md`
 
 ## Feedback
 
-* **Found an issue or have a suggestion?** Please [raise an issue](https://github.com/googlecloudplatform/vertex-ai-creative-studio/issues) on our GitHub repository.
-* **Share your experience!** We'd love to hear about how you're using Creative Studio or any success stories. Feel free to reach out to us at creative-studio@google.com or discuss in the GitHub discussions.
+* **Found an issue or have a suggestion?** Please [raise an issue](https://github.com/GoogleCloudPlatform/gcc-creative-studio/issues) on our GitHub repository.
+* **Share your experience!** We'd love to hear about how you're using Creative Studio or any success stories. Feel free to reach out to us at genmedia-creativestudio@google.com or discuss in the GitHub discussions.
 
 # Relevant Terms of Service
 
@@ -326,3 +239,108 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+
+# Step by step guide | Deploying and working on Creative Studio
+
+This guide provides a comprehensive walkthrough for setting up and running the Creative Studio application **on your local machine**. It covers the **standard local development setup using Docker Compose**.
+
+## 1. Prerequisites
+
+Before you begin, ensure you have the following tools installed on your system:
+
+*   **Git**: For cloning the repository.
+*   **Google Cloud CLI (gcloud)**: For authenticating and managing your GCP resources.
+*   **Github Account**: If you don't already have a GitHub account.
+*   **Install Antigravity**: [Download Antigravity](https://antigravity.google/)
+*   **Install Docker and docker compose**: [Download Docker](http://docker.com/get-started/)
+*   **Install nvm**: [Download nvm](https://github.com/nvm-sh/nvm#installing-and-updating) and then install the latest node version. Version 20 or higher.
+*   **Install uv**: A fast Python package installer. [Install it here](https://github.com/astral-sh/uv).
+
+## 2. Initial Setup
+
+1.  Go to your GCP Account and make sure you can login.
+2.  After you create your account:
+    *   You create a fork of [Open Source Repo](https://github.com/GoogleCloudPlatform/gcc-creative-studio/tree/main)
+    *   You see this video [How to Deploy Creative Studio.mp4](./screenshots/how_to_deploy_creative_studio.mp4) and deploy Creative Studio into your GCP Account environment, using CloudShell for simplicity.
+
+## 3. Add env variables to repo where we’ll work
+
+You can connect to your new GCP Argolis Account by setting a `backend/.env` file for the backend and a `frontend/src/environments/development.environment.ts` file for the frontend.
+
+> **Important!!!** set `isLocal = True`, in both frontend and backend, this is so that instead of loggin in with Identity Platform, we login with Firebase, and we keep Identity Platform Authorized Javascript origins clean, without the need to whitelist localhost.
+
+Add the following env variables in your cloned repo “gcc-creative-studio” modifying the corresponding locations, and replacing with your env values:
+
+### `backend/.env` file
+
+```bash
+# Common env vars
+FRONTEND_URL="http://localhost:4200"
+ENVIRONMENT="local"
+LOG_LEVEL="INFO"
+
+# Project ID: creative-studio-deploy
+GOOGLE_CLOUD_PROJECT="creative-studio-deploy"
+PROJECT_ID="creative-studio-deploy"
+GENMEDIA_BUCKET="creative-studio-deploy-cs-development-bucket"
+SIGNING_SA_EMAIL="cs-development-read@creative-studio-deploy.iam.gserviceaccount.com"
+GOOGLE_TOKEN_AUDIENCE="XXXX-XXXXXXXXXXX.apps.googleusercontent.com"
+IDENTITY_PLATFORM_ALLOWED_ORGS=""
+```
+
+### `frontend/src/environments/development.environment.ts` file
+
+```typescript
+export const environment = {
+  // Project ID: creative-studio-deploy
+  firebase: {
+    apiKey: "your-api-key",
+    authDomain: "creative-studio-deploy.firebaseapp.com",
+    projectId: "creative-studio-deploy",
+    storageBucket: "creative-studio-deploy.firebasestorage.app",
+    messagingSenderId: "your-messaging-sender-id",
+    appId: "your-app-id",
+    measurementId: "G-XXXXXXXX"
+  },
+  production: false,
+  isLocal: true,
+  GOOGLE_CLIENT_ID: 'XXXX-XXXXXXXXXXX.apps.googleusercontent.com',
+  backendURL: 'http://localhost:8080/api',
+
+  // Common env vars
+  EMAIL_REGEX: /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+  ADMIN: 'admin',
+};
+```
+
+## 4. Running with Docker Compose
+
+We use Docker to build and run both the frontend and backend containers, simplifying the setup process.
+
+After installation and before running docker compose, be sure to set your default gcloud login:
+
+```bash
+# Set the target project for the deployment
+gcloud config set project $PROJECT_ID
+
+# Set up application-default credentials
+gcloud auth application-default login
+```
+
+And also to give your account access to presign the urls you’ll get on your frontend:
+
+```bash
+export PROJECT_ID=$(gcloud config get project)
+export USER_EMAIL=$(gcloud config get account)
+
+gcloud iam service-accounts add-iam-policy-binding cs-development-read@$PROJECT_ID.iam.gserviceaccount.com --member="user:$USER_EMAIL" --role="roles/iam.serviceAccountTokenCreator"
+```
+
+You are all set, from the root of the project, run the following command:
+
+```bash
+docker compose up
+```
+
+As this uses volumes, and we use hot reload to start the services, every time you change something on the files the container will be refreshed with the changes.

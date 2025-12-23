@@ -32,116 +32,71 @@ infrastructure/
 * **`/environments`**: Contains a directory for each distinct deployment environment. These directories call the `platform` module with the correct set of variables.
 
 ---
-## ⚠️ Manual Setup Steps
 
-Before you can use Terraform, you must perform these one-time manual steps.
-
-### 1. Install Prerequisite Software
-You must install the following command-line tools on your local machine:
-* **Terraform CLI:** [Install Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
-```bash
-# After you download the terraform binary
-$ sudo cp ./terraform /usr/local/bin
-$ sudo chmod +x /usr/local/bin/terraform
-
-$ terraform version
-Terraform v1.13.0
-on linux_amd64
+## Deploy in 20min!!
+Just run this script which has a step by step approach for you to deploy the infrastructure and start the app, just follow the instructions
 ```
-* **Google Cloud SDK:** [Install gcloud](https://cloud.google.com/sdk/docs/install)
-
-### 2. Authenticate with Google Cloud
-You need to authenticate your local machine with Google Cloud. This command will open a browser for you to log in.
-```bash
-gcloud auth list
-gcloud config list
-
-gcloud config set account <your account email>
-gcloud auth login
-gcloud config set project <your project id>
-gcloud auth application-default set-quota-project <your project id>
-
-gcloud auth list
-gcloud config list
+curl https://raw.githubusercontent.com/GoogleCloudPlatform/gcc-creative-studio/refs/heads/main/bootstrap.sh | bash
 ```
 
-### 3. Create a GCS Bucket for Terraform State
-Terraform needs a GCS bucket to store its state file for each environment. This must be done manually because the backend configuration is read before Terraform can create any resources.
->
-**Run this command for each environment (dev, prod, etc.), making sure to use a globally unique bucket name:**
-```bash
-# Example for the 'dev' environment
-export PROJECT_ID=creative-studio-arena && \
-gsutil mb -p $PROJECT_ID gs://$PROJECT_ID-cstudio-dev-tfstate
-```
+For better guidance, [we recorded a video](./screenshots/how_to_deploy_creative_studio.mp4) to showcase how to deploy Creative Studio in a completely new and fresh GCP Account.
 
-### 4. Connect GitHub to Cloud Build
-You must authorize Google Cloud Build to access your GitHub repository.
-1.  Go to the Google Cloud Console: **Cloud Build > Settings**.
-2.  Click **Connect repository 2nd Gen**.
-3.  Choose **Create Host Connection > GitHub (Cloud Build GitHub App)** as the source.
-4.  Follow the prompts to authenticate and install the GitHub App on your account and enable the required APIs if needed.
-5.  **Crucially, grant the app access to your `MauroCominotti/maurocominotti-vertex-ai-creative-studio` repository.**
-6.  Note the **Connection Name** (e.g., `gh-mauro-con`) as you will need it for your `.tfvars` file and select the **Region** of your choice.
+<video controls autoplay loop width="100%" style="max-width: 1200px;">
+  <source src="./screenshots/how_to_deploy_creative_studio.mp4" type="video/mp4">
+  Your browser does not support the video tag. You can <a href="./screenshots/how_to_deploy_creative_studio.mp4">download the video here</a>.
+</video>
 
-### 5. Setup Firebase Auth and upgrade to use with Google Identity Platform
-1.  Go to the [Firebase Console](https://console.firebase.google.com/).
-2.  Select your Google Cloud project from the list.
-3.  In the left-hand navigation pane, go to **Build** > **Authentication**.
-4.  Click **Get started**. This action enables Google Identity Platform for your project.
-5.  If prompted, click **Upgrade to Identity Platform**. This gives you access to enterprise-grade features like multi-tenancy and SAML/OIDC federation, which are built on top of Firebase Authentication.
-6.  Once enabled, navigate to the [Google Cloud Console](https://console.cloud.google.com/).
-7.  In the navigation menu, go to **APIs & Services** > **Credentials**.
-8.  Under the **OAuth 2.0 Client IDs** section, you will see a client named **Web client (auto created by Google Service)**. This is the client your web application will use to authenticate users via Identity Platform.
-9.  Click on the name of the web client to open its details page.
-10. Copy the **Client ID**. This value is the unique identifier for your web application.
+## System Architecture
+![](../screenshots/creative-studio-architecture.png)
 
-    This Client ID serves as the **audience** for the OIDC tokens that Identity Platform issues to your authenticated users. When a user accesses your application through Identity-Aware Proxy (IAP), IAP will inspect the user's token and verify that its `aud` (audience) claim exactly matches this Client ID. This ensures that tokens intended for other applications cannot be used to access this one.
+The backend follows a **Modular, Feature-Driven Architecture**, heavily inspired by the principles of Hexagonal Architecture (Ports & Adapters).
 
-11. We will now use this Client ID as the value for the `IAP_AUDIENCE` variable in our Terraform configuration. Open the `environments/your-env/your-env.tfvars` file and add the following line, replacing `<YOUR_WEB_CLIENT_ID>` with the value you just copied:
+* **Structure:** Code is organized by feature domain (e.g., /images, /galleries, /users) rather than by technical layer (/controllers, /services).  
+* **Rationale:**  
+  * **Scalability:** This approach prevents individual directories from becoming unwieldy as the application grows.  
+  * **Maintainability:** All code related to a single feature is co-located, making it easier to understand, modify, and test.  
+  * **High Cohesion, Low Coupling:** Modules are self-contained and interact through well-defined interfaces (services and DTOs), making the system robust and flexible.
 
-    ```tfvars
-    IAP_AUDIENCE = "<YOUR_WEB_CLIENT_ID>"
-    ```
+### Technology Stack
 
-### 6. Setup env variables & Deploy Infra
-#### 🛠️ Managing Environments
-
-All commands should be run from within a specific environment's directory.
-
-#### Creating a New Environment (e.g., `staging`)
-
-1.  **Perform Manual Setup:** Create a new GCS bucket for the staging state (see Manual Step #3 above).
-2.  **(Optional) Create the Directory:** Copy the `dev` directory: `cp -r environments/dev environments/staging`
-3.  **Configure `backend.tf`:** Edit `environments/staging/backend.tf` to point to your new staging GCS bucket.
-4.  **Configure/Update `your-env.tfvars`:** Rename `dev.tfvars` to `staging.tfvars` and update the values inside (project ID, service names, etc.) for your new environment.
-5.  **Deploy:** Navigate to the new directory and run the standard `init` and `apply` commands.
-    ```bash
-    cd environments/staging
-    terraform init
-    terraform apply -var-file="staging.tfvars"
-    ```
+| Category | Technology / Service |
+| :---- | :---- |
+| **Frontend** | Angular, TypeScript, Angular Material, Tailwind CSS |
+| **Backend** | Python, FastAPI, Pydantic |
+| **Database** | Google Cloud SQL (PostgreSQL) |
+| **Cloud Provider** | Google Cloud Platform (GCP) |
+| **Deployment** | Cloud Run (for backend), Firebase Hosting (for frontend) |
+| **AI Models** | Imagen, Veo, Gemini (via Vertex AI SDK) |
 
 
-#### Deploying an Existing Environment (e.g., `dev`)
+### Dependencies
 
-1.  **Navigate to the `dev` directory:**
-    ```bash
-    cd environments/dev
-    ```
-2.  **Initialize Terraform:**
-    This downloads the necessary providers and configures the remote state backend.
-    ```bash
-    terraform init
-    ```
-3.  **Plan the changes:**
-    Always review the plan carefully before applying.
-    ```bash
-    terraform plan -var-file="dev.tfvars"
-    ```
-4.  **Apply the changes:**
-    This will build and deploy the infrastructure.
-    ```bash
-    terraform apply -var-file="dev.tfvars"
-    ```
+Regarding the dependencies of the APIs and Services we’ll use (the Google APIs `‘xxxx.googleapis.com’` will be enabled by the script automatically):
+
+* `Github Account` (You must have a Github Account to fork the repository)  
+* `Google Cloud Account` (A GCP Project)
+---
+* `aiplatform.googleapis.com` (Vertex AI)  
+* `artifactregistry.googleapis.com` (Artifact Registry)  
+* `cloudbuild.googleapis.com` (Cloud Build)  
+* `cloudfunctions.googleapis.com` (Cloud Functions)  
+* `compute.googleapis.com` (Compute Engine)  
+* `firebase.googleapis.com` (Firebase)  
+* `sqladmin.googleapis.com` (Cloud SQL)  
+* `iamcredentials.googleapis.com` (IAM Service API)  
+* `iap.googleapis.com` (Cloud Identity-Aware Proxy)  
+* `identitytoolkit.googleapis.com` (Identity Platform)  
+* `run.googleapis.com` (Cloud Run)  
+* `secretmanager.googleapis.com` (Secret Manager)  
+* `texttospeech.googleapis.com` (Text to Speech)
+
+For the deployment you can use CloudShell which already has all of the necessary, but in case of deploying from a computer, the script will automatically check for the following command-line tools and attempt to install them if they are missing or outdated.
+
+* `gcloud` (Google Cloud SDK)  
+* `git`  
+* `jq` (JSON processor)  
+* `firebase-tools` (Firebase CLI)  
+* `uv` (Python package installer)  
+* `terraform` (version 1.13.0 or newer) 
+
 

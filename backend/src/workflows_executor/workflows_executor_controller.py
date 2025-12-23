@@ -47,9 +47,10 @@ async def edit_image(
 @router.post("/generate_video")
 async def generate_video(
     request: GenerateVideoRequest,
+    authorization: Annotated[str | None, Header()] = None,
     service: WorkflowsExecutorService = Depends(),
 ):
-    return await service.generate_video(request)
+    return await service.generate_video(request, authorization)
 
 
 @router.post("/crop_image")

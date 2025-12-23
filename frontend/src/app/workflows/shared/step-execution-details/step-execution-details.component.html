@@ -91,8 +91,18 @@
            </div>
        </div>
 
+       <!-- Audio Output -->
+       <div *ngIf="isAudioOutput(output.key)" class="col-span-2">
+           <div *ngIf="output.value" class="relative group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900 p-2 flex items-center justify-center">
+              <audio [src]="getMediaUrl(output.value)" controls class="w-full" alt="Generated Audio"></audio>
+              <div class="absolute bottom-0 left-0 right-0 p-1 text-[10px] text-neutral-400 truncate px-2 text-center pointer-events-none">
+                {{ output.key }}
+              </div>
+           </div>
+       </div>
+
        <!-- Text/Other Output -->
-       <div *ngIf="!isImageOutput(output.key) && !isVideoOutput(output.key)" class="col-span-2 bg-neutral-900 p-2 rounded border border-neutral-800 mb-2">
+       <div *ngIf="!isImageOutput(output.key) && !isVideoOutput(output.key) && !isAudioOutput(output.key)" class="col-span-2 bg-neutral-900 p-2 rounded border border-neutral-800 mb-2">
             <span class="text-xs text-neutral-500 block mb-1">{{ output.key }}</span>
             <p class="text-sm text-neutral-200 whitespace-pre-wrap font-mono">{{ output.value | json }}</p>
        </div>

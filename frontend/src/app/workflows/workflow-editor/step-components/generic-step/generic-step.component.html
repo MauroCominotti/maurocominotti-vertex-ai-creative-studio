@@ -103,6 +103,7 @@
       <h3>Settings</h3>
       <div class="settings-grid">
         <ng-container *ngFor="let setting of localConfig.settings">
+          <ng-container *ngIf="!setting.hidden">
           <mat-form-field *ngIf="setting.type === 'select'" appearance="outline">
             <mat-label>{{ setting.label }}</mat-label>
             <mat-select [formControlName]="setting.name">
@@ -116,6 +117,7 @@
           <div *ngIf="setting.type === 'checkbox'" class="checkbox-group">
             <mat-checkbox [formControlName]="setting.name">{{ setting.label }}</mat-checkbox>
           </div>
+          </ng-container>
         </ng-container>
       </div>
     </div>

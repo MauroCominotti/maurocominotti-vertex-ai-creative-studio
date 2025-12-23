@@ -14,6 +14,7 @@ export interface StepSetting {
   type: 'text' | 'textarea' | 'select' | 'checkbox' | 'slider' | 'radio';
   options?: { value: string; label: string }[];
   defaultValue: any;
+  hidden?: boolean;
 }
 
 export interface StepOutput {

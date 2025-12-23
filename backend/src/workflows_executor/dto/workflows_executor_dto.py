@@ -13,6 +13,8 @@ from src.workflows.schema.workflow_model import (
     CropImageSettings,
     VirtualTryOnInputs,
     VirtualTryOnSettings,
+    GenerateAudioInputs,
+    GenerateAudioSettings,
 )
 
 class GenerateTextRequest(BaseModel):
@@ -42,3 +44,8 @@ class VirtualTryOnRequest(BaseModel):
     workspace_id: int
     inputs: VirtualTryOnInputs
     config: VirtualTryOnSettings
+
+class GenerateAudioRequest(BaseModel):
+    workspace_id: int
+    inputs: GenerateAudioInputs
+    config: GenerateAudioSettings

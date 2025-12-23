@@ -31,6 +31,9 @@ export interface ModelCapability {
   supportsAudio?: boolean; // For video
   supportsNegativePrompt?: boolean;
   supportsGoogleSearch?: boolean;
+  supportsVoice?: boolean;
+  supportsLanguage?: boolean;
+  supportsSeed?: boolean;
 }
 
 export interface GenerationModelConfig {
@@ -213,6 +216,10 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
       supportedModes: ['Text to Audio'],
       maxReferenceImages: 0,
       supportedAspectRatios: [],
+      supportsSeed: true,
+      supportsNegativePrompt: true,
+      supportsVoice: false,
+      supportsLanguage: false,
     },
   },
   {
@@ -224,6 +231,10 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
       supportedModes: ['Text to Audio'],
       maxReferenceImages: 0,
       supportedAspectRatios: [],
+      supportsVoice: true,
+      supportsLanguage: true,
+      supportsSeed: false,
+      supportsNegativePrompt: false,
     },
   },
   {
@@ -235,6 +246,10 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
       supportedModes: ['Text to Audio'],
       maxReferenceImages: 0,
       supportedAspectRatios: [],
+      supportsVoice: true,
+      supportsLanguage: true,
+      supportsSeed: false,
+      supportsNegativePrompt: false,
     },
   },
 ];

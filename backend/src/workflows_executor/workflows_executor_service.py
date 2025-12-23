@@ -17,6 +17,7 @@ from src.workflows_executor.dto.workflows_executor_dto import (
     GenerateVideoRequest,
     CropImageRequest,
     VirtualTryOnRequest,
+    GenerateAudioRequest,
 )
 from src.workflows.schema.workflow_model import ReferenceImage
 from src.config.config_service import config_service
@@ -375,3 +376,45 @@ class WorkflowsExecutorService:
         await self._poll_job_status(image_id, authorization)
         
         return {"generated_image": image_id}
+
+    async def generate_audio(self, request: GenerateAudioRequest, authorization: str | None = None):
+        logger.info(f"Generate audio execution")
+        
+        url = self.backend_url + "/api/audios/generate"
+        
+        body = {
+            "workspace_id": request.workspace_id,
+            "prompt": request.inputs.prompt,
+            "model": request.config.model,
+            "voice_name": request.config.voice_name,
+            "language_code": request.config.language_code,
+            "negative_prompt": request.config.negative_prompt,
+            "seed": request.config.seed,
+        }
+        
+        # Filter None values to let DTO defaults take over if needed
+        body = {k: v for k, v in body.items() if v is not None}
+
+        headers = {"Authorization": authorization} if authorization else {}
+
+        logger.info(
+            f"Call backend with url: {url}, body: {body}, headers: {headers}"
+        )
+
+        # Note: Audio generation is synchronous in the current controller/service implementation
+        response = self.rest_client.post(url, json=body, headers=headers)
+        
+        if response.status_code != 200:
+             logger.error(f"Backend error: {response.text}")
+             raise HTTPException(status_code=response.status_code, detail=f"Backend error: {response.text}")
+
+        dict_response = response.json()
+        audio_id = dict_response.get("id", None)
+        
+        if not audio_id:
+             raise HTTPException(status_code=500, detail="Couldn't create audio")
+             
+        # Poll for completion
+        await self._poll_job_status(audio_id, authorization)
+        
+        return {"generated_audio": audio_id}

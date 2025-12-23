@@ -6,6 +6,7 @@ export enum NodeTypes {
   GENERATE_VIDEO = 'generate_video',
   CROP_IMAGE = 'crop_image',
   VIRTUAL_TRY_ON = 'virtual_try_on',
+  GENERATE_AUDIO = 'generate_audio',
 }
 
 export interface StepOutputReference {

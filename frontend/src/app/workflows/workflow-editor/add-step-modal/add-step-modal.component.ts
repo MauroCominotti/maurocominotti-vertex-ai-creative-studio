@@ -44,17 +44,16 @@ export class AddStepModalComponent {
       icon: 'checkroom'
     },
     {
-      type: 'crop_image',
-      label: 'Crop Image',
-      description: 'Crops an image to a specific aspect ratio or dimension.',
-      icon: 'crop',
-      disabled: true
-    },
-    {
       type: 'generate_video',
       label: 'Generate Video',
       description: 'Generates a video clip from a prompt or image.',
       icon: 'movie',
+    },
+    {
+      type: 'generate_audio',
+      label: 'Generate Audio',
+      description: 'Generates audio (music or speech) from a text prompt.',
+      icon: 'music_note',
     }
   ];
 

@@ -9,6 +9,7 @@ from src.workflows_executor.dto.workflows_executor_dto import (
     GenerateVideoRequest,
     CropImageRequest,
     VirtualTryOnRequest,
+    GenerateAudioRequest,
 )
 from src.workflows_executor.workflows_executor_service import WorkflowsExecutorService
 
@@ -68,3 +69,12 @@ async def virtual_try_on(
     service: WorkflowsExecutorService = Depends(),
 ):
     return await service.virtual_try_on(request, authorization)
+
+
+@router.post("/generate_audio")
+async def generate_audio(
+    request: GenerateAudioRequest,
+    authorization: Annotated[str | None, Header()] = None,
+    service: WorkflowsExecutorService = Depends(),
+):
+    return await service.generate_audio(request, authorization)

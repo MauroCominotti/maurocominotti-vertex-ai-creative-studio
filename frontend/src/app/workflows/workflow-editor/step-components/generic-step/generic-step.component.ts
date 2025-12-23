@@ -205,7 +205,23 @@ export class GenericStepComponent implements OnInit, OnChanges {
       }
     }
 
-    // 3. Update Inputs based on Mode and Max Refs
+    // 3. Update Audio Settings Visibility
+    this.localConfig.settings.forEach(setting => {
+      if (setting.name === 'voice_name') {
+        setting.hidden = !modelMeta.supportsVoice;
+      }
+      if (setting.name === 'language_code') {
+        setting.hidden = !modelMeta.supportsLanguage;
+      }
+      if (setting.name === 'seed') {
+        setting.hidden = !modelMeta.supportsSeed;
+      }
+      if (setting.name === 'negative_prompt') {
+        setting.hidden = !modelMeta.supportsNegativePrompt;
+      }
+    });
+
+    // 4. Update Inputs based on Mode and Max Refs
     const maxRefs = modelMeta.maxReferenceImages; // 0, 1, or more
     this.currentMaxReferenceImages = maxRefs;
 

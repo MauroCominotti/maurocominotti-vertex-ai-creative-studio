@@ -2,6 +2,7 @@ import { Component, Input, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CROP_IMAGE_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/crop-image-step.config';
 import { EDIT_IMAGE_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/edit-image-step.config';
+import { GENERATE_AUDIO_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/generate-audio-step.config';
 import { GENERATE_IMAGE_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/generate-image-step.config';
 import { GENERATE_TEXT_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/generate-text-step.config';
 import { GENERATE_VIDEO_STEP_CONFIG } from '../../workflow-editor/step-components/step-configs/generate-video-step.config';
@@ -30,6 +31,7 @@ export class StepExecutionDetailsComponent implements OnInit {
     [NodeTypes.CROP_IMAGE]: CROP_IMAGE_STEP_CONFIG,
     [NodeTypes.GENERATE_VIDEO]: GENERATE_VIDEO_STEP_CONFIG,
     [NodeTypes.VIRTUAL_TRY_ON]: VIRTUAL_TRY_ON_STEP_CONFIG,
+    [NodeTypes.GENERATE_AUDIO]: GENERATE_AUDIO_STEP_CONFIG,
   };
 
   constructor(private router: Router) { }
@@ -130,6 +132,17 @@ export class StepExecutionDetailsComponent implements OnInit {
       return output?.type === 'video';
     }
     return config.outputs.some(o => o.type === 'video');
+  }
+
+  isAudioOutput(outputName?: any): boolean {
+    const config = this.getStepConfig();
+    if (!config) return false;
+
+    if (outputName) {
+      const output = config.outputs.find(o => o.name === String(outputName));
+      return output?.type === 'audio';
+    }
+    return config.outputs.some(o => o.type === 'audio');
   }
 
   get inputCount(): number {

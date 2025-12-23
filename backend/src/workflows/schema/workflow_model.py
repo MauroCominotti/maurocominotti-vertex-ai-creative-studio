@@ -26,7 +26,7 @@ from typing import (
     Union,
 )
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.common.base_dto import BaseDto
 from src.common.base_repository import BaseDocument
@@ -46,6 +46,7 @@ class NodeTypes(str, Enum):
     GENERATE_VIDEO = "generate_video"
     CROP_IMAGE = "crop_image"
     VIRTUAL_TRY_ON = "virtual_try_on"
+    GENERATE_AUDIO = "generate_audio"
 
 
 # =========================================
@@ -246,6 +247,32 @@ class VirtualTryOnStep(BaseStep[VirtualTryOnInputs, VirtualTryOnSettings]):
     settings: VirtualTryOnSettings
 
 
+# --- Generate Audio ---
+class GenerateAudioInputs(BaseModel):
+    prompt: Union[StepOutputReference, str]
+
+
+class GenerateAudioSettings(BaseModel):
+    model: str
+    voice_name: Optional[str] = None
+    language_code: Optional[str] = None
+    negative_prompt: Optional[str] = None
+    seed: Optional[int] = None
+
+    @field_validator("seed", mode="before")
+    @classmethod
+    def empty_string_to_none(cls, v: Any) -> Optional[int]:
+        if v == "":
+            return None
+        return v
+
+
+class GenerateAudioStep(BaseStep[GenerateAudioInputs, GenerateAudioSettings]):
+    type: Literal[NodeTypes.GENERATE_AUDIO]
+    inputs: GenerateAudioInputs
+    settings: GenerateAudioSettings
+
+
 # =========================================
 # Workflow Step Union
 # =========================================
@@ -258,6 +285,7 @@ WorkflowStepUnion = Union[
     GenerateVideoStep,
     CropImageStep,
     VirtualTryOnStep,
+    GenerateAudioStep,
 ]
 
 # Discriminated union based on the 'type' field in each step

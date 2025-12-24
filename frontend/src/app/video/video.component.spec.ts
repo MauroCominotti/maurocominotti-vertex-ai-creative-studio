@@ -36,8 +36,9 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { FlowPromptBoxComponent } from '../common/components/flow-prompt-box/flow-prompt-box.component';
 import { AppInjector, setAppInjector } from '../app-injector';
 import { NotificationService } from '../common/services/notification.service';
+import { MatIconTestingModule } from '@angular/material/icon/testing';
 
-fdescribe('VideoComponent', () => {
+describe('VideoComponent', () => {
   let component: VideoComponent;
   let fixture: ComponentFixture<VideoComponent>;
   let mockSearchService: jasmine.SpyObj<SearchService>;
@@ -48,7 +49,6 @@ fdescribe('VideoComponent', () => {
   let mockWorkspaceStateService: jasmine.SpyObj<WorkspaceStateService>;
   let mockSourceAssetService: jasmine.SpyObj<SourceAssetService>;
   let mockVideoStateService: jasmine.SpyObj<VideoStateService>;
-  let mockMatIconRegistry: jasmine.SpyObj<MatIconRegistry>;
   let mockDomSanitizer: jasmine.SpyObj<DomSanitizer>;
   let mockNotificationService: jasmine.SpyObj<NotificationService>;
   let injector: Injector;
@@ -78,10 +78,6 @@ fdescribe('VideoComponent', () => {
       'updateState',
       'resetState',
     ]);
-    mockMatIconRegistry = jasmine.createSpyObj('MatIconRegistry', [
-      'addSvgIcon',
-      'getNamedSvgIcon',
-    ]);
     mockDomSanitizer = jasmine.createSpyObj('DomSanitizer', [
       'bypassSecurityTrustHtml',
       'bypassSecurityTrustResourceUrl',
@@ -96,12 +92,6 @@ fdescribe('VideoComponent', () => {
 
     // Mock the return of getCurrentNavigation to avoid errors on initialization
     (mockRouter.getCurrentNavigation as jasmine.Spy).and.returnValue(null);
-    (mockMatIconRegistry.addSvgIcon as jasmine.Spy).and.returnValue(mockMatIconRegistry);
-    (
-      mockMatIconRegistry.getNamedSvgIcon as jasmine.Spy
-    ).and.returnValue(
-      of(document.createElementNS('http://www.w3.org/2000/svg', 'svg')),
-    );
     mockDomSanitizer.bypassSecurityTrustResourceUrl.and.callFake(
       (value: string) => value,
     );
@@ -122,6 +112,7 @@ fdescribe('VideoComponent', () => {
         BrowserAnimationsModule,
         FlowPromptBoxComponent,
         HttpClientTestingModule,
+        MatIconTestingModule,
       ],
       providers: [
         { provide: SearchService, useValue: mockSearchService },
@@ -132,7 +123,6 @@ fdescribe('VideoComponent', () => {
         { provide: WorkspaceStateService, useValue: mockWorkspaceStateService },
         { provide: SourceAssetService, useValue: mockSourceAssetService },
         { provide: VideoStateService, useValue: mockVideoStateService },
-        { provide: MatIconRegistry, useValue: mockMatIconRegistry },
         { provide: DomSanitizer, useValue: mockDomSanitizer },
         { provide: NotificationService, useValue: mockNotificationService },
       ],
@@ -150,7 +140,7 @@ fdescribe('VideoComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  fdescribe('Initialization', () => {
+  describe('Initialization', () => {
     it('should have default searchRequest values', () => {
       fixture.detectChanges();
       expect(component.searchRequest.prompt).toBe('');
@@ -171,7 +161,7 @@ fdescribe('VideoComponent', () => {
     });
   });
 
-  fdescribe('State Management', () => {
+  describe('State Management', () => {
     it('should save state', () => {
       component.searchRequest.prompt = 'test prompt';
       component.saveState();
@@ -206,7 +196,7 @@ fdescribe('VideoComponent', () => {
     });
   });
 
-  fdescribe('Mode Switching', () => {
+  describe('Mode Switching', () => {
     it('should switch to Extend Video mode', () => {
       component.onModeChanged('Extend Video');
       expect(component.currentMode).toBe('Extend Video');
@@ -238,7 +228,7 @@ fdescribe('VideoComponent', () => {
     });
   });
 
-  fdescribe('User Input', () => {
+  describe('User Input', () => {
     it('should update prompt on change', () => {
       const newPrompt = 'A cat dancing';
       component.onPromptChanged(newPrompt);
@@ -268,7 +258,7 @@ fdescribe('VideoComponent', () => {
     });
   });
 
-  fdescribe('Search Term', () => {
+  describe('Search Term', () => {
     beforeEach(() => {
       mockWorkspaceStateService.getActiveWorkspaceId.and.returnValue(
         'test-workspace',
@@ -323,6 +313,7 @@ fdescribe('VideoComponent', () => {
     });
 
     it('should switch to Veo 3.1 if source assets are present with Veo 3.0', () => {
+      component.searchRequest.prompt = 'a test prompt';
       component.searchRequest.generationModel = 'veo-3.0-generate-001';
       component.startImageAssetId = 123;
       spyOn(component, 'selectModel').and.callThrough();
@@ -395,7 +386,7 @@ fdescribe('VideoComponent', () => {
     });
   });
 
-  fdescribe('Prompt Helpers', () => {
+  describe('Prompt Helpers', () => {
     it('should rewrite prompt', () => {
       component.searchRequest.prompt = 'old prompt';
       mockSearchService.rewritePrompt.and.returnValue(of({ prompt: 'new prompt' }));
@@ -414,7 +405,7 @@ fdescribe('VideoComponent', () => {
     });
   });
 
-  fdescribe('UI Interaction and Signals', () => {
+  describe('UI Interaction and Signals', () => {
     beforeEach(() => {
       fixture.detectChanges(); // initial data binding
     });
@@ -434,7 +425,7 @@ fdescribe('VideoComponent', () => {
     });
   });
 
-  fdescribe('File Input and Clearing', () => {
+  describe('File Input and Clearing', () => {
     it('should open image selector and process image result', () => {
       const dialogRefSpyObj = jasmine.createSpyObj({
         afterClosed: of({
@@ -514,7 +505,7 @@ fdescribe('VideoComponent', () => {
     });
   });
 
-  fdescribe('Reference Images', () => {
+  describe('Reference Images', () => {
     it('should open image selector and add a reference image', () => {
       const dialogRefSpyObj = jasmine.createSpyObj({
         afterClosed: of({
@@ -545,9 +536,11 @@ fdescribe('VideoComponent', () => {
     });
 
     it('should clear other inputs and switch model when first reference image is added', () => {
+      component.searchRequest.generationModel = 'some-other-model';
       component.image1Preview = 'some-preview';
       spyOn(component, 'selectModel').and.callThrough();
       spyOn(component as any, 'updateModeAndNotify').and.callThrough();
+      component.referenceImages.push({ sourceAssetId: 1, previewUrl: 'url' });
 
       // This is called internally by openImageSelectorForReference etc.
       (component as any).handleReferenceImageAdded();
@@ -579,7 +572,7 @@ fdescribe('VideoComponent', () => {
     });
   });
 
-  fdescribe('Remix and Template Logic', () => {
+  describe('Remix and Template Logic', () => {
     it('should apply template parameters', () => {
       component.templateParams = {
         prompt: 'template prompt',
@@ -636,6 +629,7 @@ fdescribe('VideoComponent', () => {
     });
 
     it('should apply source assets from navigation', () => {
+      component.searchRequest.generationModel = 'some-other-model';
       const sourceAssets = [
         {
           assetId: 10,
@@ -651,7 +645,7 @@ fdescribe('VideoComponent', () => {
         },
       ] as EnrichedSourceAsset[];
 
-      spyOn(component as any, 'handleReferenceImageAdded').and.callThrough();
+      spyOn(component, 'selectModel').and.callThrough();
       spyOn(component as any, 'processInput').and.callThrough();
 
       (component as any).applySourceAssets(sourceAssets);
@@ -660,7 +654,7 @@ fdescribe('VideoComponent', () => {
       expect(component.image1Preview).toBe('url1');
       expect(component.referenceImages.length).toBe(1);
       expect(component.referenceImages[0].previewUrl).toBe('url2');
-      expect((component as any).handleReferenceImageAdded).toHaveBeenCalled();
+      expect(component.selectModel).toHaveBeenCalled();
       expect(component.currentMode).toBe('Ingredients to Video');
       expect(mockVideoStateService.updateState).toHaveBeenCalled();
     });

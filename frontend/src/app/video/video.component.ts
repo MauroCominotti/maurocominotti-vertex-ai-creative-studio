@@ -264,30 +264,35 @@ export class VideoComponent implements OnInit, AfterViewInit {
 
   private restoreState() {
     const state = this.videoStateService.getState();
-    this.searchRequest.prompt = state.prompt;
-    this.searchRequest.aspectRatio = state.aspectRatio;
-    this.searchRequest.generationModel = state.model;
-    this.searchRequest.style = state.style;
-    this.searchRequest.colorAndTone = state.colorAndTone;
-    this.searchRequest.lighting = state.lighting;
-    this.searchRequest.numberOfMedia = state.numberOfMedia;
-    this.searchRequest.durationSeconds = state.durationSeconds;
-    this.searchRequest.composition = state.composition;
-    this.searchRequest.generateAudio = state.generateAudio;
-    this.searchRequest.negativePrompt = state.negativePrompt;
-    this.searchRequest.useBrandGuidelines = state.useBrandGuidelines;
-    this.currentMode = state.mode || 'Text to Video';
+    this.searchRequest.prompt = state.prompt ?? '';
+    this.searchRequest.aspectRatio = state.aspectRatio ?? '16:9';
+    this.searchRequest.generationModel =
+      state.model ?? 'veo-3.1-generate-preview';
+    this.searchRequest.style = state.style ?? null;
+    this.searchRequest.colorAndTone = state.colorAndTone ?? null;
+    this.searchRequest.lighting = state.lighting ?? null;
+    this.searchRequest.numberOfMedia = state.numberOfMedia ?? 4;
+    this.searchRequest.durationSeconds = state.durationSeconds ?? 8;
+    this.searchRequest.composition = state.composition ?? null;
+    this.searchRequest.generateAudio = state.generateAudio ?? true;
+    this.searchRequest.negativePrompt = state.negativePrompt ?? '';
+    this.searchRequest.useBrandGuidelines = state.useBrandGuidelines ?? false;
+    this.currentMode = state.mode ?? 'Text to Video';
 
     this.negativePhrases = state.negativePrompt
       ? state.negativePrompt.split(', ').filter(Boolean)
       : [];
 
     // Update selected options for UI
-    const modelOption = this.generationModels.find(m => m.value === state.model);
+    const modelOption = this.generationModels.find(
+      m => m.value === this.searchRequest.generationModel,
+    );
     if (modelOption) {
       this.selectedGenerationModel = modelOption.viewValue;
     }
-    const ratioOption = this.aspectRatioOptions.find(r => r.value === state.aspectRatio);
+    const ratioOption = this.aspectRatioOptions.find(
+      r => r.value === this.searchRequest.aspectRatio,
+    );
     if (ratioOption) {
       this.selectedAspectRatio = ratioOption.viewValue;
     }
@@ -1324,7 +1329,6 @@ export class VideoComponent implements OnInit, AfterViewInit {
   private handleReferenceImageAdded(): void {
     if (this.referenceImages.length === 1) {
       // If there's a start/end frame or a video for extension/concatenation, clear them.
-      const hadInputs = this.image1Preview || this.image2Preview;
       const snackbarMessage =
         'Start/end frames and extension videos have been cleared to use reference images.';
       if (this.image1Preview || this.image2Preview) {
@@ -1340,19 +1344,23 @@ export class VideoComponent implements OnInit, AfterViewInit {
         this._snackBar.open(snackbarMessage, 'OK', {duration: 5000});
       }
 
-      const veo31Model = this.generationModels.find(
-        m => m.value === 'veo-3.1-generate-preview',
+      this._switchToReferenceImageModel();
+    }
+  }
+
+  private _switchToReferenceImageModel() {
+    const veo31Model = this.generationModels.find(
+      m => m.value === 'veo-3.1-generate-preview',
+    );
+    if (
+      veo31Model &&
+      this.searchRequest.generationModel !== veo31Model.value
+    ) {
+      this.selectModel(veo31Model);
+      handleSuccessSnackbar(
+        this._snackBar,
+        "We've switched to the Veo 3.1 model for you, as this one supports reference images.",
       );
-      if (
-        veo31Model &&
-        this.searchRequest.generationModel !== veo31Model.value
-      ) {
-        this.selectModel(veo31Model);
-        handleSuccessSnackbar(
-          this._snackBar,
-          "We've switched to the Veo 3.1 model for you, as this one supports reference images.",
-        );
-      }
     }
   }
 
@@ -1389,7 +1397,9 @@ export class VideoComponent implements OnInit, AfterViewInit {
               id: asset.assetId,
               gcsUri: asset.gcsUri,
               presignedUrl: asset.presignedUrl,
-              mimeType: asset.gcsUri.endsWith('.mp4') ? 'video/mp4' : 'image/png',
+              mimeType: asset.gcsUri.endsWith('.mp4')
+                ? 'video/mp4'
+                : 'image/png',
               originalFilename: 'remix-asset',
               // Add other required fields with default/null values
             } as SourceAssetResponseDto,
@@ -1398,9 +1408,9 @@ export class VideoComponent implements OnInit, AfterViewInit {
         }
       }
     }
- 
+
     if (hasAddedReferenceImage) {
-      this.handleReferenceImageAdded();
+      this._switchToReferenceImageModel();
       this.currentMode = 'Ingredients to Video';
     }
     this.updateModeAndNotify();

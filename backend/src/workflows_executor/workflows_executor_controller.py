@@ -22,9 +22,10 @@ router = APIRouter(
 @router.post("/generate_text")
 async def generate_text(
     request: GenerateTextRequest,
+    authorization: Annotated[str | None, Header()] = None,
     service: WorkflowsExecutorService = Depends(),
 ):
-    return await service.generate_text(request)
+    return await service.generate_text(request, authorization)
 
 
 @router.post("/generate_image")

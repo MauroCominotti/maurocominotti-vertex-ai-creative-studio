@@ -141,6 +141,8 @@ class UserInputStep(BaseStep[UserInputInputs, UserInputSettings]):
 # --- Generate Text ---
 class GenerateTextInputs(BaseModel):
     prompt: Union[StepOutputReference, str]
+    input_images: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
+    input_videos: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
 
 
 class GenerateTextSettings(BaseModel):

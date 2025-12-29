@@ -44,8 +44,51 @@
             </div>
         </div>
 
-        <!-- Non-Image Input -->
-        <div *ngIf="!isImageInput(input.key)" class="col-span-2 bg-neutral-900 p-2 rounded border border-neutral-800 mb-2">
+        <!-- Video Input -->
+        <div *ngIf="isVideoInput(input.key)" class="col-span-2">
+            <div *ngIf="input.value" class="relative group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900">
+                <!-- Loading Spinner -->
+                <div *ngIf="!isLoaded(input.value)" class="absolute inset-0 flex items-center justify-center bg-neutral-800 z-10">
+                    <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+
+                <video [src]="getMediaUrl(input.value)" 
+                       controls 
+                       class="w-full h-auto transition-opacity duration-300"
+                       [class.opacity-0]="!isLoaded(input.value)"
+                       [class.opacity-100]="isLoaded(input.value)"
+                       (loadedmetadata)="onMediaLoaded(input.value)"
+                       alt="Input Video"></video>
+                <div class="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[10px] text-white truncate px-2">
+                    {{ input.key }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Input -->
+        <div *ngIf="isAudioInput(input.key)" class="col-span-2">
+            <div *ngIf="input.value" class="relative group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900 p-2 flex items-center justify-center min-h-[50px]">
+                <!-- Loading Spinner -->
+                <div *ngIf="!isLoaded(input.value)" class="absolute inset-0 flex items-center justify-center bg-neutral-900 z-10">
+                    <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+
+                <audio [src]="getMediaUrl(input.value)" 
+                       controls 
+                       class="w-full transition-opacity duration-300"
+                       [class.opacity-0]="!isLoaded(input.value)"
+                       [class.opacity-100]="isLoaded(input.value)"
+                       (canplay)="onMediaLoaded(input.value)"
+                       alt="Input Audio"></audio>
+                <div class="absolute bottom-0 left-0 right-0 p-1 text-[10px] text-neutral-400 truncate px-2 text-center pointer-events-none">
+                    {{ input.key }}
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Non-Image/Video/Audio Input -->
+        <div *ngIf="!isImageInput(input.key) && !isVideoInput(input.key) && !isAudioInput(input.key)" class="col-span-2 bg-neutral-900 p-2 rounded border border-neutral-800 mb-2">
             <span class="text-xs text-neutral-500 block mb-1">{{ input.key }}</span>
             <p class="text-xs text-neutral-300 font-mono whitespace-pre-wrap">{{ input.value | json }}</p>
         </div>
@@ -84,7 +127,18 @@
        <!-- Video Output -->
        <div *ngIf="isVideoOutput(output.key)" class="col-span-2">
            <div *ngIf="output.value" class="relative group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900">
-              <video [src]="getMediaUrl(output.value)" controls class="w-full h-auto" alt="Generated Video"></video>
+              <!-- Loading Spinner -->
+              <div *ngIf="!loadedMedia.has($any(output.value))" class="absolute inset-0 flex items-center justify-center bg-neutral-800 z-10">
+                  <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+
+              <video [src]="getMediaUrl(output.value)" 
+                     controls 
+                     class="w-full h-auto transition-opacity duration-300"
+                     [class.opacity-0]="!loadedMedia.has($any(output.value))"
+                     [class.opacity-100]="loadedMedia.has($any(output.value))"
+                     (loadedmetadata)="onMediaLoaded(output.value)"
+                     alt="Generated Video"></video>
               <div class="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[10px] text-white truncate px-2">
                 {{ output.key }}
               </div>
@@ -93,8 +147,19 @@
 
        <!-- Audio Output -->
        <div *ngIf="isAudioOutput(output.key)" class="col-span-2">
-           <div *ngIf="output.value" class="relative group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900 p-2 flex items-center justify-center">
-              <audio [src]="getMediaUrl(output.value)" controls class="w-full" alt="Generated Audio"></audio>
+           <div *ngIf="output.value" class="relative group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-900 p-2 flex items-center justify-center min-h-[50px]">
+              <!-- Loading Spinner -->
+              <div *ngIf="!loadedMedia.has($any(output.value))" class="absolute inset-0 flex items-center justify-center bg-neutral-900 z-10">
+                  <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+
+              <audio [src]="getMediaUrl(output.value)" 
+                     controls 
+                     class="w-full transition-opacity duration-300"
+                     [class.opacity-0]="!loadedMedia.has($any(output.value))"
+                     [class.opacity-100]="loadedMedia.has($any(output.value))"
+                     (canplay)="onMediaLoaded(output.value)"
+                     alt="Generated Audio"></audio>
               <div class="absolute bottom-0 left-0 right-0 p-1 text-[10px] text-neutral-400 truncate px-2 text-center pointer-events-none">
                 {{ output.key }}
               </div>

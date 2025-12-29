@@ -19,25 +19,25 @@ import {
   Component,
   ElementRef,
   EventEmitter,
-  NgZone,
-  OnInit,
   Input,
+  NgZone,
   OnDestroy,
+  OnInit,
   Output,
   ViewChild,
 } from '@angular/core';
-import {debounceTime, finalize, fromEvent, Subscription} from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { debounceTime, finalize, fromEvent, Subscription } from 'rxjs';
+import { AssetTypeEnum } from '../../../admin/source-assets-management/source-asset.model';
+import { handleErrorSnackbar, handleSuccessSnackbar } from '../../../utils/handleMessageSnackbar';
 import {
-  SourceAssetService,
   SourceAssetResponseDto,
   SourceAssetSearchDto,
+  SourceAssetService,
 } from '../../services/source-asset.service';
-import {AssetTypeEnum} from '../../../admin/source-assets-management/source-asset.model';
-import {UserService} from '../../services/user.service';
-import {MatDialog} from '@angular/material/dialog';
-import {MatSnackBar} from '@angular/material/snack-bar';
-import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
-import { handleErrorSnackbar, handleSuccessSnackbar } from '../../../utils/handleMessageSnackbar';
+import { UserService } from '../../services/user.service';
+import { ConfirmationDialogComponent } from '../confirmation-dialog/confirmation-dialog.component';
 
 @Component({
   selector: 'app-source-asset-gallery',
@@ -49,12 +49,8 @@ export class SourceAssetGalleryComponent
 {
   @Output() assetSelected = new EventEmitter<SourceAssetResponseDto>();
   @Input() filterByType: AssetTypeEnum | null = null;
-  @Input() filterByMimeType:
-    | 'image/*'
-    | 'image/png'
-    | 'video/mp4'
-    | 'audio/mpeg'
-    | null = null;
+  @Input() filterByMimeType: 'image/*' | 'image/png' | 'video/mp4' | null =
+    null;
   @ViewChild('sentinel') private sentinel!: ElementRef<HTMLElement>;
 
   public assets: SourceAssetResponseDto[] = [];

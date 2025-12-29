@@ -39,7 +39,7 @@ export class MediaResolutionService {
       const processIO = (ioConfig: any[], sourceData: any) => {
         if (!sourceData) return;
         ioConfig.forEach(item => {
-          if (item.type === 'image') {
+          if (['image', 'audio', 'video'].includes(item.type)) {
             this.collectMediaIds(sourceData[item.name], mediaItemIds, sourceAssetIds);
           }
         });

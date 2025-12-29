@@ -234,7 +234,7 @@ export class GenericStepComponent implements OnInit, OnChanges {
 
     this.localConfig.inputs.forEach(input => {
       // Logic for specific inputs
-      if (input.name === 'input_images' || input.name === 'reference_images') {
+      if (this.localConfig.type === 'generate-video' && (input.name === 'input_images' || input.name === 'reference_images')) {
         const showIngredients = currentMode === 'Ingredients to Video';
 
         if (showIngredients && maxRefs > 0) {
@@ -306,14 +306,20 @@ export class GenericStepComponent implements OnInit, OnChanges {
     }
   }
 
-  openImageSelectorForReference(inputName: string): void {
-    if ((this.referenceImages[inputName]?.length || 0) >= this.currentMaxReferenceImages) return;
+  openImageSelectorForReference(inputName: string, type: 'image' | 'video'): void {
+    const maxItems = type === 'image' ? this.currentMaxReferenceImages : 1;
+    if ((this.referenceImages[inputName]?.length || 0) >= maxItems) return;
+
+    let mimeType: string = 'image/*';
+    if (type === 'video') mimeType = 'video/mp4';
+
     const dialogRef = this.dialog.open(ImageSelectorComponent, {
       width: '90vw',
       height: '80vh',
       maxWidth: '90vw',
       data: {
-        mimeType: 'image/*', // Only allow images for references
+        mimeType: mimeType,
+        assetType: type === 'video' ? AssetTypeEnum.GENERIC_VIDEO : AssetTypeEnum.GENERIC_IMAGE,
       },
       panelClass: 'image-selector-dialog',
     });

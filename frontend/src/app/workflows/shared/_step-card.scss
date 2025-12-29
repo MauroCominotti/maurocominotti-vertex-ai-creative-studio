@@ -39,7 +39,7 @@
   padding: 16px 24px;
   background: rgba(255, 255, 255, 0.03);
   border-bottom: 1px solid var(--border-color);
-  cursor: pointer;
+  cursor: move;
 
   .step-title {
     display: flex;
@@ -153,5 +153,41 @@
     font-size: 18px;
     width: 18px;
     height: 18px;
+  }
+}
+
+/* Slider Group */
+.slider-group {
+  margin-top: 8px;
+  
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  
+  mat-slider {
+    width: 100%;
+  }
+}
+
+/* Radio Group */
+.radio-group {
+  margin-top: 8px;
+  
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+  
+  mat-radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
   }
 }

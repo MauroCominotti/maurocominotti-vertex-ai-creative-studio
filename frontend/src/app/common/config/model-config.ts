@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export type GenerationType = 'IMAGE' | 'VIDEO' | 'AUDIO';
+export type GenerationType = 'IMAGE' | 'VIDEO' | 'AUDIO' | 'TEXT';
 
 export type GenerationMode =
   | 'Text to Image'
@@ -22,7 +22,8 @@ export type GenerationMode =
   | 'Text to Video'
   | 'Frames to Video'
   | 'Ingredients to Video'
-  | 'Text to Audio';
+  | 'Text to Audio'
+  | 'Multimodal to text';
 
 export interface ModelCapability {
   supportedModes: GenerationMode[];
@@ -132,7 +133,55 @@ export const MODEL_CONFIGS: GenerationModelConfig[] = [
       supportedAspectRatios: ['1:1', '16:9', '9:16', '3:4', '4:3'],
     },
   },
-
+  // --- Text Models ---
+  {
+    value: 'gemini-2.5-pro',
+    viewValue: 'Gemini 2.5 Pro',
+    type: 'TEXT',
+    icon: 'gemini-spark-icon',
+    isSvg: true,
+    capabilities: {
+      supportedModes: ['Multimodal to text'],
+      maxReferenceImages: 10,
+      supportedAspectRatios: [],
+    },
+  },
+  {
+    value: 'gemini-2.5-flash',
+    viewValue: 'Gemini 2.5 Flash',
+    type: 'TEXT',
+    icon: 'gemini-spark-icon',
+    isSvg: true,
+    capabilities: {
+      supportedModes: ['Multimodal to text'],
+      maxReferenceImages: 10,
+      supportedAspectRatios: [],
+    },
+  },
+  {
+    value: 'gemini-3-pro-preview',
+    viewValue: 'Gemini 3 Pro Preview',
+    type: 'TEXT',
+    icon: 'gemini-spark-icon',
+    isSvg: true,
+    capabilities: {
+      supportedModes: ['Multimodal to text'],
+      maxReferenceImages: 10,
+      supportedAspectRatios: [],
+    },
+  },
+  {
+    value: 'gemini-3-flash-preview',
+    viewValue: 'Gemini 3 Flash Preview',
+    type: 'TEXT',
+    icon: 'gemini-spark-icon',
+    isSvg: true,
+    capabilities: {
+      supportedModes: ['Multimodal to text'],
+      maxReferenceImages: 10,
+      supportedAspectRatios: [],
+    },
+  },
   // --- Video Models ---
   {
     value: 'veo-3.1-generate-preview',

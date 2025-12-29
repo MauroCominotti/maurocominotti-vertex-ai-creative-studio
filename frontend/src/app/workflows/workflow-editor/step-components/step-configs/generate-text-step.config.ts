@@ -1,5 +1,13 @@
 
+import { MODEL_CONFIGS } from '../../../../common/config/model-config';
 import { StepConfig } from '../generic-step/step.model';
+
+const model_options = MODEL_CONFIGS
+  .filter(model => model.type === 'TEXT')
+  .map(model => ({
+    value: model.value,
+    label: model.viewValue
+  }));
 
 export const GENERATE_TEXT_STEP_CONFIG: StepConfig = {
   type: 'generate-text',
@@ -12,23 +20,35 @@ export const GENERATE_TEXT_STEP_CONFIG: StepConfig = {
       type: 'textarea',
       required: true,
     },
+    {
+      name: 'input_images',
+      label: 'Input Images',
+      type: 'image',
+      required: false,
+    },
+    {
+      name: 'input_videos',
+      label: 'Input Videos',
+      type: 'video',
+      required: false,
+    },
   ],
   settings: [
     {
       name: 'model',
       label: 'Model',
       type: 'select',
-      options: [
-        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
-      ],
-      defaultValue: 'gemini-1.5-pro',
+      options: model_options,
+      defaultValue: 'gemini-3-flash-preview',
     },
     {
       name: 'temperature',
       label: 'Temperature',
       type: 'slider',
       defaultValue: 0.7,
+      min: 0,
+      max: 1,
+      step: 0.1,
     },
   ],
   outputs: [

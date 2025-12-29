@@ -26,13 +26,8 @@ import {
 import { WorkflowService } from '../workflow.service';
 import { AddStepModalComponent } from './add-step-modal/add-step-modal.component';
 import { RunWorkflowModalComponent } from './run-workflow-modal/run-workflow-modal.component';
-import { CROP_IMAGE_STEP_CONFIG } from './step-components/step-configs/crop-image-step.config';
-import { EDIT_IMAGE_STEP_CONFIG } from './step-components/step-configs/edit-image-step.config';
-import { GENERATE_AUDIO_STEP_CONFIG } from './step-components/step-configs/generate-audio-step.config';
-import { GENERATE_IMAGE_STEP_CONFIG } from './step-components/step-configs/generate-image-step.config';
-import { GENERATE_TEXT_STEP_CONFIG } from './step-components/step-configs/generate-text-step.config';
-import { GENERATE_VIDEO_STEP_CONFIG } from './step-components/step-configs/generate-video-step.config';
-import { VIRTUAL_TRY_ON_STEP_CONFIG } from './step-components/step-configs/virtual-try-on-step.config';
+
+import { STEP_CONFIGS_MAP } from '../shared/step-configs.map';
 
 
 
@@ -84,15 +79,6 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   mediaUrlMap = new Map<number, string>();
   loadedMedia = new Set<number>();
 
-  stepConfigs = {
-    [NodeTypes.GENERATE_TEXT]: GENERATE_TEXT_STEP_CONFIG,
-    [NodeTypes.GENERATE_IMAGE]: GENERATE_IMAGE_STEP_CONFIG,
-    [NodeTypes.EDIT_IMAGE]: EDIT_IMAGE_STEP_CONFIG,
-    [NodeTypes.CROP_IMAGE]: CROP_IMAGE_STEP_CONFIG,
-    [NodeTypes.GENERATE_VIDEO]: GENERATE_VIDEO_STEP_CONFIG,
-    [NodeTypes.VIRTUAL_TRY_ON]: VIRTUAL_TRY_ON_STEP_CONFIG,
-    [NodeTypes.GENERATE_AUDIO]: GENERATE_AUDIO_STEP_CONFIG,
-  };
 
   constructor(
     private fb: FormBuilder,
@@ -209,7 +195,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   // ... (rest of the component logic will be updated in subsequent steps)
 
   getStepConfig(type: string) {
-    return this.stepConfigs[type as keyof typeof this.stepConfigs];
+    return (STEP_CONFIGS_MAP as any)[type];
   }
 
   get isReadOnly(): boolean {
@@ -313,7 +299,7 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         const stepConfig = this.getStepConfig(step.type);
         if (!stepConfig) return;
 
-        stepConfig.outputs.forEach(output => {
+        stepConfig.outputs.forEach((output: any) => {
           availableOutputs.push({
             label: `Step ${stepIndex + 1}: ${output.label}`,
             value: {
@@ -861,8 +847,8 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     });
     this.stepsArray.clear();
     this.outputDefinitionsArray.clear();
-    this.addOutput('Main Prompt', 'text');
-    this.addOutput('Model Image', 'image');
+    this.addOutput('User Text Input', 'text');
+    this.addOutput('User Image Input', 'image');
     this.updateAvailableOutputs();
   }
 

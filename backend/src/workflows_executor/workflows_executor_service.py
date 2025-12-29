@@ -2,7 +2,7 @@ import logging
 import os
 import asyncio
 
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Union, List, Dict, Any
 
 from fastapi import Header, HTTPException
 from google import genai
@@ -117,7 +117,46 @@ class WorkflowsExecutorService:
             await asyncio.sleep(poll_interval)
 
 
-    async def generate_text(self, request: GenerateTextRequest):
+    async def _resolve_media_to_parts(self, inputs, authorization: str | None = None) -> List[types.Part]:
+        """
+        Resolves mixed input types into a list of Gemini types.Part.
+        """
+        parts = []
+        media_items, asset_ids = self._normalize_asset_inputs(inputs)
+        
+        headers = {"Authorization": authorization} if authorization else {}
+        
+        # Resolve Media Items
+        for item in media_items:
+            media_id = item["media_item_id"]
+            index = item["media_index"]
+            try:
+                response = self.rest_client.get(f"{self.backend_url}/api/gallery/item/{media_id}", headers=headers)
+                if response.status_code == 200:
+                    data = response.json()
+                    gcs_uris = data.get("gcs_uris", [])
+                    mime_type = data.get("mime_type", "image/png") # Defaulting to image if not found, but should be there
+                    if 0 <= index < len(gcs_uris):
+                        parts.append(types.Part.from_uri(file_uri=gcs_uris[index], mime_type=mime_type))
+            except Exception as e:
+                logger.error(f"Error resolving media item {media_id}: {e}")
+
+        # Resolve Source Assets
+        for asset_id in asset_ids:
+            try:
+                response = self.rest_client.get(f"{self.backend_url}/api/source_assets/{asset_id}", headers=headers)
+                if response.status_code == 200:
+                    data = response.json()
+                    gcs_uri = data.get("gcsUri") or data.get("gcs_uri")
+                    mime_type = data.get("mimeType") or data.get("mime_type") or "image/jpeg"
+                    if gcs_uri:
+                        parts.append(types.Part.from_uri(file_uri=gcs_uri, mime_type=mime_type))
+            except Exception as e:
+                logger.error(f"Error resolving source asset {asset_id}: {e}")
+
+        return parts
+
+    async def generate_text(self, request: GenerateTextRequest, authorization: str | None = None):
         generate_content_config = types.GenerateContentConfig(
             temperature=request.config.temperature,
             top_p=0.95,
@@ -138,12 +177,28 @@ class WorkflowsExecutorService:
             ],
         )
 
+        contents = []
+        
+        # 1. Add Text Prompt
+        if isinstance(request.inputs.prompt, str):
+            contents.append(types.Part.from_text(text=request.inputs.prompt))
+        
+        # 2. Add Images
+        if request.inputs.input_images:
+            image_parts = await self._resolve_media_to_parts(request.inputs.input_images, authorization)
+            contents.extend(image_parts)
+            
+        # 3. Add Videos
+        if request.inputs.input_videos:
+            video_parts = await self._resolve_media_to_parts(request.inputs.input_videos, authorization)
+            contents.extend(video_parts)
+
         text = ""
         # Note: The original code used a stream but returned the full text at the end.
         # Keeping this behavior for now.
         for chunk in self.genai_client.models.generate_content_stream(
             model=request.config.model,
-            contents=request.inputs.prompt,
+            contents=contents,
             config=generate_content_config,
         ):
             if chunk.text:

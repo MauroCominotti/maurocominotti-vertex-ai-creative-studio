@@ -1,6 +1,6 @@
 
 <div class="step-card" [formGroup]="stepForm" [ngClass]="localConfig.type" [class.invalid-step]="stepForm.invalid && showValidationErrors">
-  <div class="step-header" (click)="isCollapsed = !isCollapsed">
+  <div class="step-header" (click)="isCollapsed = !isCollapsed" cdkDragHandle>
     <div class="step-title">
       <mat-icon>{{ localConfig.icon }}</mat-icon>
       <span>{{ localConfig.title }}</span>
@@ -55,25 +55,32 @@
             </mat-error>
           </mat-form-field>
           <!-- Inputs image -->
-          <div class="flex items-center gap-3" *ngIf="inputModes[input.name] === 'fixed' && input.type === 'image'">
+          <div class="flex items-center gap-3" *ngIf="inputModes[input.name] === 'fixed' && (input.type === 'image' || input.type === 'video')">
               <div
                 class="relative h-16 w-16 cursor-pointer rounded-xl border-2 border-dashed transition-colors flex items-center justify-center"
                 [ngClass]="{
                   'border-red-500 bg-red-500/10': stepForm.get('inputs')?.get(input.name)?.invalid && showValidationErrors,
                   'border-neutral-700 bg-neutral-800 hover:border-neutral-500 hover:bg-neutral-700': !(stepForm.get('inputs')?.get(input.name)?.invalid && showValidationErrors)
                 }"
-                [class.opacity-50]="(referenceImages[input.name].length || 0) >= currentMaxReferenceImages"
-                (click)="(referenceImages[input.name].length || 0) < currentMaxReferenceImages && openImageSelectorForReference(input.name)"
+                [class.opacity-50]="(referenceImages[input.name].length || 0) >= (input.type === 'image' ? currentMaxReferenceImages : 1)"
+                (click)="(referenceImages[input.name].length || 0) < (input.type === 'image' ? currentMaxReferenceImages : 1) && openImageSelectorForReference(input.name, $any(input.type))"
                 (dragover)="$event.preventDefault()"
-                (drop)="$event.preventDefault(); onReferenceImageDrop($event, input.name)"
+                (drop)="$event.preventDefault(); input.type === 'image' && onReferenceImageDrop($event, input.name)"
                 >
-                <mat-icon class="text-neutral-500">add</mat-icon>
-                <span class="absolute bottom-0 text-[10px] text-neutral-500">{{ (referenceImages[input.name].length || 0) }}/{{ currentMaxReferenceImages }}</span>
+                <mat-icon class="text-neutral-500">
+                  {{ input.type === 'image' ? 'add_photo_alternate' : 'video_library' }}
+                </mat-icon>
+                <span *ngIf="input.type === 'image'" class="absolute bottom-1 text-[10px] text-neutral-500">{{ (referenceImages[input.name].length || 0) }}/{{ currentMaxReferenceImages }}</span>
               </div>
               <!-- Show small previews of reference images -->
-              <div class="flex gap-1">
-                <div *ngFor="let ref of referenceImages[input.name]; let i = index" class="relative h-12 w-12">
-                  <img [src]="ref.previewUrl" class="h-full w-full rounded-lg object-cover" />
+              <div class="flex gap-1 overflow-x-auto max-w-xs">
+                <div *ngFor="let ref of referenceImages[input.name]; let i = index" class="relative h-12 w-12 flex-shrink-0">
+                  <img *ngIf="input.type === 'image'" [src]="ref.previewUrl" class="h-full w-full rounded-lg object-cover" />
+                  <div *ngIf="input.type === 'video'" class="h-full w-full rounded-lg bg-neutral-800 flex items-center justify-center border border-neutral-700">
+                    <mat-icon class="text-neutral-500 !text-lg !w-5 !h-5">
+                      movie
+                    </mat-icon>
+                  </div>
                   <button
                     (click)="clearReferenceImage(input.name, i)"
                     class="absolute -right-1 -top-1 rounded-full bg-neutral-900 p-0.5 text-neutral-400 hover:text-white"
@@ -116,6 +123,20 @@
           </mat-form-field>
           <div *ngIf="setting.type === 'checkbox'" class="checkbox-group">
             <mat-checkbox [formControlName]="setting.name">{{ setting.label }}</mat-checkbox>
+          </div>
+          <div *ngIf="setting.type === 'slider'" class="slider-group">
+            <label>{{ setting.label }}: {{ stepForm.get('settings')?.get(setting.name)?.value }}</label>
+            <mat-slider [min]="setting.min || 0" [max]="setting.max || 1" [step]="setting.step || 0.1">
+              <input matSliderThumb [formControlName]="setting.name">
+            </mat-slider>
+          </div>
+          <div *ngIf="setting.type === 'radio'" class="radio-group">
+            <label>{{ setting.label }}</label>
+            <mat-radio-group [formControlName]="setting.name">
+              <mat-radio-button *ngFor="let option of setting.options" [value]="option.value">
+                {{ option.label }}
+              </mat-radio-button>
+            </mat-radio-group>
           </div>
           </ng-container>
         </ng-container>

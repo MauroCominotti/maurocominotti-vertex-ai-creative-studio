@@ -2,7 +2,7 @@
 export interface StepInput {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'image';
+  type: 'text' | 'textarea' | 'select' | 'image' | 'video' | 'audio';
   options?: { value: string; label: string }[];
   required: boolean;
   hidden?: boolean;
@@ -15,6 +15,9 @@ export interface StepSetting {
   options?: { value: string; label: string }[];
   defaultValue: any;
   hidden?: boolean;
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
 export interface StepOutput {

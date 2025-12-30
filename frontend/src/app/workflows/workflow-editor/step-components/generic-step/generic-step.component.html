@@ -33,8 +33,83 @@
       <ng-container *ngFor="let input of localConfig.inputs">
         <div class="input-group" *ngIf="!input.hidden">
         <label>{{ input.label }}</label>
-        <div class="controls-row">
-          <mat-form-field appearance="outline" class="mode-select">
+
+        <div [class.controls-row]="inputModes[input.name] !== 'mixed'" [class.mb-4]="inputModes[input.name] === 'mixed'">
+          <!-- Inputs mixed (List of fixed/linked) -->
+          <div class="input-container-mixed" *ngIf="inputModes[input.name] === 'mixed'">
+              
+               <!-- Counter -->
+              <div class="text-xs text-neutral-500 mb-2 font-medium">
+                  {{ referenceImages[input.name]?.length || 0 }}/{{ currentMaxReferenceImages }} items selected
+              </div>
+
+              <!-- List of current items -->
+              <div class="flex flex-wrap gap-2 mb-2" *ngIf="referenceImages[input.name]?.length">
+                <div *ngFor="let item of referenceImages[input.name]; let i = index" 
+                     class="relative h-20 w-20 flex-shrink-0 group rounded-lg overflow-hidden border border-neutral-700 bg-neutral-800">
+                  
+                  <!-- Case 1: Fixed Image/Video -->
+                  <ng-container *ngIf="!isStepOutputReference(item)">
+                      <img *ngIf="$any(item).previewUrl" [src]="$any(item).previewUrl" class="h-full w-full object-cover" />
+                      <!-- Fallback/Icon if no preview -->
+                      <div *ngIf="!$any(item).previewUrl" class="h-full w-full flex items-center justify-center">
+                          <mat-icon class="text-neutral-500">image</mat-icon>
+                      </div>
+                  </ng-container>
+
+                  <!-- Case 2: Linked Output -->
+                  <ng-container *ngIf="isStepOutputReference(item)">
+                      <div class="h-full w-full flex flex-col items-center justify-center p-1 text-center bg-blue-900/20">
+                          <mat-icon class="text-blue-400 !w-5 !h-5 !text-lg">link</mat-icon>
+                          <span class="text-[9px] text-blue-200 leading-tight mt-1 line-clamp-2">
+                              {{ getLinkedOutputLabel(item) }}
+                          </span>
+                      </div>
+                  </ng-container>
+
+                  <!-- Delete Button -->
+                  <button
+                    (click)="clearReferenceImage(input.name, i)"
+                    class="absolute top-0 right-0 p-0.5 bg-black/50 text-white hover:bg-red-500 rounded-bl-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <mat-icon class="!h-4 !w-4 !text-sm">close</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+               <!-- Add Buttons (Always on new row) -->
+               <div class="flex gap-2" *ngIf="(referenceImages[input.name]?.length || 0) < currentMaxReferenceImages">
+                   <!-- Add Fixed -->
+                  <div 
+                        class="h-10 w-10 flex flex-col items-center justify-center cursor-pointer rounded-lg border-2 border-dashed border-neutral-700 hover:border-neutral-500 hover:bg-neutral-800 transition-colors gap-1"
+                        (click)="openImageSelectorForReference(input.name, $any(input.type))"
+                        matTooltip="Add {{ input.type === 'video' ? 'Video' : 'Image' }}">
+                        <mat-icon class="text-neutral-400 !w-5 !h-5 !text-xl">add_photo_alternate</mat-icon>
+                    </div>
+                  
+                  <!-- Add Linked -->
+                    <div 
+                        class="h-10 w-10 flex flex-col items-center justify-center cursor-pointer rounded-lg border-2 border-dashed border-neutral-700 hover:border-blue-500/50 hover:bg-blue-900/10 transition-colors gap-1"
+                        [matMenuTriggerFor]="outputMenu"
+                        matTooltip="Add Output Reference">
+                        <mat-icon class="text-blue-400 !w-5 !h-5 !text-xl">link</mat-icon>
+                    </div>
+                  
+                  <mat-menu #outputMenu="matMenu">
+                      <button mat-menu-item *ngFor="let out of compatibleOutputs[input.name]" (click)="addLinkedOutput(input.name, out)">
+                          {{ out.label }}
+                      </button>
+                      <div *ngIf="!compatibleOutputs[input.name]?.length" class="px-4 py-2 text-sm text-neutral-500">
+                          No compatible outputs
+                      </div>
+                  </mat-menu>
+               </div>
+               <mat-error *ngIf="showValidationErrors && stepForm.get('inputs')?.get(input.name)?.hasError('required') && !referenceImages[input.name]?.length">
+                   At least one input is required
+               </mat-error>
+          </div>
+
+          <mat-form-field *ngIf="inputModes[input.name] !== 'mixed'" appearance="outline" class="mode-select">
             <mat-select [value]="inputModes[input.name]" (selectionChange)="toggleInputMode(input.name, $event.value)">
               <mat-option value="fixed">Fixed</mat-option>
               <mat-option value="linked">Link</mat-option>
@@ -75,7 +150,8 @@
               <!-- Show small previews of reference images -->
               <div class="flex gap-1 overflow-x-auto max-w-xs">
                 <div *ngFor="let ref of referenceImages[input.name]; let i = index" class="relative h-12 w-12 flex-shrink-0">
-                  <img *ngIf="input.type === 'image'" [src]="ref.previewUrl" class="h-full w-full rounded-lg object-cover" />
+                  <!-- Use $any(ref) to avoid type errors since referenceImages is mixed now -->
+                  <img *ngIf="input.type === 'image'" [src]="$any(ref).previewUrl" class="h-full w-full rounded-lg object-cover" />
                   <div *ngIf="input.type === 'video'" class="h-full w-full rounded-lg bg-neutral-800 flex items-center justify-center border border-neutral-700">
                     <mat-icon class="text-neutral-500 !text-lg !w-5 !h-5">
                       movie

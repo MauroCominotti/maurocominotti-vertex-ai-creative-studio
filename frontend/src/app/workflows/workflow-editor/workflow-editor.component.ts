@@ -847,8 +847,8 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
     });
     this.stepsArray.clear();
     this.outputDefinitionsArray.clear();
-    this.addOutput('User Text Input', 'text');
-    this.addOutput('User Image Input', 'image');
+    this.addOutput('User_Text_Input', 'text');
+    this.addOutput('User_Image_Input', 'image');
     this.updateAvailableOutputs();
   }
 

@@ -122,6 +122,9 @@ class BaseStep(BaseDto, Generic[InputT, SettingsT]):
 # =========================================
 
 
+
+WorkflowInputItem = Union[StepOutputReference, ReferenceImage, int]
+
 # --- User Input ---
 class UserInputInputs(BaseModel):
     pass
@@ -141,8 +144,8 @@ class UserInputStep(BaseStep[UserInputInputs, UserInputSettings]):
 # --- Generate Text ---
 class GenerateTextInputs(BaseModel):
     prompt: Union[StepOutputReference, str]
-    input_images: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
-    input_videos: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
+    input_images: Optional[Union[StepOutputReference, List[WorkflowInputItem], int]] = None
+    input_videos: Optional[Union[StepOutputReference, List[WorkflowInputItem], int]] = None
 
 
 class GenerateTextSettings(BaseModel):
@@ -176,7 +179,7 @@ class GenerateImageStep(BaseStep[GenerateImageInputs, GenerateImageSettings]):
 
 # --- Edit Image ---
 class EditImageInputs(BaseModel):
-    input_images: Union[StepOutputReference, List[ReferenceImage], List[int], int]
+    input_images: Union[StepOutputReference, List[WorkflowInputItem], int]
     prompt: Union[StepOutputReference, str]
 
 
@@ -195,9 +198,9 @@ class EditImageStep(BaseStep[EditImageInputs, EditImageSettings]):
 # --- Generate Video ---
 class GenerateVideoInputs(BaseModel):
     prompt: Union[StepOutputReference, str]
-    input_images: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
-    start_frame: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
-    end_frame: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
+    input_images: Optional[Union[StepOutputReference, List[WorkflowInputItem], int]] = None
+    start_frame: Optional[Union[StepOutputReference, List[WorkflowInputItem], int]] = None
+    end_frame: Optional[Union[StepOutputReference, List[WorkflowInputItem], int]] = None
 
 
 class GenerateVideoSettings(BaseModel):
@@ -215,7 +218,7 @@ class GenerateVideoStep(BaseStep[GenerateVideoInputs, GenerateVideoSettings]):
 
 # --- Crop Image ---
 class CropImageInputs(BaseModel):
-    input_image: Union[StepOutputReference, List[ReferenceImage], List[int], int]
+    input_image: Union[StepOutputReference, List[WorkflowInputItem], int]
 
 
 class CropImageSettings(BaseModel):
@@ -232,11 +235,11 @@ class CropImageStep(BaseStep[CropImageInputs, CropImageSettings]):
 
 # --- Virtual Try-On ---
 class VirtualTryOnInputs(BaseModel):
-    model_image: Union[StepOutputReference, List[ReferenceImage], List[int], int]
-    top_image: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
-    bottom_image: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
-    dress_image: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
-    shoes_image: Optional[Union[StepOutputReference, List[ReferenceImage], List[int], int]] = None
+    model_image: Union[StepOutputReference, List[WorkflowInputItem], int]
+    top_image: Optional[Union[StepOutputReference, List[WorkflowInputItem], int]] = None
+    bottom_image: Optional[Union[StepOutputReference, List[WorkflowInputItem], int]] = None
+    dress_image: Optional[Union[StepOutputReference, List[WorkflowInputItem], int]] = None
+    shoes_image: Optional[Union[StepOutputReference, List[WorkflowInputItem], int]] = None
 
 
 class VirtualTryOnSettings(BaseModel):

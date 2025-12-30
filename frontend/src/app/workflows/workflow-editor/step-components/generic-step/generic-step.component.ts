@@ -9,7 +9,10 @@ import { ImageSelectorComponent, MediaItemSelection } from '../../../../common/c
 import { ASPECT_RATIO_LABELS, MODEL_CONFIGS } from '../../../../common/config/model-config';
 import { ReferenceImage } from '../../../../common/models/search.model';
 import { SourceAssetResponseDto } from '../../../../common/services/source-asset.service';
+import { StepOutputReference } from '../../../workflow.models';
 import { StepConfig } from './step.model';
+
+type WorkflowInputItem = ReferenceImage | StepOutputReference;
 
 @Component({
   selector: 'app-generic-step',
@@ -28,11 +31,11 @@ export class GenericStepComponent implements OnInit, OnChanges {
   localConfig!: StepConfig;
   private settingsSubscription?: Subscription;
   private inputModeSubscription?: Subscription;
-  currentMaxReferenceImages = 3; // Default fallback
+  currentMaxReferenceImages = 1;
 
   isCollapsed = true;
-  inputModes: { [key: string]: 'fixed' | 'linked' } = {};
-  referenceImages: { [key: string]: ReferenceImage[] } = {};
+  inputModes: { [key: string]: 'fixed' | 'linked' | 'mixed' } = {};
+  referenceImages: { [key: string]: WorkflowInputItem[] } = {};
   compatibleOutputs: { [key: string]: any[] } = {};
 
   constructor(
@@ -93,12 +96,11 @@ export class GenericStepComponent implements OnInit, OnChanges {
 
       if (isLinked) {
         this.inputModes[input.name] = 'linked';
+      } else if (Array.isArray(value)) {
+        this.inputModes[input.name] = 'mixed';
+        this.referenceImages[input.name] = value;
       } else {
         this.inputModes[input.name] = 'fixed';
-        // If the value is an array, it's likely a list of ReferenceImages
-        if (Array.isArray(value)) {
-          this.referenceImages[input.name] = value;
-        }
       }
 
       // Initialize reference images array for this input if it doesn't exist
@@ -240,6 +242,10 @@ export class GenericStepComponent implements OnInit, OnChanges {
         if (showIngredients && maxRefs > 0) {
           input.hidden = false;
           this.stepForm.get('inputs')?.get(input.name)?.enable();
+          // Force mixed mode for list inputs if they are enabled
+          if (input.type === 'image' || input.type === 'video') {
+            this.inputModes[input.name] = 'mixed';
+          }
         } else {
           input.hidden = true;
           this.stepForm.get('inputs')?.get(input.name)?.disable();
@@ -248,9 +254,17 @@ export class GenericStepComponent implements OnInit, OnChanges {
         if (currentMode === 'Frames to Video') {
           input.hidden = false;
           this.stepForm.get('inputs')?.get(input.name)?.enable();
+          if (input.type === 'image' || input.type === 'video') {
+            this.inputModes[input.name] = 'mixed';
+          }
         } else {
           input.hidden = true;
           this.stepForm.get('inputs')?.get(input.name)?.disable();
+        }
+      } else {
+        // Default for other inputs: if it allows multiple, set to mixed
+        if ((input.type === 'image' || input.type === 'video') && maxRefs > 1) {
+          this.inputModes[input.name] = 'mixed';
         }
       }
     });
@@ -259,12 +273,12 @@ export class GenericStepComponent implements OnInit, OnChanges {
   private updateCompatibleOutputs(): void {
     this.localConfig.inputs.forEach(input => {
       this.compatibleOutputs[input.name] = this.availableOutputs.filter(
-        output => (output.type === input.type) || (output.type === "text" && input.type === "textarea")
+        output => (output.type === input.type) || (output.type === "text" && input.type === "textarea") || (output.type === 'image' && input.type === 'image')
       );
     });
   }
 
-  toggleInputMode(inputName: string, mode: 'fixed' | 'linked') {
+  toggleInputMode(inputName: string, mode: 'fixed' | 'linked' | 'mixed') {
     this.inputModes[inputName] = mode;
     this.stepForm
       .get('inputs')
@@ -395,6 +409,29 @@ export class GenericStepComponent implements OnInit, OnChanges {
       this.updateInputControlWithError(inputName);
     }
   }
+
+  addLinkedOutput(inputName: string, outputValue: any) {
+    if ((this.referenceImages[inputName]?.length || 0) >= this.currentMaxReferenceImages) return;
+    if (!this.referenceImages[inputName]) this.referenceImages[inputName] = [];
+
+    this.referenceImages[inputName].push(outputValue.value); // outputValue.value is the StepOutputReference
+    this.updateInputControlWithError(inputName);
+  }
+
+  isStepOutputReference(item: any): item is StepOutputReference {
+    return item && 'step' in item && 'output' in item;
+  }
+
+  getLinkedOutputLabel(item: StepOutputReference): string {
+    // Find label from availableOutputs
+    // This is expensive O(N) but N is small
+    for (const key in this.compatibleOutputs) {
+      const found = this.compatibleOutputs[key].find(o => o.value.step === item.step && o.value.output === item.output);
+      if (found) return found.label;
+    }
+    return `${item.step}.${item.output}`;
+  }
+
 
   private updateInputControlWithError(inputName: string) {
     const images = this.referenceImages[inputName] || [];

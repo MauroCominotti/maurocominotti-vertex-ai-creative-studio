@@ -88,25 +88,30 @@ class WorkflowService:
                 config.model_dump() if isinstance(config, BaseModel) else config
             )
 
+
             # Resolve inputs
             resolved_inputs = {}
-            for input_name, input_value in step.inputs.model_dump().items():
-                if isinstance(input_value, dict) and "step" in input_value:
-                    # This is a StepOutputReference
-                    ref_step_id = input_value["step"]
-                    ref_output_name = input_value["output"]
+            
+            def resolve_value(value):
+                # If it's a StepOutputReference (dict with step and output)
+                if isinstance(value, dict) and "step" in value and "output" in value:
+                    ref_step_id = value["step"]
+                    ref_output_name = value["output"]
 
                     if ref_step_id == user_input_step_id:
-                        # This input refers to the user_input step
-                        resolved_inputs[input_name] = (
-                            f"${{args.{ref_output_name}}}"
-                        )
+                        return f"${{args.{ref_output_name}}}"
                     else:
-                        resolved_inputs[input_name] = (
-                            f"${{{ref_step_id}_result.body.{ref_output_name}}}"
-                        )
+                        return f"${{{ref_step_id}_result.body.{ref_output_name}}}"
+                # If it's a list, resolve each item
+                elif isinstance(value, list):
+                    return [resolve_value(item) for item in value]
+                # Otherwise, return as is
                 else:
-                    resolved_inputs[input_name] = input_value
+                    return value
+
+            for input_name, input_value in step.inputs.model_dump().items():
+                resolved_inputs[input_name] = resolve_value(input_value)
+
 
             body = {
                 "workspace_id": "${args.workspace_id}",  # Dynamically injected from workspaceId passed at execution

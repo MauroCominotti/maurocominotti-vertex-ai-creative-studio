@@ -42,7 +42,15 @@ class WorkflowsExecutorService:
         # Wrap single items in a list for uniform processing
         raw_list = inputs if isinstance(inputs, list) else [inputs] if inputs is not None else []
         
-        for item in raw_list:
+        # Helper to flatten nested lists
+        def flatten(items):
+            for x in items:
+                if isinstance(x, list):
+                    yield from flatten(x)
+                else:
+                    yield x
+
+        for item in flatten(raw_list):
             if isinstance(item, int):
                 media_items.append({
                     "media_item_id": item, 

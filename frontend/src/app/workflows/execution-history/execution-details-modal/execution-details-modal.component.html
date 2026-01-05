@@ -37,7 +37,7 @@
     <div>
       <h3 class="text-lg font-semibold mb-3">Steps</h3>
       <div class="space-y-4">
-        <div *ngFor="let step of details.step_entries" class="bg-neutral-800 rounded-lg border border-neutral-700 overflow-hidden">
+        <div *ngFor="let step of visibleStepEntries" class="bg-neutral-800 rounded-lg border border-neutral-700 overflow-hidden">
           <!-- Step Header -->
           <div class="p-3 bg-neutral-700/50 flex justify-between items-center cursor-pointer hover:bg-neutral-700 transition-colors" (click)="toggleStep(step.step_id)">
             <div class="flex items-center gap-3">

@@ -20,7 +20,7 @@ export class ExecutionDetailsModalComponent implements OnInit {
     workflow: WorkflowModel | null = null;
     NodeTypes = NodeTypes;
     expandedSteps = new Set<string>();
-    mediaUrlMap = new Map<number, string>();
+    mediaUrlMap = new Map<string, string>();
     loadedMedia = new Set<string>();
 
     constructor(
@@ -36,6 +36,8 @@ export class ExecutionDetailsModalComponent implements OnInit {
         this.loadDetails();
     }
 
+    visibleStepEntries: any[] = [];
+
     loadDetails(): void {
         this.isLoading = true;
         // ForkJoin to get both details and workflow definition
@@ -46,6 +48,7 @@ export class ExecutionDetailsModalComponent implements OnInit {
             next: ({ details, workflow }) => {
                 this.details = details;
                 this.workflow = workflow as WorkflowModel;
+                this.filterStepEntries();
                 this.resolveMediaUrls();
                 this.isLoading = false;
             },
@@ -53,6 +56,17 @@ export class ExecutionDetailsModalComponent implements OnInit {
                 console.error('Failed to load details or workflow', err);
                 this.isLoading = false;
             }
+        });
+    }
+
+    filterStepEntries(): void {
+        if (!this.details?.step_entries || !this.workflow) {
+            this.visibleStepEntries = [];
+            return;
+        }
+        this.visibleStepEntries = this.details.step_entries.filter((step: any) => {
+            const type = this.getStepType(step.step_id);
+            return type !== NodeTypes.USER_INPUT;
         });
     }
 

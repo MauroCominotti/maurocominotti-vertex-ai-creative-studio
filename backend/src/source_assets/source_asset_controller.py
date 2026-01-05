@@ -197,7 +197,7 @@ async def delete_source_asset(
 
 @router.get("/{asset_id}", response_model=SourceAssetResponseDto)
 async def get_source_asset(
-    asset_id: str,
+    asset_id: int,
     current_user: UserModel = Depends(get_current_user),
     service: SourceAssetService = Depends(),
 ):

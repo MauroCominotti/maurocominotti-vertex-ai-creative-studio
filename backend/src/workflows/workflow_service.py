@@ -349,8 +349,10 @@ class WorkflowService:
                 step_entries = response.json().get("stepEntries", [])
             else:
                 logger.warning(f"Failed to fetch step entries: {response.text}")
+                step_entries = [] # Ensure step_entries is defined
         except Exception as e:
             logger.error(f"Error fetching step entries: {e}")
+            step_entries = []
 
         # Calculate duration
         duration = 0.0
@@ -381,6 +383,27 @@ class WorkflowService:
 
         previous_outputs = {}
         formatted_step_entries = []
+
+        # 1. Add User Input Step Entry (Virtual)
+        # This ensures the User Input step appears in the history and its outputs are available for resolution
+        previous_outputs[user_input_step_id] = user_inputs
+        formatted_step_entries.append({
+            "step_id": user_input_step_id,
+            "state": "STATE_SUCCEEDED", # User input is always considered succeeded if execution started
+            "step_inputs": {},
+            "step_outputs": user_inputs,
+            "start_time": execution.start_time.isoformat() if execution.start_time else None,
+            "end_time": execution.start_time.isoformat() if execution.start_time else None, # Instant
+        })
+
+        def resolve_value(value):
+            if isinstance(value, StepOutputReference):
+                return previous_outputs.get(value.step, {}).get(value.output)
+            elif isinstance(value, list):
+                return [resolve_value(item) for item in value]
+            else:
+                return value
+
         for entry in step_entries:
             step_id = entry.get("step")
             if step_id == "end":
@@ -396,23 +419,17 @@ class WorkflowService:
             # Extract inputs from step
             step_inputs = {}
             for inp_name, inp_value in current_step.inputs:
-                if isinstance(inp_value, StepOutputReference):
-                    inp_step_id = inp_value.step
-                    inp_output_name = inp_value.output
-                    if inp_step_id == user_input_step_id:
-                        value = user_inputs.get(inp_output_name)
-                    else:
-                        value = previous_outputs.get(inp_step_id, {}).get(inp_output_name)
-                    step_inputs[inp_name] = value
-                else: # This else means the input is a static value
-                    step_inputs[inp_name] = inp_value
+                step_inputs[inp_name] = resolve_value(inp_value)
 
             # Extract outputs from step
             variable_data = entry.get("variableData", {})
             variables = variable_data.get("variables", {})
             step_results = variables.get(f"{step_id}_result", {})
             step_outputs = step_results.get("body", {})
+            
+            # Store outputs for subsequent steps
             previous_outputs[step_id] = step_outputs
+            
             formatted_step_entries.append({
                 "step_id": step_id,
                 "state": step_state,

@@ -76,8 +76,8 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
   currentExecutionId: string | null = null;
   currentExecutionState: string | null = null;
   executionStepEntries: any[] = [];
-  mediaUrlMap = new Map<number, string>();
-  loadedMedia = new Set<number>();
+  mediaUrlMap = new Map<string, string>();
+  loadedMedia = new Set<string>();
 
 
   constructor(

@@ -506,12 +506,12 @@ class SourceAssetService:
         return categorized_assets
 
     async def get_asset_by_id(
-        self, asset_id: str, user: UserModel
+        self, asset_id: int, user: UserModel
     ) -> Optional[SourceAssetResponseDto]:
         """
         Retrieves a single source asset by ID, ensuring the user has access.
         """
-        asset = await asyncio.to_thread(self.repo.get_by_id, asset_id)
+        asset = await self.repo.get_by_id(asset_id)
         if not asset:
             return None
 

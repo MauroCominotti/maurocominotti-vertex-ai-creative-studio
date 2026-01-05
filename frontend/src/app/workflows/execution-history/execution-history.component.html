@@ -1,13 +1,28 @@
 <div class="workflow-list-container p-4">
   <!-- Header -->
-  <div class="header flex justify-between items-center mb-4">
-    <div class="flex items-center gap-4">
-      <div>
-        <h1 class="text-3xl font-semibold">Execution History</h1>
+  <div class="header mb-6">
+    <!-- Top Row: Title & Buttons -->
+    <div class="flex flex-wrap justify-between items-start gap-4 mb-2">
+      <div class="flex-1 min-w-[200px]">
+        <h1 *ngIf="workflow" class="text-3xl font-semibold break-words">{{ workflow.name }}</h1>
+        <h1 *ngIf="!workflow" class="text-3xl font-semibold">Execution History</h1>
+      </div>
+      
+      <div *ngIf="workflow">
+        <p class="text-neutral-300 mb-2 text-base max-w-4xl">{{ workflow.description }}</p>
+        <div class="flex flex-wrap gap-4 text-xs text-neutral-500 font-mono mt-1">
+            <span>Created: {{ workflow.createdAt | date:'mediumDate' }}</span>
+            <span>Updated: {{ workflow.updatedAt | date:'mediumDate' }}</span>
+            <span class="select-all" title="Click to select ID">Workflow ID: {{ workflow.id }}</span>
+        </div>
+      </div>
+      <div *ngIf="!workflow">
         <p class="text-sm text-neutral-400" *ngIf="workflowId">Workflow ID: {{ workflowId }}</p>
       </div>
+
     </div>
-    <div class="flex items-center gap-2">
+    
+    <div class="flex flex-wrap items-center gap-2">
       <button mat-raised-button color="primary" (click)="runWorkflow()" [disabled]="isLoading">
         <mat-icon class="mr-2">play_arrow</mat-icon>
         Run Workflow
@@ -24,6 +39,7 @@
         Go Back
       </button>
     </div>
+    
   </div>
 
   <!-- Filters -->

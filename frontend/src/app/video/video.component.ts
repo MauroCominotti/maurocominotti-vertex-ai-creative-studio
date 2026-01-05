@@ -14,50 +14,49 @@
  * limitations under the License.
  */
 
+import { HttpClient } from '@angular/common/http';
 import {
+  AfterViewInit,
   Component,
   HostListener,
-  OnDestroy,
   OnInit,
-  AfterViewInit,
-  signal,
+  signal
 } from '@angular/core';
-import {MatIconRegistry} from '@angular/material/icon';
-import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
-import {finalize, Observable} from 'rxjs';
+import { MatChipInputEvent } from '@angular/material/chips';
+import { MatDialog } from '@angular/material/dialog';
+import { MatIconRegistry } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Router } from '@angular/router';
+import { finalize, Observable } from 'rxjs';
+import { AssetTypeEnum } from '../admin/source-assets-management/source-asset.model';
+import { ImageCropperDialogComponent } from '../common/components/image-cropper-dialog/image-cropper-dialog.component';
 import {
-  ConcatenationInput,
-  SearchService,
-} from '../services/search/search.service';
-import {Router} from '@angular/router';
+  ImageSelectorComponent,
+  MediaItemSelection,
+} from '../common/components/image-selector/image-selector.component';
+import { GenerationModelConfig, MODEL_CONFIGS } from '../common/config/model-config';
+import { JobStatus, MediaItem } from '../common/models/media-item.model';
 import {
   ReferenceImage,
   SourceMediaItemLink,
   VeoRequest,
 } from '../common/models/search.model';
-import {MatChipInputEvent} from '@angular/material/chips';
-import {MatSnackBar} from '@angular/material/snack-bar';
-import {MatDialog} from '@angular/material/dialog';
-import {
-  ImageSelectorComponent,
-  MediaItemSelection,
-} from '../common/components/image-selector/image-selector.component';
-import {
-  EnrichedSourceAsset,
-  GenerationParameters,
-} from '../fun-templates/media-template.model';
-import { handleErrorSnackbar, handleInfoSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
-import {JobStatus, MediaItem} from '../common/models/media-item.model';
 import {
   SourceAssetResponseDto,
   SourceAssetService,
 } from '../common/services/source-asset.service';
-import {HttpClient} from '@angular/common/http';
-import {WorkspaceStateService} from '../services/workspace/workspace-state.service';
-import { MODEL_CONFIGS, GenerationModelConfig } from '../common/config/model-config';
-import {AssetTypeEnum} from '../admin/source-assets-management/source-asset.model';
-import {ImageCropperDialogComponent} from '../common/components/image-cropper-dialog/image-cropper-dialog.component';
-import {VideoStateService} from '../services/video-state.service';
+import {
+  EnrichedSourceAsset,
+  GenerationParameters,
+} from '../fun-templates/media-template.model';
+import {
+  ConcatenationInput,
+  SearchService,
+} from '../services/search/search.service';
+import { VideoStateService } from '../services/video-state.service';
+import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
+import { handleErrorSnackbar, handleInfoSnackbar, handleSuccessSnackbar } from '../utils/handleMessageSnackbar';
 
 @Component({
   selector: 'app-video',
@@ -497,10 +496,13 @@ export class VideoComponent implements OnInit, AfterViewInit {
 
   searchTerm() {
     const activeWorkspaceId = this.workspaceStateService.getActiveWorkspaceId();
-    this.searchRequest.workspaceId = activeWorkspaceId || '';
-    const workspaceId = activeWorkspaceId || '';
+    this.searchRequest.workspaceId = activeWorkspaceId ?? undefined;
 
     if (this.isConcatenateMode) {
+      if (!activeWorkspaceId) {
+        handleErrorSnackbar(this._snackBar, { message: 'Workspace ID is missing' }, 'Concatenate videos');
+        return;
+      }
       const inputs: ConcatenationInput[] = [];
 
       // Input 1
@@ -537,7 +539,7 @@ export class VideoComponent implements OnInit, AfterViewInit {
       this.isLoading = true;
       this.service
         .concatenateVideos({
-          workspaceId,
+          workspaceId: activeWorkspaceId,
           name,
           inputs,
           aspectRatio: this.searchRequest.aspectRatio,

@@ -32,10 +32,10 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subscription, fromEvent } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { MediaItemSelection } from '../../common/components/image-selector/image-selector.component';
+import { MODEL_CONFIGS } from '../../common/config/model-config';
 import { JobStatus, MediaItem } from '../../common/models/media-item.model';
 import { GallerySearchDto } from '../../common/models/search.model';
 import { UserService } from '../../common/services/user.service';
-import { MODEL_CONFIGS } from '../../common/config/model-config';
 import { GalleryService } from '../gallery.service';
 
 @Component({

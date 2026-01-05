@@ -14,42 +14,41 @@
  * limitations under the License.
  */
 
+import { HttpClient } from '@angular/common/http';
 import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
   OnInit,
-  ViewChild,
-  inject,
+  ViewChild
 } from '@angular/core';
-import {FormBuilder, Validators, FormGroup} from '@angular/forms';
-import {JobStatus, MediaItem} from '../common/models/media-item.model';
-import {HttpClient} from '@angular/common/http';
-import {VtoInputLink, VtoRequest, VtoSourceMediaItemLink} from './vto.model';
-import {environment} from '../../environments/environment';
-import {MatDialog} from '@angular/material/dialog';
-import {
-  ImageSelectorComponent,
-  MediaItemSelection,
-} from '../common/components/image-selector/image-selector.component';
-import {
-  SourceAssetResponseDto,
-  SourceAssetService,
-} from '../common/services/source-asset.service';
-import {MatSnackBar} from '@angular/material/snack-bar';
-import {finalize, Observable} from 'rxjs';
-import {handleErrorSnackbar, handleSuccessSnackbar} from '../utils/handleMessageSnackbar';
-import {NavigationExtras, Router} from '@angular/router';
-import {SearchService} from '../services/search/search.service';
-import {MatStepper} from '@angular/material/stepper';
-import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
-import {MatIconRegistry} from '@angular/material/icon';
-import {WorkspaceStateService} from '../services/workspace/workspace-state.service';
-import {VtoStateService} from '../services/vto-state.service';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
+import { MatIconRegistry } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatStepper } from '@angular/material/stepper';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { NavigationExtras, Router } from '@angular/router';
+import { finalize, Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 import {
   AssetScopeEnum,
   AssetTypeEnum,
 } from '../admin/source-assets-management/source-asset.model';
+import {
+  ImageSelectorComponent,
+  MediaItemSelection,
+} from '../common/components/image-selector/image-selector.component';
+import { JobStatus, MediaItem } from '../common/models/media-item.model';
+import {
+  SourceAssetResponseDto,
+  SourceAssetService,
+} from '../common/services/source-asset.service';
+import { SearchService } from '../services/search/search.service';
+import { VtoStateService } from '../services/vto-state.service';
+import { WorkspaceStateService } from '../services/workspace/workspace-state.service';
+import { handleErrorSnackbar } from '../utils/handleMessageSnackbar';
+import { VtoInputLink, VtoRequest, VtoSourceMediaItemLink } from './vto.model';
 
 interface Garment {
   id: string;
@@ -443,10 +442,17 @@ export class VtoComponent implements OnInit, AfterViewInit {
 
     this.isLoading = true;
 
+    const workspaceId = this.workspaceStateService.getActiveWorkspaceId();
+
+    if (!workspaceId) {
+      handleErrorSnackbar(this._snackBar, { message: 'Workspace ID is missing' }, 'Virtual Try-On');
+      return;
+    }
+
     const payload: VtoRequest = {
       numberOfMedia: 4, // Defaulting to 4 as per DTO
       personImage: selectedModel.inputLink,
-      workspaceId: this.workspaceStateService.getActiveWorkspaceId() ?? '',
+      workspaceId: workspaceId,
     };
 
     if (this.selectedTop) payload.topImage = this.selectedTop.inputLink;

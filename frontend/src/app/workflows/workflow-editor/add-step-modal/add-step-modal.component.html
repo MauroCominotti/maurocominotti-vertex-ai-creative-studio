@@ -1,0 +1,30 @@
+<div class="node-palette-container">
+  <div class="header">
+    <h2 mat-dialog-title>Add Step - Node Palette</h2>
+    <button mat-icon-button (click)="closeModal()" aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    <div class="node-grid">
+      <button
+        *ngFor="let step of stepTypes"
+        class="node-card"
+        [disabled]="step.disabled"
+        (click)="!step.disabled && selectStep(step.type)">
+
+        <div class="icon-container">
+          <mat-icon>{{ step.icon }}</mat-icon>
+        </div>
+        <div class="text-container">
+          <div class="header-row">
+            <h3>{{ step.label }}</h3>
+          </div>
+          <span *ngIf="step.disabled" class="coming-soon-badge">Coming Soon</span>
+          <p *ngIf="!step.disabled">{{ step.description }}</p>
+        </div>
+      </button>
+    </div>
+  </mat-dialog-content>
+</div>

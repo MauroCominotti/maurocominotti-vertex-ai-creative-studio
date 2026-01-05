@@ -504,3 +504,25 @@ class SourceAssetService:
                 asset_map[asset.asset_type].append(asset)
 
         return categorized_assets
+
+    async def get_asset_by_id(
+        self, asset_id: int, user: UserModel
+    ) -> Optional[SourceAssetResponseDto]:
+        """
+        Retrieves a single source asset by ID, ensuring the user has access.
+        """
+        asset = await self.repo.get_by_id(asset_id)
+        if not asset:
+            return None
+
+        # Authorization check
+        is_admin = UserRoleEnum.ADMIN in user.roles
+        is_owner = asset.user_id == user.id
+        is_system = asset.scope in [
+            AssetScopeEnum.SYSTEM,
+        ]
+
+        if not (is_admin or is_owner or is_system):
+            return None
+
+        return await self._create_asset_response(asset)

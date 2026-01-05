@@ -14,23 +14,20 @@
  * limitations under the License.
  */
 
-import {Component, Inject} from '@angular/core';
+import { Component, Inject } from '@angular/core';
 import {
   MAT_DIALOG_DATA,
   MatDialog,
   MatDialogRef,
 } from '@angular/material/dialog';
-import {MediaItem} from '../../models/media-item.model';
+import { finalize, Observable } from 'rxjs';
+import { AssetTypeEnum } from '../../../admin/source-assets-management/source-asset.model';
+import { MediaItem } from '../../models/media-item.model';
 import {
   SourceAssetResponseDto,
   SourceAssetService,
 } from '../../services/source-asset.service';
-import {AssetTypeEnum} from '../../../admin/source-assets-management/source-asset.model';
-import {ImageCropperDialogComponent} from '../image-cropper-dialog/image-cropper-dialog.component';
-import {finalize, Observable} from 'rxjs';
-import {WorkspaceStateService} from '../../../services/workspace/workspace-state.service';
-import {HttpClient} from '@angular/common/http';
-import {environment} from '../../../../environments/environment';
+import { ImageCropperDialogComponent } from '../image-cropper-dialog/image-cropper-dialog.component';
 
 export interface MediaItemSelection {
   mediaItem: MediaItem;
@@ -79,6 +76,13 @@ export class ImageSelectorComponent {
       // If it's a video, upload it directly from here
       this.isUploading = true;
       this.uploadVideoDirectly(file)
+        .pipe(finalize(() => (this.isUploading = false)))
+        .subscribe(asset => {
+          this.dialogRef.close(asset);
+        });
+    } else if (file.type.startsWith('audio/')) {
+      this.isUploading = true;
+      this.uploadVideoDirectly(file) // Reusing upload logic as it's just a file upload
         .pipe(finalize(() => (this.isUploading = false)))
         .subscribe(asset => {
           this.dialogRef.close(asset);

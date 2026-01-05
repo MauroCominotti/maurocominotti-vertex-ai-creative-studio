@@ -14,32 +14,32 @@
  * limitations under the License.
  */
 
-import {Component, OnInit} from '@angular/core';
-import {ActivatedRoute} from '@angular/router';
-import {MatDialog} from '@angular/material/dialog';
-import {MatSnackBar} from '@angular/material/snack-bar';
-import {Workspace, WorkspaceScope} from '../../models/workspace.model';
-import {WorkspaceService} from '../../../services/workspace/workspace.service';
-import {WorkspaceStateService} from '../../../services/workspace/workspace-state.service';
-import {CreateWorkspaceModalComponent} from '../create-workspace-modal/create-workspace-modal.component';
-import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
+import { Component, OnInit } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { ActivatedRoute } from '@angular/router';
+import { map, switchMap } from 'rxjs';
+import { WorkspaceStateService } from '../../../services/workspace/workspace-state.service';
+import { WorkspaceService } from '../../../services/workspace/workspace.service';
 import {
   handleErrorSnackbar,
   handleSuccessSnackbar,
 } from '../../../utils/handleMessageSnackbar';
-import {
-  InviteUserData,
-  InviteUserModalComponent,
-} from '../invite-user-modal/invite-user-modal.component';
-import {UserService} from '../../services/user.service';
-import {UserModel, UserRolesEnum} from '../../models/user.model';
+import { JobStatus } from '../../models/media-item.model';
+import { UserModel, UserRolesEnum } from '../../models/user.model';
+import { Workspace, WorkspaceScope } from '../../models/workspace.model';
+import { BrandGuidelineService } from '../../services/brand-guideline/brand-guideline.service';
+import { UserService } from '../../services/user.service';
 import {
   BrandGuidelineDialogComponent,
   BrandGuidelineDialogData,
 } from '../brand-guideline-dialog/brand-guideline-dialog.component';
-import {BrandGuidelineService} from '../../services/brand-guideline/brand-guideline.service';
-import {finalize, map, switchMap} from 'rxjs';
-import {JobStatus, MediaItem} from '../../models/media-item.model';
+import { ConfirmationDialogComponent } from '../confirmation-dialog/confirmation-dialog.component';
+import { CreateWorkspaceModalComponent } from '../create-workspace-modal/create-workspace-modal.component';
+import {
+  InviteUserData,
+  InviteUserModalComponent,
+} from '../invite-user-modal/invite-user-modal.component';
 
 @Component({
   selector: 'app-workspace-switcher',
@@ -152,7 +152,7 @@ export class WorkspaceSwitcherComponent implements OnInit {
   setActiveWorkspace(workspaceId: number | null): void {
     // We might need to cast to any if workspaceStateService expects string,
     // but we should check that service too. For now, let's assume we pass number.
-    this.workspaceStateService.setActiveWorkspaceId(workspaceId as any);
+    this.workspaceStateService.setActiveWorkspaceId(workspaceId);
     this.activeWorkspace =
       this.workspaces.find(w => w.id === workspaceId) || null;
     this.brandGuidelineService.clearCache();

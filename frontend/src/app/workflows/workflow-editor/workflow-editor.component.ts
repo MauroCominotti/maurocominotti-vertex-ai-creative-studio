@@ -590,17 +590,13 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
         const newInputs = { ...newStep.inputs };
         Object.keys(newInputs).forEach(key => {
           let val = newInputs[key];
-          if (val && typeof val === 'object') {
-            // Handle _definitionId removal
-            if (val._definitionId) {
-              const { _definitionId, ...rest } = val;
-              val = rest;
-            }
-            // Handle user input name transformation (display -> identifier)
-            if (val.step === NodeTypes.USER_INPUT && val.output) {
-              val = { ...val, output: this.toIdentifier(val.output) };
-            }
-            newInputs[key] = val;
+
+          if (Array.isArray(val)) {
+            // Handle array inputs (e.g. multiple images)
+            newInputs[key] = val.map(item => this.cleanInputValue(item));
+          } else if (val && typeof val === 'object') {
+            // Handle single object inputs
+            newInputs[key] = this.cleanInputValue(val);
           }
         });
         newStep.inputs = newInputs;
@@ -625,6 +621,25 @@ export class WorkflowEditorComponent implements OnInit, OnDestroy {
       status: StepStatusEnum.IDLE,
     }
     return [user_input_step, ...steps];
+  }
+
+  private cleanInputValue(val: any): any {
+    if (!val || typeof val !== 'object') return val;
+
+    let newVal = { ...val };
+
+    // Handle _definitionId removal
+    if (newVal._definitionId) {
+      const { _definitionId, ...rest } = newVal;
+      newVal = rest;
+    }
+
+    // Handle user input name transformation (display -> identifier)
+    if (newVal.step === NodeTypes.USER_INPUT && newVal.output) {
+      newVal = { ...newVal, output: this.toIdentifier(newVal.output) };
+    }
+
+    return newVal;
   }
 
   openRunModal(workflowId: string, userInputStep: any) {
